@@ -54,211 +54,226 @@ class _RewardsScreenState extends State<RewardsScreen> {
 
 @override
 Widget build(BuildContext context) {
-  return AnnotatedRegion<SystemUiOverlayStyle>(
-    value: const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFFFFEEE0), // Match your header bg
-      statusBarIconBrightness: Brightness.dark,
-    ),
-    child: Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header under the status bar
-          Container(
-            width: double.infinity,
-            color: const Color(0xFFFFEEE0),
-            child: SafeArea(
-              bottom: false,
-              child: ChayanHeader(title: 'Chayan Coins', onBackTap: () {}),
-            ),
-          ),
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final bool isTablet = constraints.maxWidth > 600;
+      final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
-          // Scrollable content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(bottom: 90.r),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFFFFEEE0), // Match your header bg
+          statusBarIconBrightness: Brightness.dark,
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: Column(
+            children: [
+              // Header under the status bar
+              Container(
+                width: double.infinity,
+                color: const Color(0xFFFFEEE0),
+                child: SafeArea(
+                  bottom: false,
+                  child: ChayanHeader(title: 'Chayan Coins', onBackTap: () {}),
+                ),
+              ),
 
-                  SizedBox(height: 20.h),
+              // Scrollable content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: 90.r * scaleFactor),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 20.h * scaleFactor),
 
-                  /// --- Refer & Earn Section ---
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ReferAndEarnScreen()),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Container(
-                        padding: EdgeInsets.all(16.r),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFE0C7),
-                          borderRadius: BorderRadius.circular(12),
+                      /// --- Refer & Earn Section ---
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ReferAndEarnScreen()),
+                          );
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
+                          child: Container(
+                            padding: EdgeInsets.all(16.r * scaleFactor),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFE0C7),
+                              borderRadius: BorderRadius.circular(12 * scaleFactor),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Refer & earn 100 coins',
+                                        style: TextStyle(
+                                          fontSize: 15.sp * scaleFactor,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8.h * scaleFactor),
+                                      Text(
+                                        'Get 100 coins when your friend completes their first booking',
+                                        style: TextStyle(fontSize: 12.sp * scaleFactor),
+                                      ),
+                                      SizedBox(height: 8.h * scaleFactor),
+                                      Text(
+                                        'Refer now',
+                                        style: TextStyle(
+                                          fontSize: 14.sp * scaleFactor,
+                                          color: const Color(0xFF757575),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 8.w * scaleFactor),
+                                SvgPicture.asset(
+                                  'assets/icons/gifty.svg',
+                                  height: 40.h * scaleFactor,
+                                  width: 40.w * scaleFactor,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
+                      ),
+
+                      SizedBox(height: 30.h * scaleFactor),
+
+                      /// --- Coin Balance Section ---
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
                         child: Row(
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children:  [
-                                  Text(
-                                    'Refer & earn 100 coins',
-                                    style: TextStyle(
-                                      fontSize: 15.sp,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8.h),
-                                  Text(
-                                    'Get 100 coins when your friend completes their first booking',
-                                    style: TextStyle(fontSize: 12.sp),
-                                  ),
-                                  SizedBox(height: 8.h),
-                                  Text(
-                                    'Refer now',
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: Color(0xFF757575),
-                                    ),
-                                  ),
-                                ],
+                            SvgPicture.asset(
+                              'assets/icons/coins.svg',
+                              height: 30.h * scaleFactor,
+                              width: 30.w * scaleFactor,
+                            ),
+                            SizedBox(width: 10.w * scaleFactor),
+                            Text(
+                              'Chayan Coins',
+                              style: TextStyle(
+                                fontSize: 24.sp * scaleFactor,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            SizedBox(width: 8.w),
-                            SvgPicture.asset(
-                              'assets/icons/gifty.svg',
-                              height: 40.h,
-                              width: 40.w,
+                            const Spacer(),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10.h * scaleFactor,
+                                vertical: 6.h * scaleFactor,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0x2BFF9437),
+                                borderRadius: BorderRadius.circular(6 * scaleFactor),
+                                border: Border.all(color: Colors.black12),
+                              ),
+                              child: Text(
+                                '100',
+                                style: TextStyle(
+                                  color: const Color(0xFFE47830),
+                                  fontSize: 20.sp * scaleFactor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  ),
 
-                  SizedBox(height: 30.h),
-
-                  /// --- Coin Balance Section ---
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      children: [
-                        SvgPicture.asset(
-                          'assets/icons/coins.svg',
-                          height: 30.h,
-                          width: 30.w,
-                        ),
-                        SizedBox(width: 10.w),
-                         Text(
-                          'Chayan Coins',
-                          style: TextStyle(
-                            fontSize: 24.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0x2BFF9437),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.black12),
-                          ),
-                          child:  Text(
-                            '100',
-                            style: TextStyle(
-                              color: Color(0xFFE47830),
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-              SizedBox(height: 10.h),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Formely Chayan Coins. Applicable on all services',
-                  style: TextStyle(fontSize: 16.sp),
-                ),
-              ),
-
-              SizedBox(height: 40.h),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  title:  Text(
-                    'Have a Question?',
-                    style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  children: [
-                    GestureDetector(
-                      onTap: _launchChayanKaro,
-                      child:  Padding(
-                        padding: EdgeInsets.only(bottom: 12.r),
-                        child: Text.rich(
-                          TextSpan(
-                            text: 'At ',
-                            children: [
-                              TextSpan(
-                                text: 'chayankaro.com',
-                                style: TextStyle(color: Colors.blue),
-                              ),
-                              TextSpan(
-                                text:
-                                    ', booking a service is simple, transparent, and stress-free. We empower you to choose exactly what you need - with the right professional - at your convenience. Enjoy trusted services, seamless booking, and complete peace of mind, all from the comfort of your home.',
-                              ),
-                            ],
-                          ),
-                          style: TextStyle(fontSize: 14.sp),
+                      SizedBox(height: 10.h * scaleFactor),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
+                        child: Text(
+                          'Formely Chayan Coins. Applicable on all services',
+                          style: TextStyle(fontSize: 16.sp * scaleFactor),
                         ),
                       ),
-                    ),
-                  ],
+
+                      SizedBox(height: 40.h * scaleFactor),
+
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
+                        child: ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: Text(
+                            'Have a Question?',
+                            style: TextStyle(
+                              fontSize: 20.sp * scaleFactor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          children: [
+                            GestureDetector(
+                              onTap: _launchChayanKaro,
+                              child: Padding(
+                                padding: EdgeInsets.only(bottom: 12.r * scaleFactor),
+                                child: Text.rich(
+                                  TextSpan(
+                                    text: 'At ',
+                                    children: [
+                                      TextSpan(
+                                        text: 'chayankaro.com',
+                                        style: TextStyle(color: Colors.blue),
+                                      ),
+                                      const TextSpan(
+                                        text:
+                                            ', booking a service is simple, transparent, and stress-free. We empower you to choose exactly what you need - with the right professional - at your convenience. Enjoy trusted services, seamless booking, and complete peace of mind, all from the comfort of your home.',
+                                      ),
+                                    ],
+                                  ),
+                                  style: TextStyle(fontSize: 14.sp * scaleFactor),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24.h * scaleFactor,
+                          vertical: 12.h * scaleFactor,
+                        ),
+                        child: Divider(thickness: 1, color: Colors.grey),
+                      ),
+
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
+                        child: Text(
+                          'Wallet Activity',
+                          style: TextStyle(fontSize: 20.sp * scaleFactor),
+                        ),
+                      ),
+
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24.h * scaleFactor,
+                          vertical: 12.h * scaleFactor,
+                        ),
+                        child: Divider(thickness: 1, color: Colors.grey),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                child: Divider(thickness: 1, color: Colors.grey),
-              ),
-
-             Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Wallet Activity',
-                  style: TextStyle(fontSize: 20.sp),
-                ),
-              ),
-
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                child: Divider(thickness: 1, color: Colors.grey),
               ),
             ],
-              ),
-            ),
           ),
-        ],
-      ),
-      bottomNavigationBar: CustomBottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-      ),
-          ), // 👈 This is the closing of Scaffold
+          bottomNavigationBar: CustomBottomNavBar(
+            selectedIndex: _selectedIndex,
+            onItemTapped: _onItemTapped,
+          ),
+        ),
+      );
+    },
+  );
+}
 
-    );
-  }
 }

@@ -1,11 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/chayan_header.dart';
-
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({Key? key}) : super(key: key);
@@ -52,36 +50,52 @@ class _HelpScreenState extends State<HelpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // ✅ Custom Header used across screens
-          ChayanHeader(
-            title: 'Help',
-            onBackTap: () => Navigator.pop(context),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isTablet = constraints.maxWidth >= 600;
+        final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              children: [
-               Text(
-                  'All Topics',
-                  style: TextStyle(
-                    fontSize: 24.sp,
-                    fontFamily: 'SF Pro',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.24,
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: Column(
+            children: [
+              // ✅ Custom Header used across screens
+              ChayanHeader(
+                title: 'Help',
+                onBackTap: () => Navigator.pop(context),
+              ),
+
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20.w * scaleFactor,
+                    vertical: 10.h * scaleFactor,
                   ),
+                  children: [
+                    Text(
+                      'All Topics',
+                      style: TextStyle(
+                        fontSize: 24.sp * scaleFactor,
+                        fontFamily: 'SF Pro',
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.24,
+                      ),
+                    ),
+                    SizedBox(height: 30.h * scaleFactor),
+                    ...topics.map(
+                      (topic) => HelpExpansionTile(
+                        topic: topic,
+                        launchUrl: _launchUrl,
+                        scaleFactor: scaleFactor,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 30.h),
-                ...topics.map((topic) => HelpExpansionTile(topic: topic, launchUrl: _launchUrl)),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -101,8 +115,14 @@ class HelpTopic {
 class HelpExpansionTile extends StatelessWidget {
   final HelpTopic topic;
   final VoidCallback launchUrl;
+  final double scaleFactor;
 
-  const HelpExpansionTile({Key? key, required this.topic, required this.launchUrl}) : super(key: key);
+  const HelpExpansionTile({
+    Key? key,
+    required this.topic,
+    required this.launchUrl,
+    this.scaleFactor = 1.0,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -112,14 +132,14 @@ class HelpExpansionTile extends StatelessWidget {
         colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
         child: SvgPicture.asset(
           topic.iconPath,
-          height: 26.h,
-          width: 26.w,
+          height: 26.h * scaleFactor,
+          width: 26.w * scaleFactor,
         ),
       ),
       title: Text(
         topic.title,
         style: TextStyle(
-          fontSize: 16.sp,
+          fontSize: 16.sp * scaleFactor,
           fontFamily: 'SF Pro',
           fontWeight: FontWeight.w500,
           color: Colors.black,
@@ -127,13 +147,17 @@ class HelpExpansionTile extends StatelessWidget {
       ),
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 8.0.r, right: 4.0.r, bottom: 16.0.r),
+          padding: EdgeInsets.only(
+            left: 8.0.r * scaleFactor,
+            right: 4.0.r * scaleFactor,
+            bottom: 16.0.r * scaleFactor,
+          ),
           child: RichText(
             text: TextSpan(
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 14.sp * scaleFactor,
                 fontFamily: 'SF Pro',
-                height: 1.5.h,
+                height: 1.5.h * scaleFactor,
                 color: Colors.black87,
               ),
               children: [

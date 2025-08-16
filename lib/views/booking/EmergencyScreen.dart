@@ -8,143 +8,167 @@ class EmergencyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header stays at top
-          ChayanHeader(title: 'Emergency', onBackTap: () {}),
-          
-          // Main content below header
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title: "Need assistance?"
-                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'Need assistance?',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'SF Pro',
-                        letterSpacing: 0.2,
-                        color: Color(0xFF161616),
+    return LayoutBuilder(builder: (context, constraints) {
+      final bool isTablet = constraints.maxWidth > 600;
+      final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
+
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            // Header stays at top
+            ChayanHeader(title: 'Emergency', onBackTap: () {}),
+
+            // Main content below header
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(vertical: 20.h * scaleFactor),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title: "Need assistance?"
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+                      child: Text(
+                        'Need assistance?',
+                        style: TextStyle(
+                          fontSize: 20.sp * scaleFactor,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'SF Pro',
+                          letterSpacing: 0.2 * scaleFactor,
+                          color: const Color(0xFF161616),
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 25.h),
+                    SizedBox(height: 25.h * scaleFactor),
 
-                  // Call for support button
-                  Padding(
-                    padding: EdgeInsets.only(left: 16.r),
-                    child: Container(
-                      width: 148.w,
-                      height: 33.h,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black.withOpacity(0.3)),
-                        borderRadius: BorderRadius.circular(5),
-                        color: Colors.white,
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(width: 6.w),
-                          SvgPicture.asset('assets/icons/help.svg',
-                              height: 20.h, width: 20.w, color: Colors.black),
-                          SizedBox(width: 10.w),
-                          Text('Call For Support',
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w500,
-                              fontFamily: 'SF Pro',
-                              letterSpacing: 0.14,
+                    // Call for support button
+                    Padding(
+                      padding: EdgeInsets.only(left: 16.r * scaleFactor),
+                      child: Container(
+                        width: 148.w * scaleFactor,
+                        height: 33.h * scaleFactor,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black.withOpacity(0.3)),
+                          borderRadius: BorderRadius.circular(5 * scaleFactor),
+                          color: Colors.white,
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 6.w * scaleFactor),
+                            SvgPicture.asset(
+                              'assets/icons/help.svg',
+                              height: 20.h * scaleFactor,
+                              width: 20.w * scaleFactor,
+                              color: Colors.black,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: 10.w * scaleFactor),
+                            Text(
+                              'Call For Support',
+                              style: TextStyle(
+                                fontSize: 14.sp * scaleFactor,
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'SF Pro',
+                                letterSpacing: 0.14 * scaleFactor,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 25.h),
-                  Container(height: 6.h, color: Color(0x7FD9D9D9)),
+                    SizedBox(height: 25.h * scaleFactor),
 
-                  Padding(padding: EdgeInsets.only(left: 16.r, top: 20.r),
-                    child: Text(
-                      'Local emergency contacts',
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'SF Pro',
-                        color: Color(0xFF161616),
-                        letterSpacing: 0.18,
+                    Container(height: 6.h * scaleFactor, color: const Color(0x7FD9D9D9)),
+
+                    Padding(
+                      padding: EdgeInsets.only(left: 16.r * scaleFactor, top: 20.r * scaleFactor),
+                      child: Text(
+                        'Local emergency contacts',
+                        style: TextStyle(
+                          fontSize: 18.sp * scaleFactor,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'SF Pro',
+                          color: const Color(0xFF161616),
+                          letterSpacing: 0.18 * scaleFactor,
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 30.h),
+                    SizedBox(height: 30.h * scaleFactor),
 
-                  _buildEmergencyRow(
-                    iconAsset: 'assets/icons/emergency.svg',
-                    label: 'All emergencies',
-                    number: 'Call 112',
-                  ),
-                  _buildDivider(),
-                  _buildEmergencyRow(
-                    iconAsset: 'assets/icons/police.svg',
-                    label: 'Police',
-                    number: 'Call 100',
-                  ),
-                  _buildDivider(),
-                  _buildEmergencyRow(
-                    iconAsset: 'assets/icons/med.svg',
-                    label: 'Medical',
-                    number: 'Call 101',
-                  ),
-                  _buildDivider(),
-                  _buildEmergencyRow(
-                    iconAsset: 'assets/icons/fire.svg',
-                    label: 'Fire',
-                    number: 'Call 102',
-                  ),
-                  _buildDivider(),
-                  SizedBox(height: 40.h),
-                ],
+                    _buildEmergencyRow(
+                      iconAsset: 'assets/icons/emergency.svg',
+                      label: 'All emergencies',
+                      number: 'Call 112',
+                      scale: scaleFactor,
+                    ),
+                    _buildDivider(scaleFactor),
+                    _buildEmergencyRow(
+                      iconAsset: 'assets/icons/police.svg',
+                      label: 'Police',
+                      number: 'Call 100',
+                      scale: scaleFactor,
+                    ),
+                    _buildDivider(scaleFactor),
+                    _buildEmergencyRow(
+                      iconAsset: 'assets/icons/med.svg',
+                      label: 'Medical',
+                      number: 'Call 101',
+                      scale: scaleFactor,
+                    ),
+                    _buildDivider(scaleFactor),
+                    _buildEmergencyRow(
+                      iconAsset: 'assets/icons/fire.svg',
+                      label: 'Fire',
+                      number: 'Call 102',
+                      scale: scaleFactor,
+                    ),
+                    _buildDivider(scaleFactor),
+                    SizedBox(height: 40.h * scaleFactor),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildEmergencyRow({
     required String iconAsset,
     required String label,
     required String number,
+    required double scale,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
+      padding: EdgeInsets.symmetric(horizontal: 15.h * scale, vertical: 7.h * scale),
       child: Row(
         children: [
-          SvgPicture.asset(iconAsset, width: 25.w, height: 25.h, color: Colors.black),
-          SizedBox(width: 14.w),
+          SvgPicture.asset(
+            iconAsset,
+            width: 25.w * scale,
+            height: 25.h * scale,
+            color: Colors.black,
+          ),
+          SizedBox(width: 14.w * scale),
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontSize: 13.sp,
+              style: TextStyle(
+                fontSize: 13.sp * scale,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'SF Pro',
-                letterSpacing: 0.13,
+                letterSpacing: 0.13 * scale,
               ),
             ),
           ),
           Text(
             number,
-            style: TextStyle(fontSize: 13.sp,
+            style: TextStyle(
+              fontSize: 13.sp * scale,
               fontWeight: FontWeight.w600,
               fontFamily: 'SF Pro',
-              letterSpacing: 0.13,
+              letterSpacing: 0.13 * scale,
             ),
           ),
         ],
@@ -152,13 +176,13 @@ class EmergencyScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDivider() {
+  Widget _buildDivider(double scale) {
     return Opacity(
       opacity: 0.5,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+        padding: EdgeInsets.symmetric(horizontal: 15.w * scale),
         child: Container(
-          height: 1.h,
+          height: 1.h * scale,
           color: const Color(0xFFD9D9D9),
         ),
       ),

@@ -22,91 +22,98 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: 16.h),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isTablet = constraints.maxWidth >= 600;
+        final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
-              // Full-width Search Bar with TextField
-              Container(
-                height: 42.h,
-                decoration: ShapeDecoration(
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(width: 1.w, color: const Color(0x9BE47830)),
-                    borderRadius: BorderRadius.circular(5.r),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: 20.sp),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    SizedBox(width: 4.w),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _focusNode,
-                        style: TextStyle(
-                          color: Colors.black.withOpacity(0.72),
-                          fontSize: 13.sp,
-                          fontFamily: 'SF Pro',
-                          fontWeight: FontWeight.w400,
-                        ),
-                        cursorColor: Colors.black,
-                        autofocus: true, // keyboard opens on screen open
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Look For Services',
-                          hintStyle: TextStyle(
-                            color: Colors.black.withOpacity(0.72),
-                            fontSize: 13.sp,
-                            fontFamily: 'SF Pro',
-                            fontWeight: FontWeight.w400,
-                          ),
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 16.h * scaleFactor),
+
+                  // Full-width Search Bar with TextField
+                  Container(
+                    height: 42.h * scaleFactor,
+                    decoration: ShapeDecoration(
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(width: 1.w * scaleFactor, color: const Color(0x9BE47830)),
+                        borderRadius: BorderRadius.circular(5.r * scaleFactor),
                       ),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: 20.sp * scaleFactor),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        SizedBox(width: 4.w * scaleFactor),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _focusNode,
+                            style: TextStyle(
+                              color: Colors.black.withOpacity(0.72),
+                              fontSize: 13.sp * scaleFactor,
+                              fontFamily: 'SF Pro',
+                              fontWeight: FontWeight.w400,
+                            ),
+                            cursorColor: Colors.black,
+                            autofocus: true,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Look For Services',
+                              hintStyle: TextStyle(
+                                color: Colors.black.withOpacity(0.72),
+                                fontSize: 13.sp * scaleFactor,
+                                fontFamily: 'SF Pro',
+                                fontWeight: FontWeight.w400,
+                              ),
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 36.h * scaleFactor),
+
+                  Text(
+                    'Trending searches',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 20.sp * scaleFactor,
+                      fontFamily: 'SF Pro',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  SizedBox(height: 20.h * scaleFactor),
+
+                  Wrap(
+                    alignment: WrapAlignment.start,
+                    spacing: 12.w * scaleFactor,
+                    runSpacing: 12.h * scaleFactor,
+                    children: _buildSearchTags(scaleFactor),
+                  ),
+                ],
               ),
-
-              SizedBox(height: 36.h),
-
-              Text(
-                'Trending searches',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 20.sp,
-                  fontFamily: 'SF Pro',
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              SizedBox(height: 20.h),
-
-              Wrap(
-                alignment: WrapAlignment.start,
-                spacing: 12.w,
-                runSpacing: 12.h,
-                children: _buildSearchTags(),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  List<Widget> _buildSearchTags() {
+  List<Widget> _buildSearchTags(double scaleFactor) {
     final List<String> tags = [
       'Professional Cleaning',
       'Electricians',
@@ -117,26 +124,26 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return tags.map((text) {
       return Container(
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 14.w * scaleFactor, vertical: 8.h * scaleFactor),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: Colors.black.withOpacity(0.5)),
-          borderRadius: BorderRadius.circular(5.r),
+          borderRadius: BorderRadius.circular(5.r * scaleFactor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             SvgPicture.asset(
               'assets/icons/trend.svg',
-              width: 20.w,
-              height: 20.h,
+              width: 20.w * scaleFactor,
+              height: 20.h * scaleFactor,
             ),
-            SizedBox(width: 6.w),
+            SizedBox(width: 6.w * scaleFactor),
             Text(
               text,
               style: TextStyle(
                 color: Colors.black.withOpacity(0.72),
-                fontSize: 13.sp,
+                fontSize: 13.sp * scaleFactor,
                 fontFamily: 'SF Pro',
                 fontWeight: FontWeight.w400,
               ),

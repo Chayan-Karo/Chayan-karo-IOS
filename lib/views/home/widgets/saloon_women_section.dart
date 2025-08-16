@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
+import '../../../viewmodels/home_viewmodel.dart';
 import '../../../services/saloonservicescreen.dart';
 
 class SaloonWomenSection extends StatelessWidget {
@@ -7,97 +9,103 @@ class SaloonWomenSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> items = [
-      {
-        'title1': 'Bleach & Detan',
-        'image1': 'assets/saloon_bleach.webp',
-        'title2': 'Facial & Cleanup',
-        'image2': 'assets/saloon_facial.webp',
-      },
-      {
-        'title1': 'Pedicure',
-        'image1': 'assets/saloon_pedicure.webp',
-        'title2': 'Threading',
-        'image2': 'assets/saloon_threading.webp',
-      },
-      {
-        'title1': 'Waxing',
-        'image1': 'assets/saloon_waxing.webp',
-        'title2': 'Manicure',
-        'image2': 'assets/saloon_manicure.webp',
-      },
-    ];
+    return Consumer<HomeViewModel>(
+      builder: (context, viewModel, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            bool isTablet = constraints.maxWidth >= 600;
+            double scaleFactor = isTablet
+                ? constraints.maxWidth / 411 // scale from common phone width
+                : 1.0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section Title Row (no padding)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Saloon - Women',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'SF Pro',
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SalonServiceScreen(),
-                  ),
-                );
-              },
-              child: Padding(padding: EdgeInsets.only(right: 16.r),
-                child: Text(
-                  'View all >',
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Color(0xFFFF6F00),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+            double titleFontSize = 16.sp * scaleFactor;
+            double viewAllFontSize = 13.sp * scaleFactor;
+            double cardWidth = 144.w * scaleFactor;
+            double cardHeight = 164.h * scaleFactor;
+            double labelHeight = 22.h * scaleFactor;
+            double labelFontSize = 10.sp * scaleFactor;
 
-        SizedBox(height: 8.h),
-
-        // Scrollable card layout (starts from left edge)
-        SizedBox(
-          height: 384.h,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.zero,
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: index == 0 ? 0 : 8,
-                  right: index == items.length - 1 ? 16 : 0,
-                ),
-                child: Column(
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section title
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _ServiceCard(
-                      title: item['title1']!,
-                      imageAsset: item['image1']!,
+                    Text(
+                      'Saloon - Women',
+                      style: TextStyle(
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'SF Pro',
+                      ),
                     ),
-                    SizedBox(height: 8.h),
-                    _ServiceCard(
-                      title: item['title2']!,
-                      imageAsset: item['image2']!,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SalonServiceScreen(),
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 16.r * scaleFactor),
+                        child: Text(
+                          'View all >',
+                          style: TextStyle(
+                            fontSize: viewAllFontSize,
+                            color: const Color(0xFFFF6F00),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              );
-            },
-          ),
-        ),
-      ],
+
+                SizedBox(height: 8.h * scaleFactor),
+
+                // Cards scroll
+                SizedBox(
+                  height: (cardHeight * 2) + (8.h * scaleFactor), // two stacked cards
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.zero,
+                    itemCount: viewModel.saloonWomenItems.length,
+                    separatorBuilder: (_, __) => SizedBox(width: 8.w * scaleFactor),
+                    itemBuilder: (context, index) {
+                      final item = viewModel.saloonWomenItems[index];
+                      return Column(
+                        children: [
+                          _ServiceCard(
+                            title: item['title1']!,
+                            imageAsset: item['image1']!,
+                            width: cardWidth,
+                            height: cardHeight,
+                            labelHeight: labelHeight,
+                            labelFontSize: labelFontSize,
+                            scaleFactor: scaleFactor,
+                          ),
+                          SizedBox(height: 8.h * scaleFactor),
+                          _ServiceCard(
+                            title: item['title2']!,
+                            imageAsset: item['image2']!,
+                            width: cardWidth,
+                            height: cardHeight,
+                            labelHeight: labelHeight,
+                            labelFontSize: labelFontSize,
+                            scaleFactor: scaleFactor,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -105,17 +113,30 @@ class SaloonWomenSection extends StatelessWidget {
 class _ServiceCard extends StatelessWidget {
   final String title;
   final String imageAsset;
+  final double width;
+  final double height;
+  final double labelHeight;
+  final double labelFontSize;
+  final double scaleFactor;
 
-  const _ServiceCard({required this.title, required this.imageAsset});
+  const _ServiceCard({
+    required this.title,
+    required this.imageAsset,
+    required this.width,
+    required this.height,
+    required this.labelHeight,
+    required this.labelFontSize,
+    required this.scaleFactor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 144.w,
-      height: 164.h,
+      width: width,
+      height: height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Color(0xFFFFD9BE), width: 1.w),
+        borderRadius: BorderRadius.circular(10 * scaleFactor),
+        border: Border.all(color: const Color(0xFFFFD9BE), width: 1.w * scaleFactor),
         image: DecorationImage(
           image: AssetImage(imageAsset),
           fit: BoxFit.cover,
@@ -125,18 +146,19 @@ class _ServiceCard extends StatelessWidget {
         alignment: Alignment.bottomCenter,
         child: Container(
           width: double.infinity,
-          height: 22.h,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFD9BE),
+          height: labelHeight,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFD9BE),
             borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(10),
-              bottomRight: Radius.circular(10),
+              bottomLeft: Radius.circular(10.h * scaleFactor),
+              bottomRight: Radius.circular(10.h * scaleFactor),
             ),
           ),
           alignment: Alignment.center,
           child: Text(
             title,
-            style: TextStyle(fontSize: 10.sp,
+            style: TextStyle(
+              fontSize: labelFontSize,
               fontWeight: FontWeight.w600,
               fontFamily: 'Inter',
             ),

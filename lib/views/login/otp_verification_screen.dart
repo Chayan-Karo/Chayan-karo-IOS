@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
-import '../../widgets/location_popup_screen.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   @override
@@ -62,31 +61,34 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     super.dispose();
   }
 
-  Widget _buildOtpFields() {
+  Widget _buildOtpFields([double scaleFactor = 1.0]) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: List.generate(4, (index) {
         return SizedBox(
-          width: 55.w,
-          height: 55.h,
+          width: 55.w * scaleFactor,
+          height: 55.h * scaleFactor,
           child: TextField(
             controller: _otpControllers[index],
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             maxLength: 1,
             style: TextStyle(
-              fontSize: 22.sp,
+              fontSize: 22.sp * scaleFactor,
               fontFamily: 'SFProSemibold',
               color: Colors.black,
             ),
             decoration: InputDecoration(
               counterText: '',
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(12.r * scaleFactor),
               ),
               focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFFFF6F00), width: 2.w),
-                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(
+                  color: Color(0xFFFF6F00),
+                  width: 2.w * scaleFactor,
+                ),
+                borderRadius: BorderRadius.circular(12.r * scaleFactor),
               ),
             ),
             onChanged: (value) {
@@ -104,96 +106,202 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
-      ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(height: 20.h),
-            Center(
-              child: Text(
-                "Enter verification code",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24.sp,
-                  fontFamily: 'SFProDisplay',
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isTabletDevice = constraints.maxWidth > 600;
+        final double scaleFactor = isTabletDevice ? constraints.maxWidth / 411 : 1.0;
+
+        if (!isTabletDevice) {
+          // Phone UI remains unchanged
+          return Scaffold(
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              foregroundColor: Colors.black,
             ),
-            SizedBox(height: 8.h),
-            Center(
-              child: Text(
-                "We have sent you a 4 digit verification code on +91 $_phoneNumber",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontFamily: 'SFProRegular',
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-            SizedBox(height: 32.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
-              child: _buildOtpFields(),
-            ),
-            SizedBox(height: 16.h),
-            if (!_canResend)
-              Text(
-                "Resend available in $_secondsRemaining sec",
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontFamily: 'SFProRegular',
-                  color: Colors.grey[600],
-                ),
-              )
-            else
-              TextButton(
-                onPressed: () {
-                  _startTimer();
-                  // TODO: Resend OTP logic
-                },
-                child: Text(
-                  "Resend OTP",
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontFamily: 'SFProSemibold',
-                    color: Color(0xFFFF6F00),
+            body: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: 20.h),
+                  Center(
+                    child: Text(
+                      "Enter verification code",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24.sp,
+                        fontFamily: 'SFProDisplay',
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            Spacer(),
-            ElevatedButton(
-              onPressed: _loginWithOtp,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFFF6F00),
-                minimumSize: Size(double.infinity, 55.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-              ),
-              child: Text(
-                "Login",
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontFamily: 'SFProSemibold',
-                  color: Colors.white,
-                ),
+                  SizedBox(height: 8.h),
+                  Center(
+                    child: Text(
+                      "We have sent you a 4 digit verification code on +91 $_phoneNumber",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontFamily: 'SFProRegular',
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 32.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                    child: _buildOtpFields(),
+                  ),
+                  SizedBox(height: 16.h),
+                  if (!_canResend)
+                    Text(
+                      "Resend available in $_secondsRemaining sec",
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontFamily: 'SFProRegular',
+                        color: Colors.grey[600],
+                      ),
+                    )
+                  else
+                    TextButton(
+                      onPressed: () {
+                        _startTimer();
+                        // TODO: Resend OTP logic
+                      },
+                      child: Text(
+                        "Resend OTP",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontFamily: 'SFProSemibold',
+                          color: Color(0xFFFF6F00),
+                        ),
+                      ),
+                    ),
+                  Spacer(),
+                  ElevatedButton(
+                    onPressed: _loginWithOtp,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFFF6F00),
+                      minimumSize: Size(double.infinity, 55.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    child: Text(
+                      "Login",
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontFamily: 'SFProSemibold',
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 24.h),
+                ],
               ),
             ),
-            SizedBox(height: 24.h),
-          ],
-        ),
-      ),
+          );
+        } else {
+          // Tablet UI with scaling applied
+          return Scaffold(
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              foregroundColor: Colors.black,
+            ),
+            body: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 24.w * scaleFactor,
+                vertical: 20.h * scaleFactor,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: 20.h * scaleFactor),
+                  Center(
+                    child: Text(
+                      "Enter verification code",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24.sp * scaleFactor,
+                        fontFamily: 'SFProDisplay',
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 8.h * scaleFactor),
+                  Center(
+                    child: Text(
+                      "We have sent you a 4 digit verification code on +91 $_phoneNumber",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14.sp * scaleFactor,
+                        fontFamily: 'SFProRegular',
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 32.h * scaleFactor),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w * scaleFactor),
+                    child: _buildOtpFields(scaleFactor),
+                  ),
+                  SizedBox(height: 16.h * scaleFactor),
+                  if (!_canResend)
+                    Text(
+                      "Resend available in $_secondsRemaining sec",
+                      style: TextStyle(
+                        fontSize: 13.sp * scaleFactor,
+                        fontFamily: 'SFProRegular',
+                        color: Colors.grey[600],
+                      ),
+                    )
+                  else
+                    TextButton(
+                      onPressed: () {
+                        _startTimer();
+                        // TODO: Resend OTP logic
+                      },
+                      child: Text(
+                        "Resend OTP",
+                        style: TextStyle(
+                          fontSize: 14.sp * scaleFactor,
+                          fontFamily: 'SFProSemibold',
+                          color: Color(0xFFFF6F00),
+                        ),
+                      ),
+                    ),
+                  Spacer(),
+                  ElevatedButton(
+                    onPressed: _loginWithOtp,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFFF6F00),
+                      minimumSize: Size(double.infinity, 55.h * scaleFactor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r * scaleFactor),
+                      ),
+                    ),
+                    child: Text(
+                      "Login",
+                      style: TextStyle(
+                        fontSize: 16.sp * scaleFactor,
+                        fontFamily: 'SFProSemibold',
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 24.h * scaleFactor),
+                ],
+              ),
+            ),
+          );
+        }
+      },
     );
   }
 }

@@ -14,53 +14,60 @@ class ChayanHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const backgroundColor = Color(0xFFFFEEE0); // Your peach color
-
+    const backgroundColor = Color(0xFFFFEEE0); // Peach color
     final double statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: backgroundColor, // Needed for Android
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light, // For iOS
-      ),
-      child: Column(
-        children: [
-          // Fill status bar space with background color
-          Container(
-            height: statusBarHeight,
-            color: backgroundColor,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Tablet detection
+        final bool isTablet = constraints.maxWidth > 600;
+        final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
+
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.dark.copyWith(
+            statusBarColor: backgroundColor,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
           ),
-          Container(
-            height: 56.h,
-            color: backgroundColor,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: onBack ?? () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      title,
-                      style:  TextStyle(
-                        fontFamily: 'SFProDisplay',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18.sp,
+          child: Column(
+            children: [
+              Container(height: statusBarHeight, color: backgroundColor),
+              Container(
+                height: 56.h * scaleFactor,
+                color: backgroundColor,
+                padding: EdgeInsets.symmetric(horizontal: 12.w * scaleFactor),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: onBack ?? () => Navigator.pop(context),
+                      child: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 20 * scaleFactor,
                         color: Colors.black,
                       ),
                     ),
-                  ),
+                    SizedBox(width: 12.w * scaleFactor),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontFamily: 'SFProDisplay',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18.sp * scaleFactor,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 32.w * scaleFactor),
+                  ],
                 ),
-                SizedBox(width: 32.w), // Right side spacer to balance
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

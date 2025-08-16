@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../widgets/chayan_header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
 
@@ -46,137 +45,149 @@ class _HelpScreenState extends State<HelpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          ChayanHeader(title: 'Help', onBackTap: () {}),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 20.h),
-                  
-                  // Need Assistance title
-                  Padding(
-                    padding: EdgeInsets.only(left: 16.r),
-                    child: Text(
-                      'Need assistance?',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'SF Pro',
-                        color: Color(0xFF161616),
+    return LayoutBuilder(builder: (context, constraints) {
+      final bool isTablet = constraints.maxWidth > 600;
+      final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
+
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            ChayanHeader(title: 'Help', onBackTap: () {}),
+
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 20.h * scaleFactor),
+
+                    // Need Assistance title
+                    Padding(
+                      padding: EdgeInsets.only(left: 16.r * scaleFactor),
+                      child: Text(
+                        'Need assistance?',
+                        style: TextStyle(
+                          fontSize: 20.sp * scaleFactor,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'SF Pro',
+                          color: Color(0xFF161616),
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 12.h),
-                  
-                  // Call for Support button
-                  Container(
-                    height: 33.h,
-                    width: 160.w,
-                    margin: EdgeInsets.only(left: 16.r),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(5),
-                      color: Colors.white,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SvgPicture.asset('assets/icons/help.svg', height: 20.h, width: 20.w,color: Colors.black),
-                        SizedBox(width: 8.w),
-                        Text('Call For Support',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
-                            fontFamily: 'SF Pro',
+                    SizedBox(height: 12.h * scaleFactor),
+
+                    // Call for Support button
+                    Container(
+                      height: 33.h * scaleFactor,
+                      width: 160.w * scaleFactor,
+                      margin: EdgeInsets.only(left: 16.r * scaleFactor),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black.withOpacity(0.3)),
+                        borderRadius: BorderRadius.circular(5 * scaleFactor),
+                        color: Colors.white,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SvgPicture.asset(
+                            'assets/icons/help.svg',
+                            height: 20.h * scaleFactor,
+                            width: 20.w * scaleFactor,
+                            color: Colors.black,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 8.w * scaleFactor),
+                          Text(
+                            'Call For Support',
+                            style: TextStyle(
+                              fontSize: 14.sp * scaleFactor,
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'SF Pro',
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  SizedBox(height: 24.h),
+                    SizedBox(height: 24.h * scaleFactor),
 
-                  // FAQ Title (left-aligned, no padding)
-                  Padding(padding: EdgeInsets.only(left: 16.r),
-  child: Text(
-    'Frequently Asked Question(FAQ’s)',
-    style: TextStyle(
-      fontSize: 18.sp,
-      fontWeight: FontWeight.w600,
-      fontFamily: 'SF Pro',
-      color: Color(0xFF161616),
-    ),
-  ),
-),
+                    // FAQ Title
+                    Padding(
+                      padding: EdgeInsets.only(left: 16.r * scaleFactor),
+                      child: Text(
+                        'Frequently Asked Question(FAQ’s)',
+                        style: TextStyle(
+                          fontSize: 18.sp * scaleFactor,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'SF Pro',
+                          color: Color(0xFF161616),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8.h * scaleFactor),
+                    Divider(thickness: 6, color: Color(0x7FD9D9D9)),
 
-SizedBox(height: 8.h),
-Divider(thickness: 6, color: Color(0x7FD9D9D9)),
-
-                  // FAQ list
-                  Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 20),
-  child: ListView.separated(
-    shrinkWrap: true,
-    physics: NeverScrollableScrollPhysics(),
-    itemCount: faqs.length,
-    separatorBuilder: (_, __) => Divider(
-      thickness: 1,
-      color: Colors.black.withOpacity(0.56),
-    ),
-    itemBuilder: (context, index) {
-      return ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        initiallyExpanded: _isExpanded[index],
-        onExpansionChanged: (val) {
-          setState(() {
-            _isExpanded[index] = val;
-          });
-        },
-        trailing: Text(
-          _isExpanded[index] ? '✕' : '+',
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        title: Text(
-          faqs[index]['question']!,
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w500,
-            fontFamily: 'SF Pro',
-            color: Colors.black,
-          ),
-        ),
-        children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: 10.r),
-            child: Text(
-              faqs[index]['answer']!,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w400,
-                color: Colors.black87,
+                    // FAQ list
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w * scaleFactor),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: faqs.length,
+                        separatorBuilder: (_, __) => Divider(
+                          thickness: 1,
+                          color: Colors.black.withOpacity(0.56),
+                        ),
+                        itemBuilder: (context, index) {
+                          return ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            initiallyExpanded: _isExpanded[index],
+                            onExpansionChanged: (val) {
+                              setState(() {
+                                _isExpanded[index] = val;
+                              });
+                            },
+                            trailing: Text(
+                              _isExpanded[index] ? '✕' : '+',
+                              style: TextStyle(
+                                fontSize: 16.sp * scaleFactor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            title: Text(
+                              faqs[index]['question']!,
+                              style: TextStyle(
+                                fontSize: 16.sp * scaleFactor,
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'SF Pro',
+                                color: Colors.black,
+                              ),
+                            ),
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.only(bottom: 10.r * scaleFactor),
+                                child: Text(
+                                  faqs[index]['answer']!,
+                                  style: TextStyle(
+                                    fontSize: 14.sp * scaleFactor,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 20.h * scaleFactor),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
-    },
-  ),
-),
-                  SizedBox(height: 20.h),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    });
   }
 }

@@ -6,9 +6,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.chayankaro"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973" // <-- Hardcoded to fix plugin compatibility
+    namespace = "com.chayankaro.app" // Match your package name
+    compileSdk = 35 // Updated to 35 for plugin compatibility
+    ndkVersion = "27.0.12077973" // Keep for plugin compatibility
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -20,21 +20,27 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.chayankaro"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.chayankaro.app" // Permanent Play Store ID
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        targetSdk = 35 // Update targetSdk to 35 as per compileSdk
+        versionCode = 3 // Increment for each upload
+        versionName = "1.0.1"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("C:/Users/himan/my-release-key.jks")
+            storePassword = "Chayan2025!"  // Replace with your actual keystore password
+            keyAlias = "chayankaro_alias"
+            keyPassword = "Chayan2025!"        // Replace with your actual key password
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

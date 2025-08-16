@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -5,7 +6,7 @@ class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  _OnboardingScreenState createState() => _OnboardingScreenState();
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
@@ -24,6 +25,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     'Get Beauty parlor at your home & other Personal Grooming needs',
   ];
 
+  /// Consistent tablet detection
+  bool isTablet(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final widthDp = mq.size.width;
+    final heightDp = mq.size.height;
+    final diagonalDp = math.sqrt(math.pow(widthDp, 2) + math.pow(heightDp, 2));
+
+    final isLargeEnough = diagonalDp >= 1100; // ~7" at mdpi
+    final isWideEnough = mq.size.shortestSide >= 500;
+
+    debugPrint(
+      '[Onboarding Tablet Check] widthDp: $widthDp, heightDp: $heightDp, diagonalDp: $diagonalDp, '
+      'isLargeEnough: $isLargeEnough, isWideEnough: $isWideEnough, '
+      'tablet: ${isLargeEnough || isWideEnough}',
+    );
+
+    return isLargeEnough || isWideEnough;
+  }
+
   void _nextPage() {
     if (_currentPage < _images.length - 1) {
       _pageController.nextPage(
@@ -41,150 +61,297 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Responsive sizes based on screen width
-    double outerCircleSize = 0.8.sw; // 80% of screen width
-    double innerCircleSize = 0.7.sw; // 70% of screen width
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isTabletDevice = constraints.maxWidth > 600;
+        final double scaleFactor = isTabletDevice ? constraints.maxWidth / 411 : 1.0;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          PageView.builder(
-            controller: _pageController,
-            itemCount: _images.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.w),
-                child: Column(
-                  children: [
-                    SizedBox(height: 100.h),
-                    Center(
-                      child: Stack(
-                        alignment: Alignment.center,
+        if (!isTabletDevice) {
+          // Phone UI remains unchanged
+          final bool tablet = isTablet(context);
+
+          // Sizes change based on tablet detection
+          double outerCircleSize = tablet ? 0.6.sw : 0.8.sw;
+          double innerCircleSize = tablet ? 0.5.sw : 0.7.sw;
+
+          return Scaffold(
+            backgroundColor: Colors.white,
+            body: Stack(
+              children: [
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: _images.length,
+                  onPageChanged: (index) => setState(() => _currentPage = index),
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Column(
                         children: [
-                          Container(
-                            height: outerCircleSize,
-                            width: outerCircleSize,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF2F4FF),
-                              shape: BoxShape.circle,
+                          SizedBox(height: tablet ? 80.h : 100.h),
+                          Center(
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  height: outerCircleSize,
+                                  width: outerCircleSize,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF2F4FF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                Container(
+                                  height: innerCircleSize,
+                                  width: innerCircleSize,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE5EAFF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      _images[index],
+                                      width: innerCircleSize,
+                                      height: innerCircleSize,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Container(
-                            height: innerCircleSize,
-                            width: innerCircleSize,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE5EAFF),
-                              shape: BoxShape.circle,
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                _images[index],
-                                width: innerCircleSize,
-                                height: innerCircleSize,
-                                fit: BoxFit.cover,
-                              ),
+                          SizedBox(height: tablet ? 30.h : 40.h),
+                          Text(
+                            _titles[index],
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: const Color(0xFF1A1D1F),
+                              fontSize: tablet ? 34.sp : 28.sp,
+                              fontFamily: 'SF Pro Display',
+                              fontWeight: FontWeight.w700,
+                              height: 1.43,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    SizedBox(height: 40.h),
-                    Text(
-                      _titles[index],
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: const Color(0xFF1A1D1F),
-                        fontSize: 28.sp,
-                        fontFamily: 'SF Pro Display',
-                        fontWeight: FontWeight.w700,
-                        height: 1.43,
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              );
-            },
-          ),
 
-          // Skip Button
-          Positioned(
-            top: 50.h,
-            right: 24.w,
-            child: GestureDetector(
-              onTap: _skip,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE6EAFF),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  "Skip",
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontFamily: 'SFProSemibold',
-                    color: const Color(0xFFFF6F00),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Bottom Controls
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              minimum: EdgeInsets.only(bottom: 28.h),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: _nextPage,
+                // Skip Button
+                Positioned(
+                  top: 50.h,
+                  right: 24.w,
+                  child: GestureDetector(
+                    onTap: _skip,
                     child: Container(
-                      padding: EdgeInsets.all(16.r),
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFFFF6F00),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 8.h,
                       ),
-                      child: Icon(
-                        Icons.arrow_forward,
-                        color: Colors.white,
-                        size: 28.sp,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE6EAFF),
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Text(
+                        "Skip",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontFamily: 'SFProSemibold',
+                          color: const Color(0xFFFF6F00),
+                        ),
                       ),
                     ),
                   ),
-                  SizedBox(height: 12.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _images.length,
-                      (index) => buildDot(index),
+                ),
+
+                // Bottom Controls
+                Positioned(
+                  bottom: 0.h,
+                  left: 0.w,
+                  right: 0.w,
+                  child: SafeArea(
+                    minimum: EdgeInsets.only(bottom: 28.h),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: _nextPage,
+                          child: Container(
+                            padding: EdgeInsets.all(16.r),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFFF6F00),
+                            ),
+                            child: Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white,
+                              size: 28.sp,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            _images.length,
+                            (index) => buildDot(index),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
+          );
+        } else {
+          // Tablet UI with scaling applied
+          return Scaffold(
+            backgroundColor: Colors.white,
+            body: Stack(
+              children: [
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: _images.length,
+                  onPageChanged: (index) => setState(() => _currentPage = index),
+                  itemBuilder: (context, index) {
+                    // Use tablet sizing for larger screens
+                    double outerCircleSize = 0.6.sw * scaleFactor;
+                    double innerCircleSize = 0.5.sw * scaleFactor;
+
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
+                      child: Column(
+                        children: [
+                          SizedBox(height: 80.h * scaleFactor),
+                          Center(
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  height: outerCircleSize,
+                                  width: outerCircleSize,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF2F4FF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                Container(
+                                  height: innerCircleSize,
+                                  width: innerCircleSize,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE5EAFF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      _images[index],
+                                      width: innerCircleSize,
+                                      height: innerCircleSize,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 30.h * scaleFactor),
+                          Text(
+                            _titles[index],
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: const Color(0xFF1A1D1F),
+                              fontSize: 34.sp * scaleFactor,
+                              fontFamily: 'SF Pro Display',
+                              fontWeight: FontWeight.w700,
+                              height: 1.43,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+
+                // Skip Button - Scaled for tablets
+                Positioned(
+                  top: 50.h * scaleFactor,
+                  right: 24.w * scaleFactor,
+                  child: GestureDetector(
+                    onTap: _skip,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w * scaleFactor,
+                        vertical: 8.h * scaleFactor,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE6EAFF),
+                        borderRadius: BorderRadius.circular(20.r * scaleFactor),
+                      ),
+                      child: Text(
+                        "Skip",
+                        style: TextStyle(
+                          fontSize: 14.sp * scaleFactor,
+                          fontFamily: 'SFProSemibold',
+                          color: const Color(0xFFFF6F00),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Bottom Controls - Scaled for tablets
+                Positioned(
+                  bottom: 0.h,
+                  left: 0.w,
+                  right: 0.w,
+                  child: SafeArea(
+                    minimum: EdgeInsets.only(bottom: 28.h * scaleFactor),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: _nextPage,
+                          child: Container(
+                            padding: EdgeInsets.all(16.r * scaleFactor),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFFF6F00),
+                            ),
+                            child: Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white,
+                              size: 28.sp * scaleFactor,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 12.h * scaleFactor),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            _images.length,
+                            (index) => buildDot(index, scaleFactor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      },
     );
   }
 
-  Widget buildDot(int index) {
+  Widget buildDot(int index, [double scaleFactor = 1.0]) {
     return Container(
-      height: 8.h,
-      width: _currentPage == index ? 24.w : 8.w,
-      margin: EdgeInsets.symmetric(horizontal: 4.w),
+      height: 8.h * scaleFactor,
+      width: _currentPage == index ? 24.w * scaleFactor : 8.w * scaleFactor,
+      margin: EdgeInsets.symmetric(horizontal: 4.w * scaleFactor),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4.r),
+        borderRadius: BorderRadius.circular(4.r * scaleFactor),
         color: _currentPage == index
             ? const Color(0xFFFF6F00)
             : Colors.grey.shade300,

@@ -152,7 +152,7 @@ Widget build(BuildContext context) {
                     ),
                     SizedBox(height: 8.h),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      padding:  EdgeInsets.symmetric(horizontal: 32.w),
                       child: Text(
                         error!,
                         textAlign: TextAlign.center,
@@ -167,7 +167,7 @@ Widget build(BuildContext context) {
                       onPressed: _fetchLocation,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE47830),
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        padding:  EdgeInsets.symmetric(horizontal: 32.h, vertical: 12.h),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -225,13 +225,13 @@ Widget build(BuildContext context) {
             SafeArea(
               top: false,
               child: Container(
-                height: MediaQuery.of(context).size.height * 0.55,
+                height: MediaQuery.of(context).size.height * 0.55.h,
                 decoration: BoxDecoration(color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20.h)),
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
-                      .copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+                  padding:  EdgeInsets.symmetric(horizontal: 16.h, vertical: 12.h)
+                      .copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -363,7 +363,7 @@ Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => setState(() => selectedLabel = label),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding:  EdgeInsets.symmetric(horizontal: 16.h, vertical: 8.h),
         decoration: BoxDecoration(
           color: isSelected ? Color(0xFFE6EAFF) : Colors.white,
           border: Border.all(
