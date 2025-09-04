@@ -1,67 +1,148 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'dart:async';
+import 'package:get/get.dart';
+import '../../controllers/otp_controller.dart';
 
-class OtpVerificationScreen extends StatefulWidget {
-  @override
-  _OtpVerificationScreenState createState() => _OtpVerificationScreenState();
-}
-
-class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-  late Timer _timer;
-  int _secondsRemaining = 60;
-  bool _canResend = false;
-  String _phoneNumber = "";
-  List<TextEditingController> _otpControllers =
-      List.generate(4, (_) => TextEditingController());
+class OtpVerificationScreen extends StatelessWidget {
+  const OtpVerificationScreen({Key? key}) : super(key: key);
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args != null && args is String) {
-      _phoneNumber = args;
-    }
-    _startTimer();
+  Widget build(BuildContext context) {
+    // Initialize controller
+    final OtpController controller = Get.put(OtpController());
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isTabletDevice = constraints.maxWidth > 600;
+        final double scaleFactor = isTabletDevice ? constraints.maxWidth / 411 : 1.0;
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            foregroundColor: Colors.black,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () => Get.back(),
+            ),
+          ),
+          body: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: 24.w * scaleFactor,
+              vertical: 20.h * scaleFactor,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(height: 20.h * scaleFactor),
+                
+                // Title
+                Center(
+                  child: Text(
+                    "Enter verification code",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24.sp * scaleFactor,
+                      fontFamily: 'SFProDisplay',
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: 8.h * scaleFactor),
+                
+                // Subtitle with phone number
+                Center(
+                  child: Obx(() => Text(
+                    "We have sent you a 4 digit verification code on +91 ${controller.phoneNumber}",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14.sp * scaleFactor,
+                      fontFamily: 'SFProRegular',
+                      color: Colors.black87,
+                    ),
+                  )),
+                ),
+                
+                SizedBox(height: 32.h * scaleFactor),
+                
+                // OTP Input Fields
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w * scaleFactor),
+                  child: _buildOtpFields(controller, scaleFactor),
+                ),
+                
+                SizedBox(height: 16.h * scaleFactor),
+                
+                // Resend OTP / Timer
+                Obx(() => !controller.canResend
+                    ? Text(
+                        "Resend available in ${controller.secondsRemaining} sec",
+                        style: TextStyle(
+                          fontSize: 13.sp * scaleFactor,
+                          fontFamily: 'SFProRegular',
+                          color: Colors.grey[600],
+                        ),
+                      )
+                    : TextButton(
+                        onPressed: controller.resendOTP,
+                        child: Text(
+                          "Resend OTP",
+                          style: TextStyle(
+                            fontSize: 14.sp * scaleFactor,
+                            fontFamily: 'SFProSemibold',
+                            color: Color(0xFFFF6F00),
+                          ),
+                        ),
+                      )),
+                
+                Spacer(),
+                
+                // Login Button
+                Obx(() => ElevatedButton(
+                  onPressed: controller.isButtonEnabled && !controller.isLoading
+                      ? controller.verifyOTP
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: controller.isButtonEnabled
+                        ? Color(0xFFFF6F00)
+                        : Colors.grey[300],
+                    minimumSize: Size(double.infinity, 55.h * scaleFactor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r * scaleFactor),
+                    ),
+                  ),
+                  child: controller.isLoading
+                      ? SizedBox(
+                          width: 20.w * scaleFactor,
+                          height: 20.h * scaleFactor,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          "Verify & Login",
+                          style: TextStyle(
+                            fontSize: 16.sp * scaleFactor,
+                            fontFamily: 'SFProSemibold',
+                            color: controller.isButtonEnabled ? Colors.white : Colors.grey[600],
+                          ),
+                        ),
+                )),
+                
+                SizedBox(height: 24.h * scaleFactor),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
-  void _startTimer() {
-    _canResend = false;
-    _secondsRemaining = 60;
-    _timer = Timer.periodic(Duration(seconds: 1), (Timer timer) {
-      if (_secondsRemaining == 0) {
-        setState(() {
-          _canResend = true;
-        });
-        timer.cancel();
-      } else {
-        setState(() {
-          _secondsRemaining--;
-        });
-      }
-    });
-  }
-
-  void _loginWithOtp() {
-    String otp = _otpControllers.map((e) => e.text).join();
-    if (otp.length == 4) {
-      // TODO: Replace this with real login logic
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter the 4-digit OTP")),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    _otpControllers.forEach((c) => c.dispose());
-    super.dispose();
-  }
-
-  Widget _buildOtpFields([double scaleFactor = 1.0]) {
+  Widget _buildOtpFields(OtpController controller, double scaleFactor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: List.generate(4, (index) {
@@ -69,7 +150,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           width: 55.w * scaleFactor,
           height: 55.h * scaleFactor,
           child: TextField(
-            controller: _otpControllers[index],
+            controller: controller.otpControllers[index],
+            focusNode: controller.focusNodes[index],
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             maxLength: 1,
@@ -82,6 +164,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               counterText: '',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r * scaleFactor),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r * scaleFactor),
+                borderSide: BorderSide(color: Colors.grey[300]!),
               ),
               focusedBorder: OutlineInputBorder(
                 borderSide: BorderSide(
@@ -90,218 +177,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
                 borderRadius: BorderRadius.circular(12.r * scaleFactor),
               ),
+              filled: true,
+              fillColor: Colors.grey[50],
             ),
-            onChanged: (value) {
-              if (value.length == 1 && index < 3) {
-                FocusScope.of(context).nextFocus();
-              } else if (value.isEmpty && index > 0) {
-                FocusScope.of(context).previousFocus();
-              }
-            },
+            onChanged: (value) => controller.onOtpChanged(value, index),
           ),
         );
       }),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isTabletDevice = constraints.maxWidth > 600;
-        final double scaleFactor = isTabletDevice ? constraints.maxWidth / 411 : 1.0;
-
-        if (!isTabletDevice) {
-          // Phone UI remains unchanged
-          return Scaffold(
-            backgroundColor: Colors.white,
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              foregroundColor: Colors.black,
-            ),
-            body: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 20.h),
-                  Center(
-                    child: Text(
-                      "Enter verification code",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24.sp,
-                        fontFamily: 'SFProDisplay',
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Center(
-                    child: Text(
-                      "We have sent you a 4 digit verification code on +91 $_phoneNumber",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontFamily: 'SFProRegular',
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 32.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w),
-                    child: _buildOtpFields(),
-                  ),
-                  SizedBox(height: 16.h),
-                  if (!_canResend)
-                    Text(
-                      "Resend available in $_secondsRemaining sec",
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        fontFamily: 'SFProRegular',
-                        color: Colors.grey[600],
-                      ),
-                    )
-                  else
-                    TextButton(
-                      onPressed: () {
-                        _startTimer();
-                        // TODO: Resend OTP logic
-                      },
-                      child: Text(
-                        "Resend OTP",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontFamily: 'SFProSemibold',
-                          color: Color(0xFFFF6F00),
-                        ),
-                      ),
-                    ),
-                  Spacer(),
-                  ElevatedButton(
-                    onPressed: _loginWithOtp,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFFF6F00),
-                      minimumSize: Size(double.infinity, 55.h),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                    ),
-                    child: Text(
-                      "Login",
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontFamily: 'SFProSemibold',
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-                ],
-              ),
-            ),
-          );
-        } else {
-          // Tablet UI with scaling applied
-          return Scaffold(
-            backgroundColor: Colors.white,
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              foregroundColor: Colors.black,
-            ),
-            body: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 24.w * scaleFactor,
-                vertical: 20.h * scaleFactor,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 20.h * scaleFactor),
-                  Center(
-                    child: Text(
-                      "Enter verification code",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24.sp * scaleFactor,
-                        fontFamily: 'SFProDisplay',
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 8.h * scaleFactor),
-                  Center(
-                    child: Text(
-                      "We have sent you a 4 digit verification code on +91 $_phoneNumber",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14.sp * scaleFactor,
-                        fontFamily: 'SFProRegular',
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 32.h * scaleFactor),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w * scaleFactor),
-                    child: _buildOtpFields(scaleFactor),
-                  ),
-                  SizedBox(height: 16.h * scaleFactor),
-                  if (!_canResend)
-                    Text(
-                      "Resend available in $_secondsRemaining sec",
-                      style: TextStyle(
-                        fontSize: 13.sp * scaleFactor,
-                        fontFamily: 'SFProRegular',
-                        color: Colors.grey[600],
-                      ),
-                    )
-                  else
-                    TextButton(
-                      onPressed: () {
-                        _startTimer();
-                        // TODO: Resend OTP logic
-                      },
-                      child: Text(
-                        "Resend OTP",
-                        style: TextStyle(
-                          fontSize: 14.sp * scaleFactor,
-                          fontFamily: 'SFProSemibold',
-                          color: Color(0xFFFF6F00),
-                        ),
-                      ),
-                    ),
-                  Spacer(),
-                  ElevatedButton(
-                    onPressed: _loginWithOtp,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFFF6F00),
-                      minimumSize: Size(double.infinity, 55.h * scaleFactor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r * scaleFactor),
-                      ),
-                    ),
-                    child: Text(
-                      "Login",
-                      style: TextStyle(
-                        fontSize: 16.sp * scaleFactor,
-                        fontFamily: 'SFProSemibold',
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 24.h * scaleFactor),
-                ],
-              ),
-            ),
-          );
-        }
-      },
     );
   }
 }

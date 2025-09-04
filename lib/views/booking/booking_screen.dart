@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
 import '../chayan_sathi/chayan_sathi_screen.dart';
-import '../rewards/rewards_screen.dart';
+import '../rewards/ReferAndEarnScreen.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import 'upcoming_booking_screen.dart';
 import 'PreviousBookingScreen.dart';
@@ -31,7 +31,7 @@ class _BookingScreenState extends State<BookingScreen> {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
         break;
       case 3:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => RewardsScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ReferAndEarnScreen()));
         break;
       case 4:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ProfileScreen()));

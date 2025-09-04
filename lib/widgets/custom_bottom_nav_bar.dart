@@ -51,7 +51,7 @@ class CustomBottomNavBar extends StatelessWidget {
                 _buildNavItem('assets/icons/chayansathi.svg', 'Chayan Sathi', 0, scaleFactor),
                 _buildNavItem('assets/icons/bookings.svg', 'Bookings', 1, scaleFactor),
                 _buildCenterNavItem('assets/icons/chayankaro.jpg', 'Chayan Karo', 2, scaleFactor),
-                _buildNavItem('assets/icons/rewards.svg', 'Rewards', 3, scaleFactor),
+                _buildNavItem('assets/icons/refer.svg', 'Referral', 3, scaleFactor),
                 _buildNavItem('assets/icons/profile.svg', 'Profile', 4, scaleFactor),
               ],
             ),

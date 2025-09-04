@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import '../data/local/database.dart'; // Import for database access
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -12,6 +14,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _isLoading = false; // Add loading state
 
   final List<String> _images = [
     "assets/onboard1.webp",
@@ -51,12 +54,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.ease,
       );
     } else {
-      Navigator.pushReplacementNamed(context, '/login');
+      _completeOnboarding(); // Updated to use database method
     }
   }
 
   void _skip() {
-    Navigator.pushReplacementNamed(context, '/login');
+    _completeOnboarding(); // Updated to use database method
+  }
+
+  // Complete onboarding with database integration (NO SNACKBARS)
+  Future<void> _completeOnboarding() async {
+    if (_isLoading) return; // Prevent multiple taps
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get database instance
+      final database = Get.find<AppDatabase>();
+      
+      // Mark onboarding as completed
+      await database.markOnboardingComplete();
+      
+      print('✅ Onboarding completed successfully');
+      
+      // Navigate to login screen silently (NO SNACKBAR)
+      Get.offAllNamed('/login');
+      
+    } catch (e) {
+      print('❌ Error completing onboarding: $e');
+      
+      // Navigate anyway on error (NO ERROR SNACKBAR)
+      Get.offAllNamed('/login');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -137,34 +174,47 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                 ),
 
-                // Skip Button
+                // Skip Button with loading state
                 Positioned(
                   top: 50.h,
                   right: 24.w,
                   child: GestureDetector(
-                    onTap: _skip,
+                    onTap: _isLoading ? null : _skip,
                     child: Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: 16.w,
                         vertical: 8.h,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE6EAFF),
+                        color: _isLoading 
+                            ? const Color(0xFFE6EAFF).withOpacity(0.5)
+                            : const Color(0xFFE6EAFF),
                         borderRadius: BorderRadius.circular(20.r),
                       ),
-                      child: Text(
-                        "Skip",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontFamily: 'SFProSemibold',
-                          color: const Color(0xFFFF6F00),
-                        ),
-                      ),
+                      child: _isLoading
+                          ? SizedBox(
+                              width: 16.w,
+                              height: 16.h,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  const Color(0xFFFF6F00),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              "Skip",
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontFamily: 'SFProSemibold',
+                                color: const Color(0xFFFF6F00),
+                              ),
+                            ),
                     ),
                   ),
                 ),
 
-                // Bottom Controls
+                // Bottom Controls with loading state
                 Positioned(
                   bottom: 0.h,
                   left: 0.w,
@@ -175,18 +225,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         GestureDetector(
-                          onTap: _nextPage,
+                          onTap: _isLoading ? null : _nextPage,
                           child: Container(
                             padding: EdgeInsets.all(16.r),
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Color(0xFFFF6F00),
+                              color: _isLoading 
+                                  ? const Color(0xFFFF6F00).withOpacity(0.5)
+                                  : const Color(0xFFFF6F00),
                             ),
-                            child: Icon(
-                              Icons.arrow_forward,
-                              color: Colors.white,
-                              size: 28.sp,
-                            ),
+                            child: _isLoading
+                                ? SizedBox(
+                                    width: 28.sp,
+                                    height: 28.sp,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Icon(
+                                    _currentPage == _images.length - 1
+                                        ? Icons.check
+                                        : Icons.arrow_forward,
+                                    color: Colors.white,
+                                    size: 28.sp,
+                                  ),
                           ),
                         ),
                         SizedBox(height: 12.h),
@@ -273,34 +338,47 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                 ),
 
-                // Skip Button - Scaled for tablets
+                // Skip Button - Scaled for tablets with loading state
                 Positioned(
                   top: 50.h * scaleFactor,
                   right: 24.w * scaleFactor,
                   child: GestureDetector(
-                    onTap: _skip,
+                    onTap: _isLoading ? null : _skip,
                     child: Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: 16.w * scaleFactor,
                         vertical: 8.h * scaleFactor,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE6EAFF),
+                        color: _isLoading 
+                            ? const Color(0xFFE6EAFF).withOpacity(0.5)
+                            : const Color(0xFFE6EAFF),
                         borderRadius: BorderRadius.circular(20.r * scaleFactor),
                       ),
-                      child: Text(
-                        "Skip",
-                        style: TextStyle(
-                          fontSize: 14.sp * scaleFactor,
-                          fontFamily: 'SFProSemibold',
-                          color: const Color(0xFFFF6F00),
-                        ),
-                      ),
+                      child: _isLoading
+                          ? SizedBox(
+                              width: 16.w * scaleFactor,
+                              height: 16.h * scaleFactor,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  const Color(0xFFFF6F00),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              "Skip",
+                              style: TextStyle(
+                                fontSize: 14.sp * scaleFactor,
+                                fontFamily: 'SFProSemibold',
+                                color: const Color(0xFFFF6F00),
+                              ),
+                            ),
                     ),
                   ),
                 ),
 
-                // Bottom Controls - Scaled for tablets
+                // Bottom Controls - Scaled for tablets with loading state
                 Positioned(
                   bottom: 0.h,
                   left: 0.w,
@@ -311,18 +389,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         GestureDetector(
-                          onTap: _nextPage,
+                          onTap: _isLoading ? null : _nextPage,
                           child: Container(
                             padding: EdgeInsets.all(16.r * scaleFactor),
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Color(0xFFFF6F00),
+                              color: _isLoading 
+                                  ? const Color(0xFFFF6F00).withOpacity(0.5)
+                                  : const Color(0xFFFF6F00),
                             ),
-                            child: Icon(
-                              Icons.arrow_forward,
-                              color: Colors.white,
-                              size: 28.sp * scaleFactor,
-                            ),
+                            child: _isLoading
+                                ? SizedBox(
+                                    width: 28.sp * scaleFactor,
+                                    height: 28.sp * scaleFactor,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Icon(
+                                    _currentPage == _images.length - 1
+                                        ? Icons.check
+                                        : Icons.arrow_forward,
+                                    color: Colors.white,
+                                    size: 28.sp * scaleFactor,
+                                  ),
                           ),
                         ),
                         SizedBox(height: 12.h * scaleFactor),

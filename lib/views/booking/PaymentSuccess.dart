@@ -1,4 +1,4 @@
-import 'package:chayankaro/views/booking/booking_successful_screen.dart';
+import './booking_successful_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
 

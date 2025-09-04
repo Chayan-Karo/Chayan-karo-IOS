@@ -1,10 +1,164 @@
-import 'package:chayankaro/views/cart/cart_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
+import '../../models/home_repair_service.dart';
+import '../../controllers/home_repair_service_controller.dart';
+import '../../controllers/cart_controller.dart';
+import '../views/cart/cart_screen.dart';
+import '../views/booking/Summaryscreen.dart';
 
-class HomeRepairsScreen extends StatelessWidget {
+class HomeRepairsScreen extends StatefulWidget {
+  final String? scrollToServiceId;
+  const HomeRepairsScreen({Key? key, this.scrollToServiceId}) : super(key: key);
+
+  @override
+  _HomeRepairsScreenState createState() => _HomeRepairsScreenState();
+}
+
+class _HomeRepairsScreenState extends State<HomeRepairsScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final HomeRepairServiceController controller = Get.put(HomeRepairServiceController());
+  final CartController cartController = Get.find<CartController>();
+  
+  final RxSet<String> _currentPageInteractedServices = <String>{}.obs;
+  final RxList<String> _currentPageSelectedServices = <String>[].obs;
+
+  // Source page information - CONSTANTS
+  static const String SOURCE_PAGE = 'home_repairs_services';
+  static const String SOURCE_TITLE = 'Home & Repairs';
+
+  final Map<String, GlobalKey> _categoryKeys = {
+    'Electrician Services': GlobalKey(),
+    'Plumber Services': GlobalKey(),
+    'Carpentry Works': GlobalKey(),
+    'Wall Painting': GlobalKey(),
+    'Pest Control': GlobalKey(),
+    'Home Sanitization': GlobalKey(),
+  };
+
+  final Map<String, String> _serviceToCategory = {
+    'fan_light_installation': 'Electrician Services',
+    'power_socket_repair': 'Electrician Services',
+    'tap_faucet_installation': 'Plumber Services',
+    'drain_blockage_fix': 'Plumber Services',
+    'furniture_repair': 'Carpentry Works',
+    'wall_shelf_mounting': 'Carpentry Works',
+    'one_wall_painting': 'Wall Painting',
+    'touch_up_repainting': 'Wall Painting',
+  };
+
+  final Map<String, String> _categoryGridToSection = {
+    'Electrician Services': 'Electrician Services',
+    'Plumber Services': 'Plumber Services',
+    'Carpentry Works': 'Carpentry Works',
+    'Wall Painting': 'Wall Painting',
+    'Pest Control': 'Electrician Services',
+    'Home Sanitization': 'Plumber Services',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    print('🟢 HomeRepairsScreen initialized with scrollToServiceId: ${widget.scrollToServiceId}');
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.scrollToServiceId != null) {
+        _scrollToService(widget.scrollToServiceId!);
+      }
+    });
+  }
+
+  void _scrollToService(String serviceId) {
+    String? categoryName = _serviceToCategory[serviceId];
+    if (categoryName != null) {
+      _scrollToCategory(categoryName);
+    }
+  }
+
+  void _scrollToCategory(String categoryName) {
+    final key = _categoryKeys[categoryName];
+    if (key?.currentContext != null) {
+      Scrollable.ensureVisible(
+        key!.currentContext!,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+        alignment: 0.1,
+      );
+    }
+  }
+
+  void _onCategoryGridTap(String categoryTitle) {
+    String? targetSection = _categoryGridToSection[categoryTitle];
+    if (targetSection != null) {
+      _scrollToCategory(targetSection);
+    } else {
+      _scrollToCategory('Electrician Services');
+    }
+  }
+
+  // UPDATED: Add to cart with source information
+  void _addToCart(HomeRepairService service) {
+    cartController.addItem(
+      service,
+      sourcePage: SOURCE_PAGE,
+      sourceTitle: SOURCE_TITLE,
+    );
+    _currentPageInteractedServices.add(service.id);
+    if (!_currentPageSelectedServices.contains(service.id)) {
+      _currentPageSelectedServices.add(service.id);
+    }
+  }
+
+  void _incrementCart(String serviceId) {
+    cartController.incrementQuantity(serviceId);
+    if (!_currentPageSelectedServices.contains(serviceId)) {
+      _currentPageSelectedServices.add(serviceId);
+    }
+  }
+
+  void _decrementCart(String serviceId) {
+    cartController.decrementQuantity(serviceId);
+    if (cartController.getQuantity(serviceId) == 0) {
+      _currentPageSelectedServices.remove(serviceId);
+      _currentPageInteractedServices.remove(serviceId);
+    }
+  }
+
+  bool get _hasCurrentPageSelections {
+    return _currentPageSelectedServices.isNotEmpty && 
+           _currentPageSelectedServices.any((serviceId) => cartController.getQuantity(serviceId) > 0);
+  }
+
+  double get _currentPageTotal {
+    double total = 0;
+    for (String serviceId in _currentPageSelectedServices) {
+      final quantity = cartController.getQuantity(serviceId);
+      if (quantity > 0) {
+        final cartItem = cartController.cartItems.firstWhereOrNull((item) => item.id == serviceId);
+        if (cartItem != null) {
+          total += cartItem.price * quantity;
+        }
+      }
+    }
+    return total;
+  }
+
+  int get _currentPageItemCount {
+    int count = 0;
+    for (String serviceId in _currentPageSelectedServices) {
+      count += cartController.getQuantity(serviceId);
+    }
+    return count;
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -12,44 +166,45 @@ class HomeRepairsScreen extends StatelessWidget {
         final bool isTablet = constraints.maxWidth > 600;
         final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
-        // Set status bar color to match header
         SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-          statusBarColor: const Color(0xFFFFEEE0), // Matches header background
-          statusBarIconBrightness: Brightness.dark, // For dark icons
+          statusBarColor: const Color(0xFFFFEEE0),
+          statusBarIconBrightness: Brightness.dark,
         ));
 
         return Scaffold(
           backgroundColor: Colors.white,
           body: Stack(
             children: [
-              Padding(
-                padding: EdgeInsets.only(top: 74.r * scaleFactor), // 54 (header) + 20 (gap)
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    bottom: (120.r + MediaQuery.of(context).viewPadding.bottom + 8.h) * scaleFactor,
+              Column(
+                children: [
+                  SizedBox(height: 74.r * scaleFactor + MediaQuery.of(context).padding.top),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 12.h * scaleFactor),
+                          _buildTopBanner(scaleFactor),
+                          SizedBox(height: 12.h * scaleFactor),
+                          _buildSalonInfoBlock(scaleFactor),
+                          SizedBox(height: 16.h * scaleFactor),
+                          _buildDiscountCards(scaleFactor),
+                          SizedBox(height: 16.h * scaleFactor),
+                          _buildCustomPackageSection(scaleFactor),
+                          SizedBox(height: 16.h * scaleFactor),
+                          _buildCategoryGrid(scaleFactor),
+                          SizedBox(height: 16.h * scaleFactor),
+                          _buildServiceCards(scaleFactor),
+                          Obx(() => _hasCurrentPageSelections
+                              ? SizedBox(height: 100.h * scaleFactor)
+                              : SizedBox(height: 16.h * scaleFactor)),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 12.h * scaleFactor),
-                      _buildTopBanner(scaleFactor),
-                      SizedBox(height: 12.h * scaleFactor),
-                      _buildSalonInfoBlock(scaleFactor),
-                      SizedBox(height: 16.h * scaleFactor),
-                      _buildDiscountCards(scaleFactor),
-                      SizedBox(height: 16.h * scaleFactor),
-                      _buildCustomPackageSection(scaleFactor),
-                      SizedBox(height: 16.h * scaleFactor),
-                      _buildCategoryGrid(scaleFactor),
-                      SizedBox(height: 16.h * scaleFactor),
-                      _buildServiceCards(scaleFactor),
-                      SizedBox(height: 16.h * scaleFactor),
-                    ],
-                  ),
-                ),
+                ],
               ),
-
-              // Sticky header on top
               Positioned(
                 top: 0.r,
                 left: 0.r,
@@ -60,9 +215,7 @@ class HomeRepairsScreen extends StatelessWidget {
                   child: _buildHeader(context, scaleFactor),
                 ),
               ),
-
-              // Bottom bar
-              _buildBottomBar(scaleFactor),
+              Obx(() => _hasCurrentPageSelections ? _buildBottomBar(scaleFactor) : SizedBox()),
             ],
           ),
         );
@@ -97,7 +250,7 @@ class HomeRepairsScreen extends StatelessWidget {
             SizedBox(width: 8.w * scaleFactor),
             Expanded(
               child: Text(
-                "Home & Repairs",
+                SOURCE_TITLE, // Use the constant
                 style: TextStyle(
                   fontSize: 16.sp * scaleFactor,
                   fontWeight: FontWeight.w600,
@@ -108,20 +261,46 @@ class HomeRepairsScreen extends StatelessWidget {
               ),
             ),
             SizedBox(width: 8.w * scaleFactor),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => CartScreen()),
-                );
-              },
-              child: SvgPicture.asset(
-                'assets/icons/cart.svg',
-                width: 40.w * scaleFactor,
-                height: 40.h * scaleFactor,
-                color: Colors.black,
-              ),
-            ),
+            Obx(() => GestureDetector(
+                  onTap: () {
+                    Get.to(() => CartScreen());
+                  },
+                  child: Stack(
+                    children: [
+                      SvgPicture.asset(
+                        'assets/icons/cart.svg',
+                        width: 40.w * scaleFactor,
+                        height: 40.h * scaleFactor,
+                        color: Colors.black,
+                      ),
+                      if (cartController.cartItemCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(4 * scaleFactor),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10 * scaleFactor),
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 18 * scaleFactor,
+                              minHeight: 18 * scaleFactor,
+                            ),
+                            child: Text(
+                              '${cartController.cartItemCount}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.sp * scaleFactor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                )),
           ],
         ),
       ),
@@ -435,60 +614,63 @@ class HomeRepairsScreen extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               final item = categories[index];
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(
-                    color: const Color(0xFFFFD9BE),
-                    width: 1.w * scaleFactor,
-                  ),
-                  borderRadius: BorderRadius.circular(12 * scaleFactor),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0x33E47830),
-                      blurRadius: 6 * scaleFactor,
-                      offset: Offset(0, 4 * scaleFactor),
-                      spreadRadius: -2 * scaleFactor,
+              return GestureDetector(
+                onTap: () => _onCategoryGridTap(item['title']!),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(
+                      color: const Color(0xFFFFD9BE),
+                      width: 1.w * scaleFactor,
                     ),
-                  ],
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 8.h * scaleFactor,
-                    vertical: 12.h * scaleFactor,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 48.w * scaleFactor,
-                        height: 48.h * scaleFactor,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8 * scaleFactor),
-                          color: Colors.white,
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8 * scaleFactor),
-                          child: Image.asset(
-                            item['image']!,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 8.h * scaleFactor),
-                      Text(
-                        item['title']!,
-                        style: TextStyle(
-                          fontSize: 11.5.sp * scaleFactor,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                          height: 1.3,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    borderRadius: BorderRadius.circular(12 * scaleFactor),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0x33E47830),
+                        blurRadius: 6 * scaleFactor,
+                        offset: Offset(0, 4 * scaleFactor),
+                        spreadRadius: -2 * scaleFactor,
                       ),
                     ],
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 8.h * scaleFactor,
+                      vertical: 12.h * scaleFactor,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 48.w * scaleFactor,
+                          height: 48.h * scaleFactor,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8 * scaleFactor),
+                            color: Colors.white,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8 * scaleFactor),
+                            child: Image.asset(
+                              item['image']!,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8.h * scaleFactor),
+                        Text(
+                          item['title']!,
+                          style: TextStyle(
+                            fontSize: 11.5.sp * scaleFactor,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                            height: 1.3,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -499,461 +681,339 @@ class HomeRepairsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomBar(double scaleFactor) {
-    return Positioned(
-      bottom: 0.r,
-      left: 0.r,
-      right: 0.r,
-      child: Builder(
-        builder: (context) {
-          final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+  Widget _buildServiceCards(double scaleFactor) {
+    return Obx(() {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: controller.groupedServices.entries.map((entry) {
+            final String category = entry.key;
+            final List<HomeRepairService> services = entry.value;
+            return Container(
+              key: _categoryKeys[category],
+              margin: EdgeInsets.only(bottom: 24.h * scaleFactor),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(category,
+                      style: TextStyle(
+                          fontSize: 16.sp * scaleFactor,
+                          fontWeight: FontWeight.bold)),
+                  SizedBox(height: 12.h * scaleFactor),
+                  ...services.map((service) =>
+                      _buildServiceCard(service, scaleFactor, category)),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      );
+    });
+  }
 
-          return Container(
-            padding: EdgeInsets.fromLTRB(
-              16.h * scaleFactor,
-              12.h * scaleFactor,
-              16.h * scaleFactor,
-              ((bottomPadding > 0 ? bottomPadding : 16.h) + 8.h) * scaleFactor,
+  Widget _buildServiceCard(HomeRepairService service, double scaleFactor, String category) {
+    if (category == 'Wall Painting') {
+      return _buildWallPaintingCard(service, scaleFactor);
+    } else {
+      return _buildRegularServiceCard(service, scaleFactor);
+    }
+  }
+
+  Widget _buildRegularServiceCard(HomeRepairService service, double scaleFactor) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
+      padding: EdgeInsets.all(12.r * scaleFactor),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12 * scaleFactor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.05),
+            blurRadius: 10 * scaleFactor,
+            offset: Offset(0, 4 * scaleFactor),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8 * scaleFactor),
+            child: Image.asset(
+              service.image,
+              width: 60.w * scaleFactor,
+              height: 60.h * scaleFactor,
+              fit: BoxFit.cover,
             ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  offset: Offset(0, -2 * scaleFactor),
-                  blurRadius: 6 * scaleFactor,
-                )
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ),
+          SizedBox(width: 12.w * scaleFactor),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Text(service.title,
+                    style: TextStyle(
+                        fontSize: 14.sp * scaleFactor,
+                        fontWeight: FontWeight.bold)),
+                SizedBox(height: 4.h * scaleFactor),
+                Row(
                   children: [
-                    Text(
-                      "2 items",
-                      style: TextStyle(
-                        fontSize: 12.sp * scaleFactor,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    SizedBox(height: 4.h * scaleFactor),
-                    Text(
-                      "₹400",
-                      style: TextStyle(
-                        fontSize: 16.sp * scaleFactor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    SvgPicture.asset('assets/icons/star.svg',
+                        width: 18.w * scaleFactor, color: Colors.black),
+                    SizedBox(width: 4.w * scaleFactor),
+                    Text("${service.rating} | ${service.duration}",
+                        style: TextStyle(
+                            fontSize: 12.sp * scaleFactor,
+                            color: Colors.grey)),
                   ],
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 24.h * scaleFactor,
-                    vertical: 12.h * scaleFactor,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE47830),
-                    borderRadius: BorderRadius.circular(30 * scaleFactor),
-                  ),
-                  child: Text(
-                    "Add to Cart",
+                SizedBox(height: 4.h * scaleFactor),
+                Text(service.price,
                     style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14.sp * scaleFactor,
-                    ),
-                  ),
-                )
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp * scaleFactor)),
               ],
             ),
-          );
-        },
+          ),
+          _buildQuantitySelector(service, scaleFactor),
+        ],
       ),
     );
   }
 
-  Widget _buildServiceCards(double scaleFactor) {
-    final Map<String, List<Map<String, String>>> groupedServices = {
-      'Electrician Services': [
-        {
-          'image': 'assets/z2.webp',
-          'title': 'Fan/Light Installation',
-          'price': '₹249',
-          'rating': '4.76',
-          'duration': '30 mins',
-        },
-        {
-          'image': 'assets/z2.webp',
-          'title': 'Power Socket Repair',
-          'price': '₹199',
-          'rating': '4.78',
-          'duration': '25 mins',
-        },
-      ],
-      'Plumber Services': [
-        {
-          'image': 'assets/s1.webp',
-          'title': 'Tap/Faucet Installation',
-          'price': '₹199',
-          'rating': '4.74',
-          'duration': '30 mins',
-        },
-        {
-          'image': 'assets/s1.webp',
-          'title': 'Drain Blockage Fix',
-          'price': '₹299',
-          'rating': '4.79',
-          'duration': '40 mins',
-        },
-      ],
-      'Carpentry Works': [
-        {
-          'image': 'assets/s2.webp',
-          'title': 'Furniture Repair',
-          'price': '₹349',
-          'rating': '4.82',
-          'duration': '50 mins',
-        },
-        {
-          'image': 'assets/s2.webp',
-          'title': 'Wall Shelf Mounting',
-          'price': '₹299',
-          'rating': '4.80',
-          'duration': '45 mins',
-        },
-      ],
-      'Wall Painting': [
-        {
-          'image': 'assets/s3.webp',
-          'title': '1 Wall Painting',
-          'price': '₹699',
-          'originalPrice': '₹849',
-          'rating': '4.75',
-          'duration': '3 hrs',
-          'desc': '• Labor + basic paint\n• Up to 100 sq. ft.\n• Patch & polish included',
-        },
-        {
-          'image': 'assets/s3.webp',
-          'title': 'Touch-up & Repainting',
-          'price': '₹499',
-          'originalPrice': '₹699',
-          'rating': '4.78',
-          'duration': '2 hrs',
-          'desc': '• Covers patch cracks\n• Roller/brush finish\n• Paint cost separate',
-        },
-      ],
-    };
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+  Widget _buildWallPaintingCard(HomeRepairService service, double scaleFactor) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12 * scaleFactor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.05),
+            blurRadius: 10 * scaleFactor,
+            offset: Offset(0, 4 * scaleFactor),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: groupedServices.entries.map((entry) {
-          final String category = entry.key;
-          final List<Map<String, String>> services = entry.value;
+        children: [
+          ClipRRect(
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(12.h * scaleFactor)),
+            child: Image.asset(
+              service.image,
+              width: double.infinity,
+              height: 180.h * scaleFactor,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(12.r * scaleFactor),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                        child: Text(service.title,
+                            style: TextStyle(
+                                fontSize: 15.sp * scaleFactor,
+                                fontWeight: FontWeight.bold))),
+                    _buildQuantitySelector(service, scaleFactor),
+                  ],
+                ),
+                SizedBox(height: 4.h * scaleFactor),
+                Row(
+                  children: [
+                    SvgPicture.asset('assets/icons/star.svg',
+                        width: 18.w * scaleFactor, color: Colors.black),
+                    SizedBox(width: 4.w * scaleFactor),
+                    Text("${service.rating} | ${service.duration}",
+                        style: TextStyle(
+                            fontSize: 12.sp * scaleFactor, color: Colors.grey)),
+                  ],
+                ),
+                SizedBox(height: 6.h * scaleFactor),
+                Row(
+                  children: [
+                    Text(service.price,
+                        style: TextStyle(
+                            fontSize: 16.sp * scaleFactor,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black)),
+                    if (service.originalPrice != null) ...[
+                      SizedBox(width: 6.w * scaleFactor),
+                      Text(service.originalPrice!,
+                          style: TextStyle(
+                              fontSize: 14.sp * scaleFactor,
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey)),
+                    ],
+                  ],
+                ),
+                if (service.desc != null && service.desc!.isNotEmpty) ...[
+                  SizedBox(height: 8.h * scaleFactor),
+                  Text(
+                    service.desc!,
+                    style: TextStyle(
+                        fontSize: 12.sp * scaleFactor, color: Colors.black87),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildQuantitySelector(HomeRepairService service, double scaleFactor) {
+    return Obx(() {
+      final quantity = cartController.getQuantity(service.id);
+      final hasInteractedOnThisPage = _currentPageInteractedServices.contains(service.id);
+
+      if (quantity == 0 || !hasInteractedOnThisPage) {
+        return GestureDetector(
+          onTap: () => _addToCart(service),
+          child: Container(
+            width: 75.w * scaleFactor,
+            height: 29.h * scaleFactor,
+            decoration: ShapeDecoration(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8 * scaleFactor)),
+              shadows: [
+                BoxShadow(
+                  color: const Color(0x33000000),
+                  blurRadius: 4 * scaleFactor,
+                  offset: Offset(0, 1 * scaleFactor),
+                )
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add,
+                    size: 12 * scaleFactor, color: Color(0xFFE47830)),
+                SizedBox(width: 4.w * scaleFactor),
+                Text('Add',
+                    style: TextStyle(
+                        color: Color(0xFFE47830),
+                        fontSize: 14.sp * scaleFactor,
+                        fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+        );
+      } else {
+        return Container(
+          width: 85.w * scaleFactor,
+          height: 29.h * scaleFactor,
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8 * scaleFactor)),
+            shadows: [
+              BoxShadow(
+                color: const Color(0x33000000),
+                blurRadius: 4 * scaleFactor,
+                offset: Offset(0, 1 * scaleFactor),
+              )
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Text(
-                category,
-                style: TextStyle(
-                  fontSize: 16.sp * scaleFactor,
-                  fontWeight: FontWeight.bold,
+              GestureDetector(
+                onTap: () => _decrementCart(service.id),
+                child: Icon(Icons.remove,
+                    size: 14 * scaleFactor, color: Color(0xFFE47830)),
+              ),
+              Text('$quantity',
+                  style: TextStyle(
+                      color: Color(0xFFE47830),
+                      fontSize: 14.sp * scaleFactor,
+                      fontWeight: FontWeight.w600)),
+              GestureDetector(
+                onTap: () => _incrementCart(service.id),
+                child: Icon(Icons.add,
+                    size: 14 * scaleFactor, color: Color(0xFFE47830)),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  Widget _buildBottomBar(double scaleFactor) {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Obx(() {
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+            16.w * scaleFactor,
+            16.h * scaleFactor,
+            16.w * scaleFactor,
+            MediaQuery.of(context).viewPadding.bottom + 16.h * scaleFactor,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                offset: Offset(0, -2 * scaleFactor),
+                blurRadius: 8 * scaleFactor,
+                spreadRadius: 0,
+              )
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("$_currentPageItemCount items",
+                      style: TextStyle(
+                          fontSize: 12.sp * scaleFactor, color: Colors.grey)),
+                  SizedBox(height: 4.h * scaleFactor),
+                  Text("₹${_currentPageTotal.toInt()}",
+                      style: TextStyle(
+                          fontSize: 16.sp * scaleFactor,
+                          fontWeight: FontWeight.bold)),
+                ],
+              ),
+              GestureDetector(
+                onTap: () {
+                  Get.to(() => SummaryScreen(
+                    currentPageSelectedServices: _currentPageSelectedServices.toList(),
+                  ));
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 24.w * scaleFactor, 
+                      vertical: 12.h * scaleFactor),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFE47830),
+                    borderRadius: BorderRadius.circular(30 * scaleFactor),
+                  ),
+                  child: Text("Buy Now",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14.sp * scaleFactor)),
                 ),
               ),
-              SizedBox(height: 12.h * scaleFactor),
-              ...services.map((service) {
-                if (!category.toLowerCase().contains('wall')) {
-                  // Regular service cards with ADD button
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
-                    padding: EdgeInsets.all(12.r * scaleFactor),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12 * scaleFactor),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orange.withOpacity(0.05),
-                          blurRadius: 10 * scaleFactor,
-                          offset: Offset(0, 4 * scaleFactor),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8 * scaleFactor),
-                          child: Image.asset(
-                            service['image']!,
-                            width: 60.w * scaleFactor,
-                            height: 60.h * scaleFactor,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        SizedBox(width: 12.w * scaleFactor),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                service['title']!,
-                                style: TextStyle(
-                                  fontSize: 14.sp * scaleFactor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 4.h * scaleFactor),
-                              Row(
-                                children: [
-                                  SvgPicture.asset(
-                                    'assets/icons/star.svg',
-                                    width: 18.w * scaleFactor,
-                                    color: Colors.black,
-                                  ),
-                                  SizedBox(width: 4.w * scaleFactor),
-                                  Text(
-                                    "${service['rating']} | ${service['duration']}",
-                                    style: TextStyle(
-                                      fontSize: 12.sp * scaleFactor,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 4.h * scaleFactor),
-                              Text(
-                                service['price']!,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14.sp * scaleFactor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 75.w * scaleFactor,
-                          height: 29.h * scaleFactor,
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                left: 0.r,
-                                top: 0.r,
-                                child: Container(
-                                  width: 75.w * scaleFactor,
-                                  height: 29.h * scaleFactor,
-                                  decoration: ShapeDecoration(
-                                    color: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8 * scaleFactor),
-                                    ),
-                                    shadows: [
-                                      BoxShadow(
-                                        color: const Color(0x33000000),
-                                        blurRadius: 4 * scaleFactor,
-                                        offset: Offset(0, 1 * scaleFactor),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: 32.r * scaleFactor,
-                                top: 5.38.r * scaleFactor,
-                                child: Text(
-                                  'Add',
-                                  style: TextStyle(
-                                    color: const Color(0xFFE47830),
-                                    fontSize: 14.sp * scaleFactor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: 16.r * scaleFactor,
-                                top: 9.r * scaleFactor,
-                                child: SizedBox(
-                                  width: 12.w * scaleFactor,
-                                  height: 12.h * scaleFactor,
-                                  child: Icon(
-                                    Icons.add,
-                                    size: 12 * scaleFactor,
-                                    color: const Color(0xFFE47830),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                } else {
-                  // Wall Painting cards with full image and detailed layout
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12 * scaleFactor),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orange.withOpacity(0.05),
-                          blurRadius: 10 * scaleFactor,
-                          offset: Offset(0, 4 * scaleFactor),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(12.h * scaleFactor),
-                          ),
-                          child: Image.asset(
-                            service['image']!,
-                            width: double.infinity,
-                            height: 180.h * scaleFactor,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.all(12.r * scaleFactor),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Title & Add button in same row
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    service['title']!,
-                                    style: TextStyle(
-                                      fontSize: 15.sp * scaleFactor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 75.w * scaleFactor,
-                                    height: 29.h * scaleFactor,
-                                    child: Stack(
-                                      children: [
-                                        Positioned(
-                                          left: 0.r,
-                                          top: 0.r,
-                                          child: Container(
-                                            width: 75.w * scaleFactor,
-                                            height: 29.h * scaleFactor,
-                                            decoration: ShapeDecoration(
-                                              color: Colors.white,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8 * scaleFactor),
-                                              ),
-                                              shadows: [
-                                                BoxShadow(
-                                                  color: const Color(0x33000000),
-                                                  blurRadius: 4 * scaleFactor,
-                                                  offset: Offset(0, 1 * scaleFactor),
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          left: 32.r * scaleFactor,
-                                          top: 5.38.r * scaleFactor,
-                                          child: Text(
-                                            'Add',
-                                            style: TextStyle(
-                                              color: const Color(0xFFE47830),
-                                              fontSize: 14.sp * scaleFactor,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          left: 16.r * scaleFactor,
-                                          top: 9.r * scaleFactor,
-                                          child: SizedBox(
-                                            width: 12.w * scaleFactor,
-                                            height: 12.h * scaleFactor,
-                                            child: Icon(
-                                              Icons.add,
-                                              size: 12 * scaleFactor,
-                                              color: const Color(0xFFE47830),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 4.h * scaleFactor),
-                              Row(
-                                children: [
-                                  SvgPicture.asset(
-                                    'assets/icons/star.svg',
-                                    width: 18.w * scaleFactor,
-                                    color: Colors.black,
-                                  ),
-                                  SizedBox(width: 4.w * scaleFactor),
-                                  Text(
-                                    "${service['rating']} | ${service['duration']}",
-                                    style: TextStyle(
-                                      fontSize: 12.sp * scaleFactor,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 6.h * scaleFactor),
-                              Row(
-                                children: [
-                                  Text(
-                                    service['price']!,
-                                    style: TextStyle(
-                                      fontSize: 16.sp * scaleFactor,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  SizedBox(width: 6.w * scaleFactor),
-                                  Text(
-                                    service['originalPrice']!,
-                                    style: TextStyle(
-                                      fontSize: 14.sp * scaleFactor,
-                                      decoration: TextDecoration.lineThrough,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (service['desc'] != null && service['desc']!.isNotEmpty) ...[
-                                SizedBox(height: 8.h * scaleFactor),
-                                Text(
-                                  service['desc']!,
-                                  style: TextStyle(
-                                    fontSize: 12.sp * scaleFactor,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              }).toList(),
             ],
-          );
-        }).toList(),
-      ),
+          ),
+        );
+      }),
     );
   }
 }

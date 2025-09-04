@@ -101,6 +101,16 @@ class HomeServiceSection extends StatelessWidget {
                                   child: Image.asset(
                                     item['images'][i],
                                     fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey[200],
+                                        child: Icon(
+                                          Icons.image_not_supported,
+                                          size: 30 * paddingScale,
+                                          color: Colors.grey,
+                                        ),
+                                      );
+                                    },
                                   ),
                                 );
                               },

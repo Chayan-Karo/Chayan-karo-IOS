@@ -1,4 +1,4 @@
-import 'package:chayankaro/views/booking/PaymentSuccess.dart';
+import './PaymentSuccess.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/chayan_header.dart';

@@ -4,19 +4,19 @@ import 'package:provider/provider.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
 import '../booking/booking_screen.dart';
-import '../rewards/rewards_screen.dart';
+import '../rewards/ReferAndEarnScreen.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../widgets/chayan_header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../viewmodels/saathi_view_model.dart';
+import '../../controllers/saathi_controller.dart';
 
 class ChayanSathiScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => SaathiViewModel(),
-      child: Consumer<SaathiViewModel>(
-        builder: (context, viewModel, child) {
+      create: (_) => SaathiController(),
+      child: Consumer<SaathiController>(
+        builder: (context, controller, child) {
           return LayoutBuilder(
             builder: (context, constraints) {
               final bool isTablet = constraints.maxWidth > 600;
@@ -35,30 +35,30 @@ class ChayanSathiScreen extends StatelessWidget {
                     /// Grid content
                     Expanded(
                       child: GridView.builder(
-                        padding: EdgeInsets.fromLTRB(
-                          16.h * scaleFactor,
-                          16.h * scaleFactor,
-                          16.h * scaleFactor,
-                          90.h * scaleFactor,
-                        ),
-                        itemCount: viewModel.saathiList.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12 * scaleFactor,
-                          mainAxisSpacing: 12 * scaleFactor,
-                          childAspectRatio: 0.68,
-                        ),
-                        itemBuilder: (context, index) {
-                          final saathi = viewModel.saathiList[index];
-                          return _buildSaathiCard(saathi, scaleFactor);
-                        },
-                      ),
+                              padding: EdgeInsets.fromLTRB(
+                                16.h * scaleFactor,
+                                16.h * scaleFactor,
+                                16.h * scaleFactor,
+                                90.h * scaleFactor,
+                              ),
+                              itemCount: controller.saathiList.length,
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12 * scaleFactor,
+                                mainAxisSpacing: 12 * scaleFactor,
+                                childAspectRatio: 0.68,
+                              ),
+                              itemBuilder: (context, index) {
+                                final saathi = controller.saathiList[index];
+                                return _buildSaathiCard(saathi, scaleFactor);
+                              },
+                            ),
                     ),
                   ],
                 ),
                 bottomNavigationBar: CustomBottomNavBar(
-                  selectedIndex: viewModel.selectedIndex,
-                  onItemTapped: (index) => _onItemTapped(context, viewModel, index),
+                  selectedIndex: controller.selectedIndex,
+                  onItemTapped: (index) => _onItemTapped(context, controller, index),
                 ),
               );
             },
@@ -168,8 +168,8 @@ class ChayanSathiScreen extends StatelessWidget {
     );
   }
 
-  void _onItemTapped(BuildContext context, SaathiViewModel viewModel, int index) {
-    viewModel.onItemTapped(index);
+  void _onItemTapped(BuildContext context, SaathiController controller, int index) {
+    controller.onItemTapped(index);
     
     switch (index) {
       case 1:
@@ -179,7 +179,7 @@ class ChayanSathiScreen extends StatelessWidget {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
         break;
       case 3:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => RewardsScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ReferAndEarnScreen()));
         break;
       case 4:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
