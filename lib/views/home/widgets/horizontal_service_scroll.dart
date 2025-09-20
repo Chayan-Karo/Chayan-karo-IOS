@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-
 import '../../../controllers/home_controller.dart';
 
 class HorizontalServiceScroll extends StatelessWidget {
@@ -31,7 +30,7 @@ class HorizontalServiceScroll extends StatelessWidget {
           // Handle loading state
           if (homeController.isLoading && services.isEmpty) {
             return SizedBox(
-              height: 240.h * scaleFactor,
+              height: 200.h * scaleFactor,
               child: const Center(
                 child: CircularProgressIndicator(
                   color: Color(0xFFFF6F00),
@@ -43,7 +42,7 @@ class HorizontalServiceScroll extends StatelessWidget {
           // Handle empty state
           if (services.isEmpty) {
             return SizedBox(
-              height: 240.h * scaleFactor,
+              height: 200.h * scaleFactor,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -67,22 +66,28 @@ class HorizontalServiceScroll extends StatelessWidget {
             );
           }
 
-          // Display services
-          return SizedBox(
-            height: 240.h * scaleFactor,
+          // ✅ FIXED: Use a more precise height calculation to minimize padding
+          double contentHeight = imageHeight + 
+                                8.h * scaleFactor + // after image
+                                (titleFontSize * 1.33 * 2) + // title space (2 lines)
+                                4.h * scaleFactor + // after title
+                                (ratingFontSize * 1.2) + // rating height
+                                4.h * scaleFactor + // after rating
+                                (priceFontSize * 1.2) + // price height
+                                5.h * scaleFactor; // buffer to prevent overflow
+
+          return Container(
+            height: contentHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              // ✅ FIXED: Removed left padding, kept only right padding
-              padding: EdgeInsets.only(
-                right: 16.w * scaleFactor,
-              ),
+              // ✅ FIXED: Zero padding to eliminate any extra space
+              padding: EdgeInsets.zero,
               itemCount: services.length,
               separatorBuilder: (_, __) => SizedBox(width: 12.w * scaleFactor),
               itemBuilder: (context, index) {
                 final service = services[index];
                 
-                // ✅ FIXED: Removed GestureDetector and onTap functionality
-                return Container(
+                return SizedBox(
                   width: imageWidth,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

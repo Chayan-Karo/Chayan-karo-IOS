@@ -528,6 +528,221 @@ Future<void> insertCartItem(cart_models.CartItem item) async {
       clearCart(),
     ]);
   }
+// Add these methods to your existing AppDatabase class
+
+/// Save authentication token
+Future<void> saveAuthToken(String token) async {
+  try {
+    await into(authDataTable).insertOnConflictUpdate(
+      AuthDataTableCompanion(
+        key: const Value('auth_token'),
+        value: Value(token),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+    print('✅ Auth token saved');
+  } catch (e) {
+    print('❌ Error saving auth token: $e');
+    throw e;
+  }
+}
+
+/// Get stored authentication token
+Future<String?> getAuthToken() async {
+  try {
+    final query = select(authDataTable)..where((auth) => auth.key.equals('auth_token'));
+    final result = await query.getSingleOrNull();
+    return result?.value;
+  } catch (e) {
+    print('❌ Error getting auth token: $e');
+    return null;
+  }
+}
+
+/// Save user data as JSON-like key-value pairs
+Future<void> saveUserData(Map<String, dynamic> userData) async {
+  try {
+    // Save each user data field as a separate auth data entry
+    await batch((batch) {
+      for (final entry in userData.entries) {
+        batch.insert(
+          authDataTable,
+          AuthDataTableCompanion(
+            key: Value('user_${entry.key}'),
+            value: Value(entry.value.toString()),
+            updatedAt: Value(DateTime.now()),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
+    print('✅ User data saved: ${userData.keys.join(', ')}');
+  } catch (e) {
+    print('❌ Error saving user data: $e');
+    throw e;
+  }
+}
+
+/// Get all user data
+Future<Map<String, dynamic>> getUserData() async {
+  try {
+    final query = select(authDataTable)..where((auth) => auth.key.like('user_%'));
+    final results = await query.get();
+    
+    final userData = <String, dynamic>{};
+    for (final result in results) {
+      // Remove 'user_' prefix from key
+      final key = result.key.substring(5);
+      userData[key] = result.value;
+    }
+    
+    return userData;
+  } catch (e) {
+    print('❌ Error getting user data: $e');
+    return {};
+  }
+}
+
+/// Save user login status (simplified)
+Future<void> saveUserLoginStatus(bool isLoggedIn) async {
+  try {
+    await saveUserPreference('is_logged_in', isLoggedIn.toString());
+    await saveUserPreference('login_timestamp', DateTime.now().toIso8601String());
+    print('✅ User login status saved: $isLoggedIn');
+  } catch (e) {
+    print('❌ Error saving user login status: $e');
+    throw e;
+  }
+}
+
+/// Clear all user and auth data (comprehensive logout)
+Future<void> clearUserAndAuthData() async {
+  try {
+    // Clear auth data table
+    await delete(authDataTable).go();
+    
+    // Clear auth-related preferences
+    final authKeys = [
+      'is_logged_in',
+      'user_id', 
+      'user_token',
+      'user_phone',
+      'user_name',
+      'login_timestamp'
+    ];
+    
+    for (String key in authKeys) {
+      await removeUserPreference(key);
+    }
+    
+    print('✅ All user and auth data cleared');
+  } catch (e) {
+    print('❌ Error clearing user and auth data: $e');
+    throw e;
+  }
+}
+
+/// Check if refresh token exists and is valid
+Future<bool> hasValidRefreshToken() async {
+  try {
+    final query = select(authDataTable)..where((auth) => auth.key.equals('refresh_token'));
+    final result = await query.getSingleOrNull();
+    
+    if (result == null) return false;
+    
+    // You can add expiration logic here if needed
+    return result.value.isNotEmpty;
+  } catch (e) {
+    print('❌ Error checking refresh token: $e');
+    return false;
+  }
+}
+
+/// Save refresh token
+Future<void> saveRefreshToken(String refreshToken) async {
+  try {
+    await into(authDataTable).insertOnConflictUpdate(
+      AuthDataTableCompanion(
+        key: const Value('refresh_token'),
+        value: Value(refreshToken),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+    print('✅ Refresh token saved');
+  } catch (e) {
+    print('❌ Error saving refresh token: $e');
+    throw e;
+  }
+}
+
+/// Get refresh token
+Future<String?> getRefreshToken() async {
+  try {
+    final query = select(authDataTable)..where((auth) => auth.key.equals('refresh_token'));
+    final result = await query.getSingleOrNull();
+    return result?.value;
+  } catch (e) {
+    print('❌ Error getting refresh token: $e');
+    return null;
+  }
+}
+
+/// Enhanced session validation with token check
+Future<bool> isSessionValidEnhanced() async {
+  try {
+    // Check basic login status
+    final isLoggedIn = await isUserLoggedIn();
+    if (!isLoggedIn) return false;
+    
+    // Check if we have a valid token
+    final token = await getAuthToken();
+    if (token == null || token.isEmpty) return false;
+    
+    // Check timestamp-based expiration
+    final loginTimestamp = await getUserPreference('login_timestamp');
+    if (loginTimestamp == null) return false;
+    
+    final loginTime = DateTime.parse(loginTimestamp);
+    final now = DateTime.now();
+    final daysDifference = now.difference(loginTime).inDays;
+    
+    // Session expires after 30 days
+    return daysDifference < 30;
+  } catch (e) {
+    print('❌ Error checking enhanced session validity: $e');
+    return false;
+  }
+}
+
+/// Get complete authentication state
+Future<Map<String, dynamic>> getAuthenticationState() async {
+  try {
+    final isLoggedIn = await isUserLoggedIn();
+    final isSessionValid = await isSessionValidEnhanced();
+    final userData = await getUserData();
+    final token = await getAuthToken();
+    final refreshToken = await getRefreshToken();
+    
+    return {
+      'isLoggedIn': isLoggedIn,
+      'isSessionValid': isSessionValid,
+      'hasToken': token != null && token.isNotEmpty,
+      'hasRefreshToken': refreshToken != null && refreshToken.isNotEmpty,
+      'userData': userData,
+      'tokenExists': token != null,
+    };
+  } catch (e) {
+    print('❌ Error getting authentication state: $e');
+    return {
+      'isLoggedIn': false,
+      'isSessionValid': false,
+      'hasToken': false,
+      'hasRefreshToken': false,
+      'userData': {},
+      'tokenExists': false,
+    };
+  }
+}
 
   // Database Stats for Debugging
   Future<Map<String, int>> getDatabaseStats() async {

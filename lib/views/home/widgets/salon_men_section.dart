@@ -16,7 +16,7 @@ class SalonMenSection extends StatelessWidget {
         double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
         double titleFontSize = 16.sp * scaleFactor;
-        double viewAllFontSize = 12.sp * scaleFactor;
+        double viewAllFontSize = 14.sp * scaleFactor;
         double cardWidth = 144.w * scaleFactor;
         double cardHeight = 164.h * scaleFactor;
         double labelHeight = 22.h * scaleFactor;
@@ -64,8 +64,9 @@ class SalonMenSection extends StatelessWidget {
                     child: Text(
                       "View All >",
                       style: TextStyle(
-                        color: const Color(0xFFFF6F00),
-                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFFA9441),
+                        fontFamily: 'SF Pro',
+                        fontWeight: FontWeight.w700,
                         fontSize: viewAllFontSize,
                       ),
                     ),

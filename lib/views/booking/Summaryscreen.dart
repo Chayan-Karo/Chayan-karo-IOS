@@ -6,29 +6,57 @@ import '../../controllers/cart_controller.dart';
 import '../../models/cart_models.dart';
 import 'showReschedulePopup.dart';
 import 'showScheduleAddressPopup.dart';
+import '../chayan_sathi/chayan_sathi_screen.dart';
+import 'PaymentScreen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-class SummaryScreen extends StatelessWidget {
+
+class SummaryScreen extends StatefulWidget {
   final List<String>? currentPageSelectedServices;
-  
+  final String initialAddress;
+  final String initialTimeSlot;
+  final Map<String, dynamic>? initialSaathi;
+
   const SummaryScreen({
-    super.key,
+    Key? key,
     this.currentPageSelectedServices,
-  });
+    this.initialAddress = 'Default Address',
+    this.initialTimeSlot = 'Select time slot',
+    this.initialSaathi,
+  }) : super(key: key);
+
+  @override
+  State<SummaryScreen> createState() => _SummaryScreenState();
+}
+
+class _SummaryScreenState extends State<SummaryScreen> {
+  late String address;
+  late String timeSlot;
+  late Map<String, dynamic>? saathi;
+
+  // Control to show/hide the editable fields below buttons
+  bool _showEditableFields = false;
+
+  @override
+  void initState() {
+    super.initState();
+    address = "Static address 123, City XYZ"; // static address always
+    timeSlot = widget.initialTimeSlot;
+    saathi = widget.initialSaathi;
+    _showEditableFields = false; // initially hide editable rows
+  }
 
   @override
   Widget build(BuildContext context) {
     final CartController cartController = Get.find<CartController>();
-    
+
     return LayoutBuilder(builder: (context, constraints) {
       final bool isTablet = constraints.maxWidth > 600;
       final double scale = isTablet ? constraints.maxWidth / 411 : 1.0;
 
       return Obx(() {
-        // Get only current page selected services
         final currentPageItems = _getCurrentPageCartItems(cartController);
         final hasCurrentPageItems = currentPageItems.isNotEmpty;
-        
-        // Calculate dynamic values using only current page items
         final itemTotal = _calculateCurrentPageTotal(currentPageItems);
         final discount = _calculateDiscount(itemTotal);
         final serviceFee = _calculateServiceFee(_getCurrentPageItemCount(currentPageItems));
@@ -43,18 +71,173 @@ class SummaryScreen extends StatelessWidget {
                   children: [
                     ChayanHeader(
                       title: 'Summary',
-                      onBackTap: () {
-                        Navigator.pop(context);
-                      },
+                      onBackTap: () => Navigator.pop(context),
                     ),
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 16.h * scale, vertical: 8.h * scale),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 16.h * scale, vertical: 8.h * scale),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Show only current page selected services
+                          if (hasCurrentPageItems && _showEditableFields) ...[
+  Container(
+    padding: EdgeInsets.all(16.r * scale),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20 * scale),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.07),
+          blurRadius: 8 * scale,
+          offset: Offset(0, 2 * scale),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Address row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SvgPicture.asset(
+              'assets/icons/home.svg',
+              width: 22 * scale,
+              height: 22 * scale,
+              color: Colors.black,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Home",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14.sp * scale,
+                      color: Colors.black,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    address,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w400,
+                      fontSize: 13.sp * scale,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            InkWell(
+              onTap: () async {
+                final newAddress = await showScheduleAddressPopup(context);
+                if (newAddress != null) {
+                  setState(() {
+                    address = newAddress;
+                  });
+                }
+              },
+              child: Icon(
+                Icons.edit,
+                size: 18 * scale,
+                color: const Color(0xFFE47830),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 14.h * scale),
+        // Time row
+        Row(
+          children: [
+            SvgPicture.asset(
+              'assets/icons/calendar.svg',
+              width: 22 * scale,
+              height: 22 * scale,
+              color: Colors.black,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                timeSlot,
+                style: TextStyle(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 14.sp * scale,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            InkWell(
+              onTap: () async {
+                final newTime = await showReschedulePopup(context, initialSlot: timeSlot);
+                if (newTime != null) {
+                  setState(() {
+                    timeSlot = newTime;
+                  });
+                }
+              },
+              child: Icon(
+                Icons.edit,
+                size: 18 * scale,
+                color: const Color(0xFFE47830),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 14.h * scale),
+        // Saathi row
+        Row(
+          children: [
+            SvgPicture.asset(
+              'assets/icons/chayansathi.svg',
+              width: 22 * scale,
+              height: 22 * scale,
+              color: Colors.black,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                saathi == null
+                    ? 'Select Chayan Saathi'
+                    : "${saathi!['name']}, (${saathi!['jobs'] ?? ''}+ work), ${saathi!['rating'] ?? ''} rating",
+                style: TextStyle(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 14.sp * scale,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            InkWell(
+              onTap: () async {
+                final selectedSaathi = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ChayanSathiScreen()),
+                );
+                if (selectedSaathi != null) {
+                  setState(() {
+                    saathi = selectedSaathi;
+                  });
+                }
+              },
+              child: Icon(
+                Icons.edit,
+                size: 18 * scale,
+                color: const Color(0xFFE47830),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  ),
+  SizedBox(height: 18.h * scale),
+],
+
+
+                            // Selected Services section (unchanged)
                             if (hasCurrentPageItems) ...[
                               Container(
                                 padding: EdgeInsets.all(16.r * scale),
@@ -68,21 +251,18 @@ class SummaryScreen extends StatelessWidget {
                                     Text(
                                       'Selected Services (${_getCurrentPageItemCount(currentPageItems)} items)',
                                       style: TextStyle(
-                                        fontSize: 16.sp * scale,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                          fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
                                     ),
                                     SizedBox(height: 12.h * scale),
-                                    // Show only current page selected services
-                                    ...currentPageItems.map((cartItem) => 
-                                      _buildServiceItem(cartItem, scale)
-                                    ).toList(),
+                                    ...currentPageItems
+                                        .map((cartItem) => _buildServiceItem(cartItem, scale))
+                                        .toList(),
                                   ],
                                 ),
                               ),
                               SizedBox(height: 20.h * scale),
-                            ] else ...[
-                              // Empty selection message
+                            ],
+                            if (!hasCurrentPageItems) ...[
                               Container(
                                 padding: EdgeInsets.all(32.r * scale),
                                 decoration: BoxDecoration(
@@ -92,24 +272,21 @@ class SummaryScreen extends StatelessWidget {
                                 child: Center(
                                   child: Column(
                                     children: [
-                                      Icon(Icons.shopping_cart_outlined, 
+                                      Icon(Icons.shopping_cart_outlined,
                                           size: 64 * scale, color: Colors.grey),
                                       SizedBox(height: 16.h * scale),
                                       Text(
                                         'No services selected from this page',
                                         style: TextStyle(
-                                          fontSize: 16.sp * scale,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[600],
-                                        ),
+                                            fontSize: 16.sp * scale,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey[600]),
                                       ),
                                       SizedBox(height: 8.h * scale),
                                       Text(
                                         'Go back and select services to proceed',
                                         style: TextStyle(
-                                          fontSize: 14.sp * scale,
-                                          color: Colors.grey[500],
-                                        ),
+                                            fontSize: 14.sp * scale, color: Colors.grey[500]),
                                       ),
                                     ],
                                   ),
@@ -118,13 +295,11 @@ class SummaryScreen extends StatelessWidget {
                               SizedBox(height: 20.h * scale),
                             ],
 
-                            // Frequently Added Together
+                            // Frequently Added Together (unchanged)
                             Text(
                               'Frequently added together',
-                              style: TextStyle(
-                                fontSize: 16.sp * scale,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style:
+                                  TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
                             ),
                             SizedBox(height: 12.h * scale),
                             SizedBox(
@@ -132,46 +307,41 @@ class SummaryScreen extends StatelessWidget {
                               child: ListView(
                                 scrollDirection: Axis.horizontal,
                                 children: [
-                                  buildAddCard(
-                                      'assets/saloon_manicure.webp', 'Manicure', '₹499', scale),
-                                  buildAddCard(
-                                      'assets/saloon_pedicure.webp', 'Pedicure', '₹499', scale),
-                                  buildAddCard(
-                                      'assets/saloon_threading.webp', 'Threading', '₹49', scale),
+                                  buildAddCard('assets/saloon_manicure.webp', 'Manicure', '₹499',
+                                      scale),
+                                  buildAddCard('assets/saloon_pedicure.webp', 'Pedicure', '₹499',
+                                      scale),
+                                  buildAddCard('assets/saloon_threading.webp', 'Threading', '₹49',
+                                      scale),
                                 ],
                               ),
                             ),
                             SizedBox(height: 20.h * scale),
 
-                            // Coupons - Only show if current page has items
+                            // Coupons and offers (unchanged)
                             if (hasCurrentPageItems) ...[
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(Icons.local_offer_outlined,
-                                          size: 20 * scale),
+                                      Icon(Icons.local_offer_outlined, size: 20 * scale),
                                       SizedBox(width: 8.w * scale),
-                                      Text(
-                                        'Coupons and offers',
-                                        style: TextStyle(fontSize: 14.sp * scale),
-                                      ),
+                                      Text('Coupons and offers', style: TextStyle(fontSize: 14.sp * scale)),
                                     ],
                                   ),
                                   Text(
                                     '2 offers  >',
                                     style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFFFA9441),
-                                    ),
-                                  ),
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFFFA9441)),
+                                  )
                                 ],
                               ),
                               SizedBox(height: 20.h * scale),
                             ],
 
-                            // Payment Summary - Only show if current page has items
+                            // Payment summary (unchanged)
                             if (hasCurrentPageItems) ...[
                               Container(
                                 padding: EdgeInsets.all(16.r * scale),
@@ -192,35 +362,34 @@ class SummaryScreen extends StatelessWidget {
                                     Text(
                                       'Payment Summary',
                                       style: TextStyle(
-                                        fontSize: 16.sp * scale,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                          fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
                                     ),
                                     SizedBox(height: 12.h * scale),
                                     PriceRow(
-                                        title: 'Item Total (${_getCurrentPageItemCount(currentPageItems)} items)', 
-                                        amount: '₹${itemTotal.toInt()}', 
-                                        scale: scale
+                                      title:
+                                          'Item Total (${_getCurrentPageItemCount(currentPageItems)} items)',
+                                      amount: '₹${itemTotal.toInt()}',
+                                      scale: scale,
                                     ),
                                     if (discount > 0) ...[
                                       PriceRow(
-                                          title: 'Item Discount',
-                                          amount: '-₹${discount.toInt()}',
-                                          color: const Color(0xFF52B46B),
-                                          scale: scale
+                                        title: 'Item Discount',
+                                        amount: '-₹${discount.toInt()}',
+                                        color: const Color(0xFF52B46B),
+                                        scale: scale,
                                       ),
                                     ],
                                     PriceRow(
-                                        title: 'Service Fee', 
-                                        amount: '₹${serviceFee.toInt()}', 
-                                        scale: scale
+                                      title: 'Service Fee',
+                                      amount: '₹${serviceFee.toInt()}',
+                                      scale: scale,
                                     ),
                                     Divider(height: 20.h * scale),
                                     PriceRow(
-                                        title: 'Grand Total',
-                                        amount: '₹${grandTotal.toInt()}',
-                                        isBold: true,
-                                        scale: scale
+                                      title: 'Grand Total',
+                                      amount: '₹${grandTotal.toInt()}',
+                                      isBold: true,
+                                      scale: scale,
                                     ),
                                     SizedBox(height: 12.h * scale),
                                     if (discount > 0)
@@ -235,18 +404,17 @@ class SummaryScreen extends StatelessWidget {
                                           child: Text(
                                             'Hurray! You saved ₹${discount.toInt()} on final bill',
                                             style: TextStyle(
-                                              color: const Color(0xFFFA9441),
-                                              fontSize: 12.sp * scale,
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                                color: const Color(0xFFFA9441),
+                                                fontSize: 12.sp * scale,
+                                                fontWeight: FontWeight.w500),
                                           ),
                                         ),
                                       )
                                   ],
                                 ),
                               ),
+                              SizedBox(height: 70.h * scale),
                             ],
-                            SizedBox(height: 100.h * scale),
                           ],
                         ),
                       ),
@@ -254,7 +422,6 @@ class SummaryScreen extends StatelessWidget {
                   ],
                 ),
 
-                // Bottom Buttons - Only show if current page has items
                 if (hasCurrentPageItems)
                   Positioned(
                     bottom: 0.r,
@@ -262,41 +429,20 @@ class SummaryScreen extends StatelessWidget {
                     right: 0.r,
                     child: Container(
                       color: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 16.h * scale, vertical: 12.h * scale),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16.h * scale, vertical: 12.h * scale),
                       child: SafeArea(
                         top: false,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
+                        child: _showEditableFields
+                            ? // Show Pay Now button after request flow completed
+                            InkWell(
                                 onTap: () {
-                                  showScheduleAddressPopup(context);
-                                },
-                                child: Container(
-                                  height: 47.h * scale,
-                                  decoration: ShapeDecoration(
-                                    color: Colors.black,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10 * scale),
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'Schedule for later',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14.sp * scale,
-                                        fontWeight: FontWeight.w500),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 16.w * scale),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () {
-                                  showReschedulePopup(context);
+                                  // Navigate to payment screen or process payment
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => PaymentScreen()),
+                                  );
                                 },
                                 child: Container(
                                   height: 47.h * scale,
@@ -308,17 +454,92 @@ class SummaryScreen extends StatelessWidget {
                                   ),
                                   alignment: Alignment.center,
                                   child: Text(
-                                    'Request Now (₹${grandTotal.toInt()})',
+                                    'Pay Now (₹${grandTotal.toInt()})',
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 14.sp * scale,
                                         fontWeight: FontWeight.w500),
                                   ),
                                 ),
+                              )
+                            : // Initial Schedule for later and Request Now buttons
+                            Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final newAddress = await showScheduleAddressPopup(context);
+                                        if (newAddress != null) {
+                                          setState(() {
+                                            address = newAddress;
+                                          });
+                                        }
+                                      },
+                                      child: Container(
+                                        height: 47.h * scale,
+                                        decoration: ShapeDecoration(
+                                          color: Colors.black,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10 * scale),
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'Schedule for later',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14.sp * scale,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 16.w * scale),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () async {
+                                        // 1. Show reschedule popup for selecting slot, passing current timeSlot
+                                        final selectedSlot = await showReschedulePopup(context, initialSlot: timeSlot);
+                                        if (selectedSlot == null) return;
+
+                                        setState(() {
+                                          timeSlot = selectedSlot;
+                                        });
+
+                                        // 2. Navigate to Chayan Sathi Screen for selection, passing current saathi
+                                        final selectedSaathi = await Navigator.push(
+  context,
+  MaterialPageRoute(builder: (_) => ChayanSathiScreen()),
+);
+
+                                        if (selectedSaathi == null) return;
+
+                                        setState(() {
+                                          saathi = selectedSaathi;
+                                          _showEditableFields = true; // Show fields and switch buttons
+                                        });
+                                      },
+                                      child: Container(
+                                        height: 47.h * scale,
+                                        decoration: ShapeDecoration(
+                                          color: const Color(0xFFE47830),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10 * scale),
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'Request Now (₹${grandTotal.toInt()})',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14.sp * scale,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ),
@@ -329,19 +550,17 @@ class SummaryScreen extends StatelessWidget {
       });
     });
   }
-   // Get cart items that are from current page selection
+
   List<CartItem> _getCurrentPageCartItems(CartController cartController) {
-    if (currentPageSelectedServices == null || currentPageSelectedServices!.isEmpty) {
+    if (widget.currentPageSelectedServices == null || widget.currentPageSelectedServices!.isEmpty) {
       return [];
     }
-    
-    return cartController.cartItems.where((item) => 
-      currentPageSelectedServices!.contains(item.id) && 
-      cartController.getQuantity(item.id) > 0
-    ).toList();
+    return cartController.cartItems
+        .where((item) =>
+            widget.currentPageSelectedServices!.contains(item.id) && cartController.getQuantity(item.id) > 0)
+        .toList();
   }
 
-  // Calculate total for current page items only
   double _calculateCurrentPageTotal(List<CartItem> currentPageItems) {
     double total = 0;
     for (CartItem item in currentPageItems) {
@@ -351,7 +570,6 @@ class SummaryScreen extends StatelessWidget {
     return total;
   }
 
-  // Get item count for current page selections
   int _getCurrentPageItemCount(List<CartItem> currentPageItems) {
     int count = 0;
     for (CartItem item in currentPageItems) {
@@ -360,26 +578,22 @@ class SummaryScreen extends StatelessWidget {
     return count;
   }
 
-  // Dynamic discount calculation based on total amount
   double _calculateDiscount(double itemTotal) {
-    if (itemTotal >= 1000) return itemTotal * 0.15; // 15% for orders above ₹1000
-    if (itemTotal >= 500) return itemTotal * 0.10;  // 10% for orders above ₹500
-    if (itemTotal >= 200) return itemTotal * 0.05;  // 5% for orders above ₹200
-    return 0; // No discount for orders below ₹200
+    if (itemTotal >= 1000) return itemTotal * 0.15;
+    if (itemTotal >= 500) return itemTotal * 0.10;
+    if (itemTotal >= 200) return itemTotal * 0.05;
+    return 0;
   }
 
-  // Dynamic service fee based on number of items
   double _calculateServiceFee(int itemCount) {
-    if (itemCount >= 5) return 100; // Higher fee for 5+ items
-    if (itemCount >= 3) return 75;  // Medium fee for 3-4 items
-    if (itemCount >= 1) return 50;  // Base fee for 1-2 items
-    return 0; // No fee if no items
+    if (itemCount >= 5) return 100;
+    if (itemCount >= 3) return 75;
+    if (itemCount >= 1) return 50;
+    return 0;
   }
 
-  // Build individual service item from cart
   Widget _buildServiceItem(CartItem cartItem, double scale) {
     final totalItemPrice = cartItem.price * cartItem.quantity;
-
     return Container(
       margin: EdgeInsets.only(bottom: 12.h * scale),
       child: Row(
@@ -506,10 +720,7 @@ class SummaryScreen extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8.h * scale),
-          Text(
-            title,
-            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14.sp * scale),
-          ),
+          Text(title, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14.sp * scale)),
           SizedBox(height: 4.h * scale),
           Text(price, style: TextStyle(fontSize: 14.sp * scale)),
           SizedBox(height: 8.h * scale),
@@ -528,10 +739,7 @@ class SummaryScreen extends StatelessWidget {
               ],
             ),
             alignment: Alignment.center,
-            child: Text(
-              'Add',
-              style: TextStyle(color: Colors.white, fontSize: 14.sp * scale),
-            ),
+            child: Text('Add', style: TextStyle(color: Colors.white, fontSize: 14.sp * scale)),
           ),
         ],
       ),
@@ -555,10 +763,8 @@ class BulletText extends StatelessWidget {
             child: CircleAvatar(radius: 2 * scale, backgroundColor: const Color(0xFF757575)),
           ),
           Flexible(
-            child: Text(
-              text,
-              style: TextStyle(color: const Color(0xFF757575), fontSize: 12.sp * scale),
-            ),
+            child:
+                Text(text, style: TextStyle(color: const Color(0xFF757575), fontSize: 12.sp * scale)),
           ),
         ],
       ),
@@ -589,23 +795,11 @@ class PriceRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14.sp * scale,
-              fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
-            ),
-          ),
-          Text(
-            amount,
-            style: TextStyle(
-              fontSize: 14.sp * scale,
-              color: color ?? Colors.black,
-              fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
-            ),
-          ),
+          Text(title, style: TextStyle(fontSize: 14.sp * scale, fontWeight: isBold ? FontWeight.w700 : FontWeight.w400)),
+          Text(amount, style: TextStyle(fontSize: 14.sp * scale, color: color ?? Colors.black, fontWeight: isBold ? FontWeight.w700 : FontWeight.w400)),
         ],
       ),
     );
   }
 }
+

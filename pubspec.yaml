@@ -73,10 +73,12 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
 
   # Code Generation
-  build_runner: ^2.4.7
-  retrofit_generator: ^8.0.4
+  build_runner: ^2.4.13
+  retrofit_generator: ^10.0.4
   drift_dev: ^2.13.2
-  json_serializable: ^6.7.1
+  json_serializable: ^6.8.0
+ # analyzer: ^8.2.0           # Add this explicitly
+
 
 # App Icon Configuration
 flutter_icons:

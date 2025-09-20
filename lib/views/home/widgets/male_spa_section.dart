@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
-import '../../../controllers/home_controller.dart';
+//import '../../../controllers/home_controller.dart';
 import '../../../services/MaleSpaScreen.dart';
 
 class MaleSpaSection extends StatelessWidget {
@@ -16,7 +16,7 @@ class MaleSpaSection extends StatelessWidget {
         double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
         double titleFontSize = 16.sp * scaleFactor;
-        double viewAllFontSize = 13.sp * scaleFactor;
+        double viewAllFontSize = 14.sp * scaleFactor;
         double cardWidth = 144.w * scaleFactor;
         double cardHeight = 164.h * scaleFactor;
         double labelFontSize = 10.sp * scaleFactor;
@@ -51,8 +51,9 @@ class MaleSpaSection extends StatelessWidget {
                       'View all >',
                       style: TextStyle(
                         fontSize: viewAllFontSize,
-                        color: const Color(0xFFFF6F00),
-                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFFFA9441),
+                        fontFamily: 'SF Pro',
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),

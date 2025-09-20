@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
-import '../../../controllers/home_controller.dart';
+//import '../../../controllers/home_controller.dart';
 import '../../../services/HomeRepairsScreen.dart';
 
 class AppliancesRepairsSection extends StatelessWidget {
@@ -16,7 +16,7 @@ class AppliancesRepairsSection extends StatelessWidget {
         double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
         double titleFontSize = 16.sp * scaleFactor;
-        double viewAllFontSize = 12.sp * scaleFactor;
+        double viewAllFontSize = 14.sp * scaleFactor;
         double cardWidth = 191.11.w * scaleFactor;
         double cardHeight = 260.h * scaleFactor;
         double labelFontSize = 11.sp * scaleFactor;
@@ -57,9 +57,9 @@ class AppliancesRepairsSection extends StatelessWidget {
                       'View All >',
                       style: TextStyle(
                         fontFamily: 'SF Pro',
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         fontSize: viewAllFontSize,
-                        color: const Color(0xFFE47830),
+                        color: const Color(0xFFFA9441),
                       ),
                     ),
                   ),

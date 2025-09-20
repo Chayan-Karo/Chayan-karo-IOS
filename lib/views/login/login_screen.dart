@@ -9,7 +9,6 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize controller
     final LoginController controller = Get.put(LoginController());
 
     return LayoutBuilder(
@@ -22,7 +21,7 @@ class LoginScreen extends StatelessWidget {
           body: SafeArea(
             child: Column(
               children: [
-                // Top Section with logo
+                // Top Section with logo (unchanged)
                 Container(
                   width: double.infinity,
                   color: const Color(0xFFF2F4FF),
@@ -44,18 +43,15 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
 
-                // Patch for smooth transition
                 Container(
                   width: double.infinity,
                   height: 16.h * scaleFactor,
                   color: const Color(0xFFF2F4FF),
                 ),
 
-                // Expanded section with scrollable content + fixed bottom section
                 Expanded(
                   child: Stack(
                     children: [
-                      // Scrollable content
                       Padding(
                         padding: EdgeInsets.only(bottom: 120.h * scaleFactor),
                         child: ListView(
@@ -119,6 +115,41 @@ class LoginScreen extends StatelessWidget {
                               ),
                             ),
                             SizedBox(height: 8.h * scaleFactor),
+                            
+                            // Error message display
+                            Obx(() => controller.errorMessage.isNotEmpty
+                                ? Container(
+                                    margin: EdgeInsets.only(bottom: 8.h * scaleFactor),
+                                    padding: EdgeInsets.all(12.w * scaleFactor),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(8.r * scaleFactor),
+                                      border: Border.all(color: Colors.red.shade200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red,
+                                          size: 20.sp * scaleFactor,
+                                        ),
+                                        SizedBox(width: 8.w * scaleFactor),
+                                        Expanded(
+                                          child: Text(
+                                            controller.errorMessage,
+                                            style: TextStyle(
+                                              fontSize: 12.sp * scaleFactor,
+                                              fontFamily: 'Inter',
+                                              color: Colors.red.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                            ),
+                            
                             Text(
                               "An OTP will be sent on given phone number for verification.\nStandard message and data rates apply.",
                               style: TextStyle(
@@ -132,7 +163,7 @@ class LoginScreen extends StatelessWidget {
                         ),
                       ),
 
-                      // Bottom fixed section
+                      // Bottom fixed section (unchanged)
                       Positioned(
                         bottom: 0.h,
                         left: 0.w,
@@ -146,7 +177,6 @@ class LoginScreen extends StatelessWidget {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // GetX Obx widget for reactive button
                               Obx(() => SizedBox(
                                 width: double.infinity,
                                 height: 55.h * scaleFactor,

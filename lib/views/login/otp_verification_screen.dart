@@ -76,6 +76,40 @@ class OtpVerificationScreen extends StatelessWidget {
                 
                 SizedBox(height: 16.h * scaleFactor),
                 
+                // Error Message Display
+                Obx(() => controller.errorMessage.isNotEmpty
+                    ? Container(
+                        margin: EdgeInsets.only(bottom: 16.h * scaleFactor),
+                        padding: EdgeInsets.all(12.w * scaleFactor),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8.r * scaleFactor),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 20.sp * scaleFactor,
+                            ),
+                            SizedBox(width: 8.w * scaleFactor),
+                            Expanded(
+                              child: Text(
+                                controller.errorMessage,
+                                style: TextStyle(
+                                  fontSize: 12.sp * scaleFactor,
+                                  fontFamily: 'SFProRegular',
+                                  color: Colors.red.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+                ),
+                
                 // Resend OTP / Timer
                 Obx(() => !controller.canResend
                     ? Text(
@@ -87,26 +121,26 @@ class OtpVerificationScreen extends StatelessWidget {
                         ),
                       )
                     : TextButton(
-                        onPressed: controller.resendOTP,
+                        onPressed: controller.isLoading ? null : controller.resendOTP,
                         child: Text(
                           "Resend OTP",
                           style: TextStyle(
                             fontSize: 14.sp * scaleFactor,
                             fontFamily: 'SFProSemibold',
-                            color: Color(0xFFFF6F00),
+                            color: controller.isLoading ? Colors.grey : Color(0xFFFF6F00),
                           ),
                         ),
                       )),
                 
                 Spacer(),
                 
-                // Login Button
+                // Verify Button
                 Obx(() => ElevatedButton(
                   onPressed: controller.isButtonEnabled && !controller.isLoading
                       ? controller.verifyOTP
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: controller.isButtonEnabled
+                    backgroundColor: controller.isButtonEnabled && !controller.isLoading
                         ? Color(0xFFFF6F00)
                         : Colors.grey[300],
                     minimumSize: Size(double.infinity, 55.h * scaleFactor),
@@ -128,7 +162,9 @@ class OtpVerificationScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 16.sp * scaleFactor,
                             fontFamily: 'SFProSemibold',
-                            color: controller.isButtonEnabled ? Colors.white : Colors.grey[600],
+                            color: controller.isButtonEnabled && !controller.isLoading 
+                                ? Colors.white 
+                                : Colors.grey[600],
                           ),
                         ),
                 )),

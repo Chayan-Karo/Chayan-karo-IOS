@@ -23,11 +23,11 @@ class MostUsedServicesWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(left: 16.0 * scaleFactor),
+      padding: EdgeInsets.only(left: 12.0 * scaleFactor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ FIXED: Static title with reactive "View All" button
+          // Header Row with Title and 'View all >' button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -48,8 +48,9 @@ class MostUsedServicesWidget extends StatelessWidget {
                     try {
                       if (homeController.mostUsedServices.isNotEmpty) {
                         Get.to(() => AllMostUsedServicesScreen(
-                          mostUsedServices: homeController.mostUsedServices.toList(),
-                        ));
+                              mostUsedServices:
+                                  homeController.mostUsedServices.toList(),
+                            ));
                       } else {
                         Get.snackbar(
                           'No Services',
@@ -75,11 +76,12 @@ class MostUsedServicesWidget extends StatelessWidget {
                     child: Text(
                       'View all >',
                       style: TextStyle(
-                        color: homeController.mostUsedServices.isNotEmpty 
-                            ? Colors.orange 
-                            : Colors.orange.withOpacity(0.5),
+                        color: homeController.mostUsedServices.isNotEmpty
+                          ? const Color(0xFFFA9441)
+                          : const Color(0xFFFA9441).withOpacity(0.5),
+
                         fontSize: 14.sp * scaleFactor,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -87,36 +89,33 @@ class MostUsedServicesWidget extends StatelessWidget {
               }),
             ],
           ),
-          
+
           SizedBox(height: 12.h * scaleFactor),
 
-          // ✅ FIXED: Let HorizontalServiceScroll handle its own reactivity
-          // No Obx wrapper here since HorizontalServiceScroll has its own Obx inside
-          SizedBox(
-            height: 240.h * scaleFactor,
-            child: const HorizontalServiceScroll(),
-          ),
+          // HorizontalServiceScroll - now with no extra padding
+          const HorizontalServiceScroll(),
 
+          // ✅ Consistent 24.h spacing after horizontal scroll
           SizedBox(height: 24.h * scaleFactor),
 
-          // ✅ FIXED: All service sections - these should now appear
+          // All subsequent sections with consistent 24.h spacing
           const SaloonWomenSection(),
           SizedBox(height: 24.h * scaleFactor),
-          
+
           const SpaWomenSection(),
           SizedBox(height: 24.h * scaleFactor),
-          
+
           const MaleSpaSection(),
           SizedBox(height: 24.h * scaleFactor),
-          
+
           const SalonMenSection(),
           SizedBox(height: 24.h * scaleFactor),
-          
+
           const ACRepairSection(),
           SizedBox(height: 24.h * scaleFactor),
-          
+
           const AppliancesRepairsSection(),
-          SizedBox(height: 24.h * scaleFactor), // Extra bottom padding
+          SizedBox(height: 24.h * scaleFactor),
         ],
       ),
     );

@@ -35,24 +35,30 @@ class ChayanSathiScreen extends StatelessWidget {
                     /// Grid content
                     Expanded(
                       child: GridView.builder(
-                              padding: EdgeInsets.fromLTRB(
-                                16.h * scaleFactor,
-                                16.h * scaleFactor,
-                                16.h * scaleFactor,
-                                90.h * scaleFactor,
-                              ),
-                              itemCount: controller.saathiList.length,
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 12 * scaleFactor,
-                                mainAxisSpacing: 12 * scaleFactor,
-                                childAspectRatio: 0.68,
-                              ),
-                              itemBuilder: (context, index) {
-                                final saathi = controller.saathiList[index];
-                                return _buildSaathiCard(saathi, scaleFactor);
-                              },
-                            ),
+                        padding: EdgeInsets.fromLTRB(
+                          16.h * scaleFactor,
+                          16.h * scaleFactor,
+                          16.h * scaleFactor,
+                          90.h * scaleFactor,
+                        ),
+                        itemCount: controller.saathiList.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12 * scaleFactor,
+                          mainAxisSpacing: 12 * scaleFactor,
+                          childAspectRatio: 0.68,
+                        ),
+                        itemBuilder: (context, index) {
+                          final saathi = controller.saathiList[index];
+                          return InkWell(
+                            onTap: () {
+                              // Return selected data to SummaryScreen
+                              Navigator.pop(context, saathi);
+                            },
+                            child: _buildSaathiCard(saathi, scaleFactor),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -170,7 +176,7 @@ class ChayanSathiScreen extends StatelessWidget {
 
   void _onItemTapped(BuildContext context, SaathiController controller, int index) {
     controller.onItemTapped(index);
-    
+
     switch (index) {
       case 1:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => BookingScreen()));

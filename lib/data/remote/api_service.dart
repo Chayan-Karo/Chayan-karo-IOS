@@ -1,13 +1,25 @@
 import 'package:retrofit/retrofit.dart';
 import 'package:dio/dio.dart';
-import '../../models/home_models.dart';
+import '../../models/auth_models.dart';
+import '../../models/home_models.dart';  // Keep your existing home models
 
 part 'api_service.g.dart';
 
-@RestApi(baseUrl: "https://your-api-base-url.com/api/")
+@RestApi(baseUrl: "http://65.1.234.42:8081")
 abstract class ApiService {
-  factory ApiService(Dio dio, {String baseUrl}) = _ApiService;
+  factory ApiService(Dio dio, {String? baseUrl}) = _ApiService;
 
+  // Auth endpoints
+  @POST('/Authentication/Login')
+  Future<OtpResponse> sendOtp(@Body() SendOtpRequest request);
+
+  @POST('/Authentication/VerifyOTP')
+  Future<AuthResponse> verifyOtp(@Body() VerifyOtpRequest request);
+
+  @POST('/Authentication/RefreshToken')
+  Future<AuthResponse> refreshToken(@Body() RefreshTokenRequest request);
+
+  // Home endpoints (keeping your existing ones)
   @GET("/home/data")
   Future<HomeData> getHomeData();
 

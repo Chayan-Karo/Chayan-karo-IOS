@@ -16,7 +16,7 @@ class ACRepairSection extends StatelessWidget {
         double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
         double titleFontSize = 16.sp * scaleFactor;
-        double viewAllFontSize = 13.sp * scaleFactor;
+        double viewAllFontSize = 14.sp * scaleFactor;
         double cardWidth = 144.w * scaleFactor;
         double cardHeight = 180.h * scaleFactor;
         double labelFontSize = 10.sp * scaleFactor;
@@ -46,8 +46,10 @@ class ACRepairSection extends StatelessWidget {
                     child: Text(
                       'View all >',
                       style: TextStyle(
+                        fontFamily: 'SF Pro',
+                        fontWeight: FontWeight.w700,
                         fontSize: viewAllFontSize,
-                        color: const Color(0xFFFF6F00),
+                        color: const Color(0xFFFA9441),
                       ),
                     ),
                   ),
