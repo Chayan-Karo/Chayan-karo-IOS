@@ -29,7 +29,7 @@ class UpcomingBookingScreen extends StatelessWidget {
               child: Column(
                 children: [
                   // Top Header
-                  ChayanHeader(title: 'Upcoming Booking', onBackTap: () {}),
+                  ChayanHeader(title: 'Upcoming Booking', onBack: () => Navigator.pop(context)),
 
                   // Scrollable Content
                   Expanded(

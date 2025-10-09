@@ -100,7 +100,7 @@ class _SalonServiceScreenState extends State<SalonServiceScreen> {
   }
 
   // UPDATED: Add to cart with source information - REMOVED SNACKBAR
-  void _addToCart(SalonService service) {
+  /*void _addToCart(SalonService service) {
     cartController.addSalonService(
       service,
       sourcePage: SOURCE_PAGE,
@@ -112,7 +112,7 @@ class _SalonServiceScreenState extends State<SalonServiceScreen> {
     if (!_currentPageSelectedServices.contains(service.id)) {
       _currentPageSelectedServices.add(service.id);
     }
-  }
+  } */
 
   void _incrementCart(String serviceId) {
     cartController.incrementQuantity(serviceId);
@@ -878,7 +878,7 @@ class _SalonServiceScreenState extends State<SalonServiceScreen> {
       // 2. Service has quantity > 0 but hasn't been interacted with on this page session
       if (quantity == 0 || !hasInteractedOnThisPage) {
         return GestureDetector(
-          onTap: () => _addToCart(service),
+      //    onTap: () => _addToCart(service),
           child: Container(
             width: 75.w * scaleFactor,
             height: 29.h * scaleFactor,

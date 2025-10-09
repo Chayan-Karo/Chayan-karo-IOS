@@ -3,13 +3,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../../widgets/chayan_header.dart';
 import '../../controllers/cart_controller.dart';
-import '../../models/cart_models.dart';
+import '../../models/service_models.dart'; // Updated import to use new model
 import 'showReschedulePopup.dart';
 import 'showScheduleAddressPopup.dart';
 import '../chayan_sathi/chayan_sathi_screen.dart';
 import 'PaymentScreen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
 
 class SummaryScreen extends StatefulWidget {
   final List<String>? currentPageSelectedServices;
@@ -71,173 +70,171 @@ class _SummaryScreenState extends State<SummaryScreen> {
                   children: [
                     ChayanHeader(
                       title: 'Summary',
-                      onBackTap: () => Navigator.pop(context),
+                      onBack: () => Navigator.pop(context),
                     ),
                     Expanded(
                       child: SingleChildScrollView(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 16.h * scale, vertical: 8.h * scale),
+                        padding: EdgeInsets.symmetric(horizontal: 16.h * scale, vertical: 8.h * scale),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                          if (hasCurrentPageItems && _showEditableFields) ...[
-  Container(
-    padding: EdgeInsets.all(16.r * scale),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20 * scale),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.07),
-          blurRadius: 8 * scale,
-          offset: Offset(0, 2 * scale),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Address row
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SvgPicture.asset(
-              'assets/icons/home.svg',
-              width: 22 * scale,
-              height: 22 * scale,
-              color: Colors.black,
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Home",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14.sp * scale,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    address,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w400,
-                      fontSize: 13.sp * scale,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            InkWell(
-              onTap: () async {
-                final newAddress = await showScheduleAddressPopup(context);
-                if (newAddress != null) {
-                  setState(() {
-                    address = newAddress;
-                  });
-                }
-              },
-              child: Icon(
-                Icons.edit,
-                size: 18 * scale,
-                color: const Color(0xFFE47830),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 14.h * scale),
-        // Time row
-        Row(
-          children: [
-            SvgPicture.asset(
-              'assets/icons/calendar.svg',
-              width: 22 * scale,
-              height: 22 * scale,
-              color: Colors.black,
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                timeSlot,
-                style: TextStyle(
-                  fontWeight: FontWeight.w400,
-                  fontSize: 14.sp * scale,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            InkWell(
-              onTap: () async {
-                final newTime = await showReschedulePopup(context, initialSlot: timeSlot);
-                if (newTime != null) {
-                  setState(() {
-                    timeSlot = newTime;
-                  });
-                }
-              },
-              child: Icon(
-                Icons.edit,
-                size: 18 * scale,
-                color: const Color(0xFFE47830),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 14.h * scale),
-        // Saathi row
-        Row(
-          children: [
-            SvgPicture.asset(
-              'assets/icons/chayansathi.svg',
-              width: 22 * scale,
-              height: 22 * scale,
-              color: Colors.black,
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                saathi == null
-                    ? 'Select Chayan Saathi'
-                    : "${saathi!['name']}, (${saathi!['jobs'] ?? ''}+ work), ${saathi!['rating'] ?? ''} rating",
-                style: TextStyle(
-                  fontWeight: FontWeight.w400,
-                  fontSize: 14.sp * scale,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            InkWell(
-              onTap: () async {
-                final selectedSaathi = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ChayanSathiScreen()),
-                );
-                if (selectedSaathi != null) {
-                  setState(() {
-                    saathi = selectedSaathi;
-                  });
-                }
-              },
-              child: Icon(
-                Icons.edit,
-                size: 18 * scale,
-                color: const Color(0xFFE47830),
-              ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  ),
-  SizedBox(height: 18.h * scale),
-],
+                            if (hasCurrentPageItems && _showEditableFields) ...[
+                              Container(
+                                padding: EdgeInsets.all(16.r * scale),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20 * scale),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.07),
+                                      blurRadius: 8 * scale,
+                                      offset: Offset(0, 2 * scale),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Address row
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        SvgPicture.asset(
+                                          'assets/icons/home.svg',
+                                          width: 22 * scale,
+                                          height: 22 * scale,
+                                          color: Colors.black,
+                                        ),
+                                        SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Home",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14.sp * scale,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                              SizedBox(height: 2),
+                                              Text(
+                                                address,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w400,
+                                                  fontSize: 13.sp * scale,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        InkWell(
+                                          onTap: () async {
+                                            final newAddress = await showScheduleAddressPopup(context);
+                                            if (newAddress != null) {
+                                              setState(() {
+                                                address = newAddress;
+                                              });
+                                            }
+                                          },
+                                          child: Icon(
+                                            Icons.edit,
+                                            size: 18 * scale,
+                                            color: const Color(0xFFE47830),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 14.h * scale),
+                                    // Time row
+                                    Row(
+                                      children: [
+                                        SvgPicture.asset(
+                                          'assets/icons/calendar.svg',
+                                          width: 22 * scale,
+                                          height: 22 * scale,
+                                          color: Colors.black,
+                                        ),
+                                        SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            timeSlot,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 14.sp * scale,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                        InkWell(
+                                          onTap: () async {
+                                            final newTime = await showReschedulePopup(context, initialSlot: timeSlot);
+                                            if (newTime != null) {
+                                              setState(() {
+                                                timeSlot = newTime;
+                                              });
+                                            }
+                                          },
+                                          child: Icon(
+                                            Icons.edit,
+                                            size: 18 * scale,
+                                            color: const Color(0xFFE47830),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 14.h * scale),
+                                    // Saathi row
+                                    Row(
+                                      children: [
+                                        SvgPicture.asset(
+                                          'assets/icons/chayansathi.svg',
+                                          width: 22 * scale,
+                                          height: 22 * scale,
+                                          color: Colors.black,
+                                        ),
+                                        SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            saathi == null
+                                                ? 'Select Chayan Saathi'
+                                                : "${saathi!['name']}, (${saathi!['jobs'] ?? ''}+ work), ${saathi!['rating'] ?? ''} rating",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 14.sp * scale,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                        InkWell(
+                                          onTap: () async {
+                                            final selectedSaathi = await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(builder: (_) => ChayanSathiScreen()),
+                                            );
+                                            if (selectedSaathi != null) {
+                                              setState(() {
+                                                saathi = selectedSaathi;
+                                              });
+                                            }
+                                          },
+                                          child: Icon(
+                                            Icons.edit,
+                                            size: 18 * scale,
+                                            color: const Color(0xFFE47830),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 18.h * scale),
+                            ],
 
-
-                            // Selected Services section (unchanged)
+                            // Selected Services section - UPDATED to use new CartItem model
                             if (hasCurrentPageItems) ...[
                               Container(
                                 padding: EdgeInsets.all(16.r * scale),
@@ -250,8 +247,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                   children: [
                                     Text(
                                       'Selected Services (${_getCurrentPageItemCount(currentPageItems)} items)',
-                                      style: TextStyle(
-                                          fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
+                                      style: TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
                                     ),
                                     SizedBox(height: 12.h * scale),
                                     ...currentPageItems
@@ -272,8 +268,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                 child: Center(
                                   child: Column(
                                     children: [
-                                      Icon(Icons.shopping_cart_outlined,
-                                          size: 64 * scale, color: Colors.grey),
+                                      Icon(Icons.shopping_cart_outlined, size: 64 * scale, color: Colors.grey),
                                       SizedBox(height: 16.h * scale),
                                       Text(
                                         'No services selected from this page',
@@ -285,8 +280,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                       SizedBox(height: 8.h * scale),
                                       Text(
                                         'Go back and select services to proceed',
-                                        style: TextStyle(
-                                            fontSize: 14.sp * scale, color: Colors.grey[500]),
+                                        style: TextStyle(fontSize: 14.sp * scale, color: Colors.grey[500]),
                                       ),
                                     ],
                                   ),
@@ -295,11 +289,10 @@ class _SummaryScreenState extends State<SummaryScreen> {
                               SizedBox(height: 20.h * scale),
                             ],
 
-                            // Frequently Added Together (unchanged)
+                            // Frequently Added Together
                             Text(
                               'Frequently added together',
-                              style:
-                                  TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
+                              style: TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
                             ),
                             SizedBox(height: 12.h * scale),
                             SizedBox(
@@ -307,18 +300,15 @@ class _SummaryScreenState extends State<SummaryScreen> {
                               child: ListView(
                                 scrollDirection: Axis.horizontal,
                                 children: [
-                                  buildAddCard('assets/saloon_manicure.webp', 'Manicure', '₹499',
-                                      scale),
-                                  buildAddCard('assets/saloon_pedicure.webp', 'Pedicure', '₹499',
-                                      scale),
-                                  buildAddCard('assets/saloon_threading.webp', 'Threading', '₹49',
-                                      scale),
+                                  buildAddCard('assets/saloon_manicure.webp', 'Manicure', '₹499', scale),
+                                  buildAddCard('assets/saloon_pedicure.webp', 'Pedicure', '₹499', scale),
+                                  buildAddCard('assets/saloon_threading.webp', 'Threading', '₹49', scale),
                                 ],
                               ),
                             ),
                             SizedBox(height: 20.h * scale),
 
-                            // Coupons and offers (unchanged)
+                            // Coupons and offers
                             if (hasCurrentPageItems) ...[
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -333,15 +323,14 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                   Text(
                                     '2 offers  >',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFFFA9441)),
+                                        fontWeight: FontWeight.w800, color: const Color(0xFFFA9441)),
                                   )
                                 ],
                               ),
                               SizedBox(height: 20.h * scale),
                             ],
 
-                            // Payment summary (unchanged)
+                            // Payment summary - UPDATED to use new model properties
                             if (hasCurrentPageItems) ...[
                               Container(
                                 padding: EdgeInsets.all(16.r * scale),
@@ -361,13 +350,11 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                   children: [
                                     Text(
                                       'Payment Summary',
-                                      style: TextStyle(
-                                          fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
+                                      style: TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w700),
                                     ),
                                     SizedBox(height: 12.h * scale),
                                     PriceRow(
-                                      title:
-                                          'Item Total (${_getCurrentPageItemCount(currentPageItems)} items)',
+                                      title: 'Item Total (${_getCurrentPageItemCount(currentPageItems)} items)',
                                       amount: '₹${itemTotal.toInt()}',
                                       scale: scale,
                                     ),
@@ -429,8 +416,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                     right: 0.r,
                     child: Container(
                       color: Colors.white,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16.h * scale, vertical: 12.h * scale),
+                      padding: EdgeInsets.symmetric(horizontal: 16.h * scale, vertical: 12.h * scale),
                       child: SafeArea(
                         top: false,
                         child: _showEditableFields
@@ -440,8 +426,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                   // Navigate to payment screen or process payment
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(
-                                        builder: (_) => PaymentScreen()),
+                                    MaterialPageRoute(builder: (_) => PaymentScreen()),
                                   );
                                 },
                                 child: Container(
@@ -508,9 +493,9 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
                                         // 2. Navigate to Chayan Sathi Screen for selection, passing current saathi
                                         final selectedSaathi = await Navigator.push(
-  context,
-  MaterialPageRoute(builder: (_) => ChayanSathiScreen()),
-);
+                                          context,
+                                          MaterialPageRoute(builder: (_) => ChayanSathiScreen()),
+                                        );
 
                                         if (selectedSaathi == null) return;
 
@@ -551,6 +536,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
     });
   }
 
+  // UPDATED: Get current page cart items using new CartItem model
   List<CartItem> _getCurrentPageCartItems(CartController cartController) {
     if (widget.currentPageSelectedServices == null || widget.currentPageSelectedServices!.isEmpty) {
       return [];
@@ -561,6 +547,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
         .toList();
   }
 
+  // UPDATED: Calculate total using new CartItem model
   double _calculateCurrentPageTotal(List<CartItem> currentPageItems) {
     double total = 0;
     for (CartItem item in currentPageItems) {
@@ -570,6 +557,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
     return total;
   }
 
+  // UPDATED: Get item count using new CartItem model
   int _getCurrentPageItemCount(List<CartItem> currentPageItems) {
     int count = 0;
     for (CartItem item in currentPageItems) {
@@ -592,6 +580,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
     return 0;
   }
 
+  // UPDATED: Build service item using new CartItem model properties
   Widget _buildServiceItem(CartItem cartItem, double scale) {
     final totalItemPrice = cartItem.price * cartItem.quantity;
     return Container(
@@ -601,7 +590,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12 * scale),
-            child: Image.asset(
+            child: Image.network( // Changed to Image.network for API images
               cartItem.image,
               width: 60.w * scale,
               height: 60.h * scale,
@@ -612,6 +601,20 @@ class _SummaryScreenState extends State<SummaryScreen> {
                   height: 60.h * scale,
                   color: Colors.grey[300],
                   child: Icon(Icons.image, color: Colors.grey, size: 30 * scale),
+                );
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: 60.w * scale,
+                  height: 60.h * scale,
+                  color: Colors.grey[200],
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFE47830),
+                    ),
+                  ),
                 );
               },
             ),
@@ -629,7 +632,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            cartItem.title,
+                            cartItem.name, // Updated: Use name instead of title
                             style: TextStyle(
                               fontSize: 14.sp * scale,
                               fontWeight: FontWeight.w600,
@@ -649,7 +652,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
                               ),
                             ),
                           ],
-                          if (cartItem.rating != null && cartItem.duration != null) ...[
+                          // Updated: Use new model rating and duration properties
+                          if (cartItem.rating.isNotEmpty && cartItem.duration.isNotEmpty) ...[
                             SizedBox(height: 4.h * scale),
                             Row(
                               children: [
@@ -669,19 +673,37 @@ class _SummaryScreenState extends State<SummaryScreen> {
                       ),
                     ),
                     SizedBox(width: 8.w * scale),
-                    Text(
-                      '₹${totalItemPrice.toInt()}',
-                      style: TextStyle(
-                        fontSize: 16.sp * scale,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFE47830),
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '₹${totalItemPrice.toInt()}',
+                          style: TextStyle(
+                            fontSize: 16.sp * scale,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFE47830),
+                          ),
+                        ),
+                        // Show discount if applicable
+                        if (cartItem.hasDiscount) ...[
+                          SizedBox(height: 2.h * scale),
+                          Text(
+                            '₹${(cartItem.originalPrice * cartItem.quantity).toInt()}',
+                            style: TextStyle(
+                              fontSize: 12.sp * scale,
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
-                if (cartItem.description != null && cartItem.description!.isNotEmpty) ...[
+                // Updated: Use new model description property
+                if (cartItem.description.isNotEmpty) ...[
                   SizedBox(height: 8.h * scale),
-                  BulletText(cartItem.description!, scale: scale),
+                  BulletText(cartItem.description, scale: scale),
                 ],
               ],
             ),
@@ -763,8 +785,7 @@ class BulletText extends StatelessWidget {
             child: CircleAvatar(radius: 2 * scale, backgroundColor: const Color(0xFF757575)),
           ),
           Flexible(
-            child:
-                Text(text, style: TextStyle(color: const Color(0xFF757575), fontSize: 12.sp * scale)),
+            child: Text(text, style: TextStyle(color: const Color(0xFF757575), fontSize: 12.sp * scale)),
           ),
         ],
       ),
@@ -802,4 +823,3 @@ class PriceRow extends StatelessWidget {
     );
   }
 }
-

@@ -5,12 +5,13 @@ import 'package:get/get.dart';
 import '../../../controllers/home_controller.dart';
 import '../../all_most_used_services/all_most_used_services_screen.dart';
 import './horizontal_service_scroll.dart';
-import './appliances_repairs_section.dart';
-import './salon_men_section.dart';
-import './ac_repair_section.dart';
-import './male_spa_section.dart';
-import './spa_women_section.dart';
-import './saloon_women_section.dart';
+//import './appliances_repairs_section.dart';
+//import './salon_men_section.dart';
+//import './ac_repair_section.dart';
+//import './male_spa_section.dart';
+//import './spa_women_section.dart';
+import 'dynamic_home_sections.dart';
+//import './saloon_women_section.dart';
 
 class MostUsedServicesWidget extends StatelessWidget {
   final double scaleFactor;
@@ -99,23 +100,25 @@ class MostUsedServicesWidget extends StatelessWidget {
           SizedBox(height: 24.h * scaleFactor),
 
           // All subsequent sections with consistent 24.h spacing
-          const SaloonWomenSection(),
+          // const SaloonWomenSection(),
+          // SizedBox(height: 24.h * scaleFactor),
+
+          //const SpaWomenSection(),
+                      DynamicHomeSections(),
+
           SizedBox(height: 24.h * scaleFactor),
 
-          const SpaWomenSection(),
-          SizedBox(height: 24.h * scaleFactor),
+          // const MaleSpaSection(),
+          // SizedBox(height: 24.h * scaleFactor),
 
-          const MaleSpaSection(),
-          SizedBox(height: 24.h * scaleFactor),
+          // const SalonMenSection(),
+        //  SizedBox(height: 24.h * scaleFactor),
 
-          const SalonMenSection(),
-          SizedBox(height: 24.h * scaleFactor),
+         // const ACRepairSection(),
+        //  SizedBox(height: 24.h * scaleFactor),
 
-          const ACRepairSection(),
-          SizedBox(height: 24.h * scaleFactor),
-
-          const AppliancesRepairsSection(),
-          SizedBox(height: 24.h * scaleFactor),
+         // const AppliancesRepairsSection(),
+         // SizedBox(height: 24.h * scaleFactor),
         ],
       ),
     );

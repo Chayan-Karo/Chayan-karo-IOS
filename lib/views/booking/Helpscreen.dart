@@ -53,7 +53,7 @@ class _HelpScreenState extends State<HelpScreen> {
         backgroundColor: Colors.white,
         body: Column(
           children: [
-            ChayanHeader(title: 'Help', onBackTap: () {}),
+            ChayanHeader(title: 'Help', onBack: () => Navigator.pop(context)),
 
             Expanded(
               child: SingleChildScrollView(

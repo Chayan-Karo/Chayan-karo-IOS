@@ -5,7 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
 import '../../controllers/cart_controller.dart';
-import '../../models/cart_models.dart' as cart_models;
+import '../../models/service_models.dart'; // Updated import to use new model
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../widgets/chayan_header.dart';
 import '../home/home_screen.dart';
@@ -74,7 +74,7 @@ class CartScreen extends StatelessWidget {
                       ),
                       child: ChayanHeader(
                         title: 'Cart',
-                        onBackTap: () => Navigator.pop(context),
+                        onBack: () => Navigator.pop(context),
                       ),
                     ),
                     Expanded(
@@ -175,7 +175,7 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  // UPDATED: Build cart with grouped items by source - sorting now handled by controller
+  // Updated: Build cart with grouped items by source - using new CartItem model
   Widget _buildCartWithItems(BuildContext context, double scaleFactor) {
     return Column(
       children: [
@@ -210,7 +210,7 @@ class CartScreen extends StatelessWidget {
   }
 
   Widget _buildSourceHeader(
-      String sourceTitle, List<cart_models.CartItem> items, double scaleFactor) {
+      String sourceTitle, List<CartItem> items, double scaleFactor) {
     return Padding(
       padding: EdgeInsets.symmetric(
           horizontal: 16.w * scaleFactor, vertical: 12.h * scaleFactor),
@@ -228,8 +228,9 @@ class CartScreen extends StatelessWidget {
     );
   }
 
+  // Updated: Use new CartItem model properties
   Widget _buildCartItemCard(
-      BuildContext context, cart_models.CartItem cartItem, double scaleFactor) {
+      BuildContext context, CartItem cartItem, double scaleFactor) {
     return Container(
       margin: EdgeInsets.symmetric(
           horizontal: 16.w * scaleFactor, vertical: 4.h * scaleFactor),
@@ -250,7 +251,7 @@ class CartScreen extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8 * scaleFactor),
-            child: Image.asset(
+            child: Image.network(  // Changed to Image.network for API images
               cartItem.image,
               width: 70.w * scaleFactor,
               height: 70.h * scaleFactor,
@@ -265,6 +266,20 @@ class CartScreen extends StatelessWidget {
                   size: 30 * scaleFactor,
                 ),
               ),
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: 70.w * scaleFactor,
+                  height: 70.h * scaleFactor,
+                  color: Colors.grey[200],
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFE47830),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           SizedBox(width: 16.w * scaleFactor),
@@ -273,7 +288,7 @@ class CartScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  cartItem.title,
+                  cartItem.name,  // Updated property name
                   style: TextStyle(
                     fontSize: 16.sp * scaleFactor,
                     fontWeight: FontWeight.w600,
@@ -284,10 +299,8 @@ class CartScreen extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: 6.h * scaleFactor),
-                if (cartItem.rating != null &&
-                    cartItem.duration != null &&
-                    cartItem.rating!.isNotEmpty &&
-                    cartItem.duration!.isNotEmpty)
+                // Updated: Use new model properties
+                if (cartItem.rating.isNotEmpty && cartItem.duration.isNotEmpty)
                   Row(
                     children: [
                       Icon(
@@ -310,7 +323,7 @@ class CartScreen extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      cartItem.formattedPrice,
+                      cartItem.formattedPrice,  // Use getter from new model
                       style: TextStyle(
                         fontSize: 18.sp * scaleFactor,
                         fontWeight: FontWeight.w700,
@@ -318,11 +331,11 @@ class CartScreen extends StatelessWidget {
                         color: const Color(0xFFE47830),
                       ),
                     ),
-                    if (cartItem.originalPrice != null &&
-                        cartItem.originalPrice!.isNotEmpty) ...[
+                    // Updated: Show original price if there's a discount
+                    if (cartItem.hasDiscount) ...[
                       SizedBox(width: 8.w * scaleFactor),
                       Text(
-                        cartItem.originalPrice!,
+                        '₹${cartItem.originalPrice.toInt()}',
                         style: TextStyle(
                           fontSize: 14.sp * scaleFactor,
                           decoration: TextDecoration.lineThrough,
@@ -333,11 +346,11 @@ class CartScreen extends StatelessWidget {
                     ],
                   ],
                 ),
-                if (cartItem.description != null &&
-                    cartItem.description!.isNotEmpty) ...[
+                // Updated: Use new model description
+                if (cartItem.description.isNotEmpty) ...[
                   SizedBox(height: 6.h * scaleFactor),
                   Text(
-                    cartItem.description!,
+                    cartItem.description,
                     style: TextStyle(
                       fontSize: 12.sp * scaleFactor,
                       color: Colors.grey[600],
@@ -582,103 +595,98 @@ class CartScreen extends StatelessWidget {
     );
   }
 
+  // Updated: Use new cart validation and checkout methods
   void _proceedToCheckout(BuildContext context) {
-    if (!cartController.validateCart()) {
-      return;
-    }
+    // Use the updated validation method
+    cartController.validateCartForCheckout().then((isValid) {
+      if (!isValid) return;
 
-    final groupedItems = cartController.getItemsGroupedBySource();
+      final groupedItems = cartController.getItemsGroupedBySource();
 
-    Get.defaultDialog(
-      title: 'Confirm Order',
-      content: Container(
-        constraints: BoxConstraints(maxWidth: 300),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Order Summary:',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-            ),
-            SizedBox(height: 12),
-            ...groupedItems.entries.map((entry) {
-              final sourceTitle = entry.key;
-              final items = entry.value;
-              final itemCount = items.fold(0, (sum, item) => sum + item.quantity);
-              final sourceTotal = items.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
-              
-              return Padding(
-                padding: EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '$sourceTitle ($itemCount ${itemCount == 1 ? 'item' : 'items'})',
-                        style: TextStyle(fontSize: 14),
-                        overflow: TextOverflow.ellipsis,
+      Get.defaultDialog(
+        title: 'Confirm Order',
+        content: Container(
+          constraints: BoxConstraints(maxWidth: 300),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Order Summary:',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+              SizedBox(height: 12),
+              ...groupedItems.entries.map((entry) {
+                final sourceTitle = entry.key;
+                final items = entry.value;
+                final itemCount = items.fold(0, (sum, item) => sum + item.quantity);
+                final sourceTotal = items.fold(0.0, (sum, item) => sum + item.totalPrice);
+                
+                return Padding(
+                  padding: EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '$sourceTitle ($itemCount ${itemCount == 1 ? 'item' : 'items'})',
+                          style: TextStyle(fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '₹${sourceTotal.toInt()}',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-            Divider(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total: ${cartController.formattedItemCount}',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  cartController.formattedTotalPrice,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFE47830),
-                    fontSize: 16,
+                      Text(
+                        '₹${sourceTotal.toInt()}',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Proceed to payment?',
-              style: TextStyle(fontSize: 16),
-            ),
-          ],
+                );
+              }).toList(),
+              Divider(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total: ${cartController.formattedItemCount}',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    cartController.formattedTotalPrice,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFE47830),
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Proceed to payment?',
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
         ),
-      ),
-      textCancel: 'Review Cart',
-      textConfirm: 'Pay Now',
-      confirmTextColor: Colors.white,
-      buttonColor: const Color(0xFFE47830),
-      cancelTextColor: Colors.grey,
-      onConfirm: () async {
-        Get.back();
-        Get.dialog(
-          Center(child: CircularProgressIndicator()),
-          barrierDismissible: false,
-        );
-        
-        await Future.delayed(Duration(seconds: 2));
-        Get.back();
-        
-        await cartController.completeCheckout();
-        
-        Get.snackbar(
-          'Order Confirmed',
-          'Your order has been placed successfully!',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-        );
-      },
-    );
+        textCancel: 'Review Cart',
+        textConfirm: 'Pay Now',
+        confirmTextColor: Colors.white,
+        buttonColor: const Color(0xFFE47830),
+        cancelTextColor: Colors.grey,
+        onConfirm: () async {
+          Get.back();
+          Get.dialog(
+            Center(child: CircularProgressIndicator(color: Color(0xFFE47830))),
+            barrierDismissible: false,
+          );
+          
+          await Future.delayed(Duration(seconds: 2));
+          Get.back();
+          
+          // Use the updated checkout method
+          await cartController.completeCheckout();
+        },
+      );
+    });
   }
 }

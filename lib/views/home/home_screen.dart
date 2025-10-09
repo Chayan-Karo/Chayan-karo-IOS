@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 // Controllers
 import '../../controllers/home_controller.dart';
 import '../../controllers/cart_controller.dart';
+import '../../controllers/category_controller.dart'; // ADD: CategoryController import
 
 // Widgets
 import './widgets/home_header_widget.dart';
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       try {
         Get.find<HomeController>();
         Get.find<CartController>();
+        Get.find<CategoryController>(); // ADD: Initialize CategoryController
         print('✅ Controllers initialized successfully');
       } catch (e) {
         print('❌ Error initializing controllers: $e');
@@ -125,7 +127,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     child: RefreshIndicator(
                       onRefresh: () async {
                         final cartController = Get.find<CartController>();
+                        final categoryController = Get.find<CategoryController>(); // ADD: Get CategoryController
                         await homeController.refreshData();
+                        await categoryController.refreshCategories(); // ADD: Refresh categories
                         cartController.refreshCart();
                       },
                       child: SingleChildScrollView(
@@ -141,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                             SizedBox(height: 16.h * scaleFactor),
 
-                            // Categories Grid
+                            // Categories Grid - Now uses CategoryController internally
                             CategoriesGridWidget(
                               scaleFactor: scaleFactor,
                               horizontalPadding: horizontalPadding,
@@ -156,7 +160,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             ),
 
                             SizedBox(height: 24.h * scaleFactor),
-
 
                             // Most Used Services
                             MostUsedServicesWidget(scaleFactor: scaleFactor),

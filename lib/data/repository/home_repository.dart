@@ -1,69 +1,13 @@
-// Import models with explicit naming to avoid conflicts
+// lib/data/repository/home_repository.dart
 import '../../models/home_models.dart' as models;
-import '../remote/api_service.dart';
 import '../local/database.dart';
 
 class HomeRepository {
-  final ApiService _apiService;
   final AppDatabase _database;
 
   HomeRepository({
-    required ApiService apiService,
     required AppDatabase database,
-  })  : _apiService = apiService,
-        _database = database;
-
-  // Dummy categories data for immediate display
-  List<models.ServiceCategory> _getDummyCategories() {
-    return [
-      models.ServiceCategory(title: 'Female Saloon', icon: 'assets/icons/female_saloon.svg'),
-      models.ServiceCategory(title: 'Female Spa', icon: 'assets/icons/female_spa.svg'),
-      models.ServiceCategory(title: 'Male Saloon', icon: 'assets/icons/male_saloon.svg'),
-      models.ServiceCategory(title: 'Male Spa', icon: 'assets/icons/male_spa.svg'),
-      models.ServiceCategory(title: 'Hair & Skin', icon: 'assets/icons/hair_skin.svg'),
-      models.ServiceCategory(title: 'Home Repairs', icon: 'assets/icons/home_repairs.svg'),
-      models.ServiceCategory(title: 'Cleaning', icon: 'assets/icons/cleaning.svg'),
-      models.ServiceCategory(title: 'AC Services', icon: 'assets/icons/ac_service.svg'),
-    ];
-  }
-
-  // Get categories - dummy data first strategy with database persistence
-  Future<List<models.ServiceCategory>> getCategories() async {
-    final dummyCategories = _getDummyCategories();
-    
-    try {
-      // Try to get from local database first
-      final localCategories = await _database.getAllCategories();
-      if (localCategories.isNotEmpty) {
-        print('📱 Returning ${localCategories.length} categories from local database');
-        return localCategories;
-      }
-
-      // If no local data, fetch from API
-      print('🌐 Fetching categories from API...');
-      final remoteCategories = await _apiService.getCategories();
-      
-      // Save to local database
-      await _database.clearCategories();
-      await _database.insertCategories(remoteCategories);
-      print('💾 Saved ${remoteCategories.length} categories to database');
-      
-      return remoteCategories;
-    } catch (e) {
-      // If everything fails, save and return dummy data
-      print('🔄 Using dummy categories data for development: $e');
-      
-      try {
-        await _database.clearCategories();
-        await _database.insertCategories(dummyCategories);
-        print('💾 Saved ${dummyCategories.length} dummy categories to database');
-      } catch (dbError) {
-        print('❌ Could not save dummy categories to database: $dbError');
-      }
-      
-      return dummyCategories;
-    }
-  }
+  }) : _database = database;
 
   // Dummy most used services data
   List<models.Service> _getDummyMostUsedServices() {
@@ -88,24 +32,20 @@ class HomeRepository {
         return localServices;
       }
 
-      print('🌐 Fetching most used services from API...');
-      final remoteServices = await _apiService.getMostUsedServices();
-      await _database.insertServices(remoteServices, 'mostUsed');
-      print('💾 Saved ${remoteServices.length} most used services to database');
-      
-      return remoteServices;
-    } catch (e) {
-      // If everything fails, save and return dummy data
-      print('🔄 Using dummy services data for development: $e');
+      // Use dummy data instead of API call
+      print('🔄 Using dummy services data for development');
       
       try {
-        // Clear existing services of this type first
-        await _database.insertServices(dummyServices, 'mostUsed');
+        // Use the correct method name for legacy services
+        await _database.insertLegacyServices(dummyServices, 'mostUsed');
         print('💾 Saved ${dummyServices.length} dummy most used services to database');
       } catch (dbError) {
         print('❌ Could not save dummy services to database: $dbError');
       }
       
+      return dummyServices;
+    } catch (e) {
+      print('🔄 Using dummy services data for development: $e');
       return dummyServices;
     }
   }
@@ -146,11 +86,10 @@ class HomeRepository {
     final dummyGoToServices = _getDummyGoToServices();
     
     try {
-      print('🌐 Fetching GoTo services from API...');
-      final remoteGoToServices = await _apiService.getGoToServices();
-      return remoteGoToServices;
+      // Return dummy data directly (bypass API)
+      print('🔄 Using dummy goto services data for development');
+      return dummyGoToServices;
     } catch (e) {
-      // Return enhanced dummy data as fallback
       print('🔄 Using dummy goto services data for development: $e');
       return dummyGoToServices;
     }
@@ -168,10 +107,9 @@ class HomeRepository {
   // Get banner data
   Future<models.Banner> getBanner() async {
     try {
-      // Try to fetch banner from API
-      print('🌐 Fetching banner from API...');
-      final homeData = await _apiService.getHomeData();
-      return homeData?.banner ?? _getDummyBanner();
+      // Return dummy data directly (bypass API)
+      print('🔄 Using dummy banner data for development');
+      return _getDummyBanner();
     } catch (e) {
       print('🔄 Using dummy banner data for development: $e');
       return _getDummyBanner();
@@ -195,11 +133,7 @@ class HomeRepository {
   // Get appliance repair services
   Future<List<Map<String, String>>> getApplianceRepairServices() async {
     try {
-      // Try to fetch from API when available
-      // final services = await _apiService.getApplianceRepairServices();
-      // return services;
-      
-      // For now, return dummy data
+      // Return dummy data directly (bypass API)
       print('🔄 Using dummy appliance repair services for development');
       return _getDummyApplianceRepairServices();
     } catch (e) {
@@ -222,11 +156,7 @@ class HomeRepository {
   // Get AC repair services
   Future<List<Map<String, String>>> getAcRepairServices() async {
     try {
-      // Try to fetch from API when available
-      // final services = await _apiService.getAcRepairServices();
-      // return services;
-      
-      // For now, return dummy data
+      // Return dummy data directly (bypass API)
       print('🔄 Using dummy AC repair services for development');
       return _getDummyAcRepairServices();
     } catch (e) {
@@ -249,7 +179,7 @@ class HomeRepository {
   // Get male spa services
   Future<List<Map<String, String>>> getMaleSpaServices() async {
     try {
-      // Try to fetch from API when available
+      // Return dummy data directly (bypass API)
       print('🔄 Using dummy male spa services for development');
       return _getDummyMaleSpaServices();
     } catch (e) {
@@ -271,7 +201,7 @@ class HomeRepository {
   // Get salon men services
   Future<List<Map<String, String>>> getSalonMenServices() async {
     try {
-      // Try to fetch from API when available
+      // Return dummy data directly (bypass API)
       print('🔄 Using dummy salon men services for development');
       return _getDummySalonMenServices();
     } catch (e) {
@@ -313,7 +243,7 @@ class HomeRepository {
   // Get women salon services
   Future<List<Map<String, String>>> getWomenSalonServices() async {
     try {
-      // Try to fetch from API when available
+      // Return dummy data directly (bypass API)
       print('🔄 Using dummy women salon services for development');
       return _getDummyWomenSalonServices();
     } catch (e) {
@@ -336,7 +266,7 @@ class HomeRepository {
   // Get women spa services
   Future<List<Map<String, String>>> getWomenSpaServices() async {
     try {
-      // Try to fetch from API when available
+      // Return dummy data directly (bypass API)
       print('🔄 Using dummy women spa services for development');
       return _getDummyWomenSpaServices();
     } catch (e) {
@@ -345,14 +275,61 @@ class HomeRepository {
     }
   }
 
-  // Get complete home data
+  // Get complete home data - return dummy data structure
   Future<models.HomeData?> getHomeData() async {
     try {
-      print('🌐 Fetching complete home data from API...');
-      return await _apiService.getHomeData();
+      print('🔄 Creating dummy home data for development');
+      
+      // Create a complete HomeData object with dummy data
+      return models.HomeData(
+        banner: _getDummyBanner(),
+        mostUsedServices: _getDummyMostUsedServices(),
+        goToServices: _getDummyGoToServices(), categories: [], acRepairItems: [], appliancesRepairItems: [], maleSpaItems: [], salonMenItems: [], saloonWomenItems: [], spaWomenItems: [],
+        // Add any other properties your HomeData model requires
+      );
     } catch (e) {
-      print('🔄 API not available, using repository fallback methods: $e');
+      print('🔄 Using dummy home data fallback: $e');
       return null;
+    }
+  }
+
+  // Refresh methods (return fresh dummy data)
+  Future<List<models.Service>> refreshMostUsedServices() async {
+    print('🔄 Refreshing most used services with dummy data');
+    final dummyServices = _getDummyMostUsedServices();
+    
+    try {
+      await _database.insertLegacyServices(dummyServices, 'mostUsed');
+      print('💾 Refreshed and saved ${dummyServices.length} dummy services to database');
+    } catch (e) {
+      print('❌ Could not save refreshed dummy services: $e');
+    }
+    
+    return dummyServices;
+  }
+
+  Future<List<models.GoToService>> refreshGoToServices() async {
+    print('🔄 Refreshing GoTo services with dummy data');
+    return _getDummyGoToServices();
+  }
+
+  Future<models.Banner> refreshBanner() async {
+    print('🔄 Refreshing banner with dummy data');
+    return _getDummyBanner();
+  }
+
+  Future<models.HomeData?> refreshHomeData() async {
+    print('🔄 Refreshing home data with dummy data');
+    return getHomeData();
+  }
+
+  // Helper method to clear cached data
+  Future<void> clearCache() async {
+    try {
+      // Clear any cached data if needed
+      print('🗑️ Clearing home repository cache');
+    } catch (e) {
+      print('❌ Error clearing cache: $e');
     }
   }
 }

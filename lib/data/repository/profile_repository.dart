@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import '../remote/network_client.dart';
+import '../remote/network_client.dart'; // should provide the singleton ApiService
 import '../local/database.dart';
 import '../../models/customer_models.dart';
 
@@ -8,16 +8,16 @@ class ProfileRepository {
   // Singleton instance
   static final ProfileRepository _instance = ProfileRepository._internal();
 
-  // Network client singleton instance
+  // Network client singleton
   final NetworkClient _networkClient;
 
   // Private named constructor
   ProfileRepository._internal() : _networkClient = NetworkClient();
 
-  // Factory constructor returns the singleton instance
+  // Factory returns the singleton instance
   factory ProfileRepository() => _instance;
 
-  // Use Get.find to get the singleton database instance
+  // Get singleton db instance
   AppDatabase get _database => Get.find<AppDatabase>();
 
   Future<Customer> getCustomer() async {
@@ -46,7 +46,6 @@ class ProfileRepository {
       await _cacheCustomerData(response.result);
 
       return response.result;
-
     } on DioException catch (e) {
       print('❌ DioException in Profile Repository: ${e.type}');
       print('❌ Status Code: ${e.response?.statusCode}');
@@ -70,7 +69,6 @@ class ProfileRepository {
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.sendTimeout) {
-
         print('⏱️ Network timeout occurred');
 
         final cachedData = await _getCachedCustomerData();
@@ -95,7 +93,6 @@ class ProfileRepository {
       }
 
       throw Exception('Network error: ${e.message}');
-
     } catch (e) {
       print('❌ Generic error in Profile Repository: $e');
 
@@ -109,6 +106,39 @@ class ProfileRepository {
       }
 
       rethrow;
+    }
+  }
+
+  Future<void> updateCustomerProfile({
+    required String emailId,
+    required String firstName,
+    String? middleName,
+    required String lastName,
+    required String gender,
+  }) async {
+    final token = await _database.getAuthToken();
+    if (token == null || token.isEmpty)
+      throw Exception('No authentication token. Please login again.');
+
+    final body = {
+      "emailId": emailId,
+      "firstName": firstName,
+      "middleName": middleName ?? "",
+      "lastName": lastName,
+      "gender": gender,
+    };
+
+    try {
+      await _networkClient.apiService.updateCustomerProfile('Bearer $token', body);
+      await refreshProfile();
+    } on DioException catch (e) {
+      print('❌ DioException on profile update: ${e.type}');
+      if (e.response?.statusCode == 401) {
+        throw Exception('Session expired. Please login again.');
+      }
+      throw Exception('Failed to update profile: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to update profile: $e');
     }
   }
 
@@ -139,8 +169,6 @@ class ProfileRepository {
       print('   Has ID: ${userData.containsKey('id')}');
 
       if (userData.isNotEmpty && userData.containsKey('id')) {
-        print('📋 Loading cached customer data...');
-
         if (userData.containsKey('cached_at')) {
           final cachedAt = DateTime.parse(userData['cached_at']);
           final ageInHours = DateTime.now().difference(cachedAt).inHours;
@@ -157,11 +185,24 @@ class ProfileRepository {
         userData.remove('login_message');
         userData.remove('phone');
 
-        if (userData.containsKey('averageRating') && userData['averageRating'] is String) {
-          userData['averageRating'] = double.tryParse(userData['averageRating'] as String) ?? 0.0;
+        if (userData.containsKey('averageRating') && userData['averageRating'] != null) {
+          if (userData['averageRating'] is String) {
+            userData['averageRating'] = double.tryParse(userData['averageRating'] as String) ?? 0.0;
+          } else if (userData['averageRating'] is num) {
+            userData['averageRating'] = (userData['averageRating'] as num).toDouble();
+          }
+        } else {
+          userData['averageRating'] = 0.0;
         }
-        if (userData.containsKey('status') && userData['status'] is String) {
-          userData['status'] = int.tryParse(userData['status'] as String) ?? 1;
+
+        if (userData.containsKey('status') && userData['status'] != null) {
+          if (userData['status'] is String) {
+            userData['status'] = int.tryParse(userData['status'] as String) ?? 1;
+          } else if (userData['status'] is int) {
+            userData['status'] = userData['status'] as int;
+          }
+        } else {
+          userData['status'] = 1;
         }
 
         print('📋 Creating Customer from cached data: ${userData.keys.toList()}');
@@ -172,7 +213,6 @@ class ProfileRepository {
       }
     } catch (e) {
       print('⚠️ Failed to load cached customer data: $e');
-      print('⚠️ Error type: ${e.runtimeType}');
     }
     return null;
   }

@@ -37,7 +37,7 @@ class FeedbackSubmittedScreen extends StatelessWidget {
               children: [
                 ChayanHeader(
                   title: 'Feedback',
-                  onBackTap: () => Navigator.pop(context),
+                  onBack: () => Navigator.pop(context),
                 ),
                 SizedBox(height: 40.h * scaleFactor),
                 SvgPicture.asset(

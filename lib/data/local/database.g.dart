@@ -304,6 +304,390 @@ class ServiceCategoriesTableCompanion
   }
 }
 
+class $CategoriesTableTable extends CategoriesTable
+    with TableInfo<$CategoriesTableTable, CategoriesTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CategoriesTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryNameMeta = const VerificationMeta(
+    'categoryName',
+  );
+  @override
+  late final GeneratedColumn<String> categoryName = GeneratedColumn<String>(
+    'category_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _imgLinkMeta = const VerificationMeta(
+    'imgLink',
+  );
+  @override
+  late final GeneratedColumn<String> imgLink = GeneratedColumn<String>(
+    'img_link',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _serviceCategoryMeta = const VerificationMeta(
+    'serviceCategory',
+  );
+  @override
+  late final GeneratedColumn<String> serviceCategory = GeneratedColumn<String>(
+    'service_category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    categoryId,
+    categoryName,
+    imgLink,
+    serviceCategory,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'categories';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CategoriesTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    if (data.containsKey('category_name')) {
+      context.handle(
+        _categoryNameMeta,
+        categoryName.isAcceptableOrUnknown(
+          data['category_name']!,
+          _categoryNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryNameMeta);
+    }
+    if (data.containsKey('img_link')) {
+      context.handle(
+        _imgLinkMeta,
+        imgLink.isAcceptableOrUnknown(data['img_link']!, _imgLinkMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_imgLinkMeta);
+    }
+    if (data.containsKey('service_category')) {
+      context.handle(
+        _serviceCategoryMeta,
+        serviceCategory.isAcceptableOrUnknown(
+          data['service_category']!,
+          _serviceCategoryMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_serviceCategoryMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {categoryId};
+  @override
+  CategoriesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CategoriesTableData(
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      )!,
+      categoryName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_name'],
+      )!,
+      imgLink: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}img_link'],
+      )!,
+      serviceCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}service_category'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CategoriesTableTable createAlias(String alias) {
+    return $CategoriesTableTable(attachedDatabase, alias);
+  }
+}
+
+class CategoriesTableData extends DataClass
+    implements Insertable<CategoriesTableData> {
+  final String categoryId;
+  final String categoryName;
+  final String imgLink;
+  final String serviceCategory;
+  final DateTime createdAt;
+  const CategoriesTableData({
+    required this.categoryId,
+    required this.categoryName,
+    required this.imgLink,
+    required this.serviceCategory,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['category_id'] = Variable<String>(categoryId);
+    map['category_name'] = Variable<String>(categoryName);
+    map['img_link'] = Variable<String>(imgLink);
+    map['service_category'] = Variable<String>(serviceCategory);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CategoriesTableCompanion toCompanion(bool nullToAbsent) {
+    return CategoriesTableCompanion(
+      categoryId: Value(categoryId),
+      categoryName: Value(categoryName),
+      imgLink: Value(imgLink),
+      serviceCategory: Value(serviceCategory),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CategoriesTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CategoriesTableData(
+      categoryId: serializer.fromJson<String>(json['categoryId']),
+      categoryName: serializer.fromJson<String>(json['categoryName']),
+      imgLink: serializer.fromJson<String>(json['imgLink']),
+      serviceCategory: serializer.fromJson<String>(json['serviceCategory']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'categoryId': serializer.toJson<String>(categoryId),
+      'categoryName': serializer.toJson<String>(categoryName),
+      'imgLink': serializer.toJson<String>(imgLink),
+      'serviceCategory': serializer.toJson<String>(serviceCategory),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CategoriesTableData copyWith({
+    String? categoryId,
+    String? categoryName,
+    String? imgLink,
+    String? serviceCategory,
+    DateTime? createdAt,
+  }) => CategoriesTableData(
+    categoryId: categoryId ?? this.categoryId,
+    categoryName: categoryName ?? this.categoryName,
+    imgLink: imgLink ?? this.imgLink,
+    serviceCategory: serviceCategory ?? this.serviceCategory,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CategoriesTableData copyWithCompanion(CategoriesTableCompanion data) {
+    return CategoriesTableData(
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      categoryName: data.categoryName.present
+          ? data.categoryName.value
+          : this.categoryName,
+      imgLink: data.imgLink.present ? data.imgLink.value : this.imgLink,
+      serviceCategory: data.serviceCategory.present
+          ? data.serviceCategory.value
+          : this.serviceCategory,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoriesTableData(')
+          ..write('categoryId: $categoryId, ')
+          ..write('categoryName: $categoryName, ')
+          ..write('imgLink: $imgLink, ')
+          ..write('serviceCategory: $serviceCategory, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    categoryId,
+    categoryName,
+    imgLink,
+    serviceCategory,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CategoriesTableData &&
+          other.categoryId == this.categoryId &&
+          other.categoryName == this.categoryName &&
+          other.imgLink == this.imgLink &&
+          other.serviceCategory == this.serviceCategory &&
+          other.createdAt == this.createdAt);
+}
+
+class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
+  final Value<String> categoryId;
+  final Value<String> categoryName;
+  final Value<String> imgLink;
+  final Value<String> serviceCategory;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CategoriesTableCompanion({
+    this.categoryId = const Value.absent(),
+    this.categoryName = const Value.absent(),
+    this.imgLink = const Value.absent(),
+    this.serviceCategory = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CategoriesTableCompanion.insert({
+    required String categoryId,
+    required String categoryName,
+    required String imgLink,
+    required String serviceCategory,
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : categoryId = Value(categoryId),
+       categoryName = Value(categoryName),
+       imgLink = Value(imgLink),
+       serviceCategory = Value(serviceCategory);
+  static Insertable<CategoriesTableData> custom({
+    Expression<String>? categoryId,
+    Expression<String>? categoryName,
+    Expression<String>? imgLink,
+    Expression<String>? serviceCategory,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (categoryId != null) 'category_id': categoryId,
+      if (categoryName != null) 'category_name': categoryName,
+      if (imgLink != null) 'img_link': imgLink,
+      if (serviceCategory != null) 'service_category': serviceCategory,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CategoriesTableCompanion copyWith({
+    Value<String>? categoryId,
+    Value<String>? categoryName,
+    Value<String>? imgLink,
+    Value<String>? serviceCategory,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CategoriesTableCompanion(
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
+      imgLink: imgLink ?? this.imgLink,
+      serviceCategory: serviceCategory ?? this.serviceCategory,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (categoryName.present) {
+      map['category_name'] = Variable<String>(categoryName.value);
+    }
+    if (imgLink.present) {
+      map['img_link'] = Variable<String>(imgLink.value);
+    }
+    if (serviceCategory.present) {
+      map['service_category'] = Variable<String>(serviceCategory.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoriesTableCompanion(')
+          ..write('categoryId: $categoryId, ')
+          ..write('categoryName: $categoryName, ')
+          ..write('imgLink: $imgLink, ')
+          ..write('serviceCategory: $serviceCategory, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ServicesTableTable extends ServicesTable
     with TableInfo<$ServicesTableTable, ServicesTableData> {
   @override
@@ -638,6 +1022,575 @@ class ServicesTableCompanion extends UpdateCompanion<ServicesTableData> {
           ..write('image: $image, ')
           ..write('type: $type, ')
           ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ApiServicesTableTable extends ApiServicesTable
+    with TableInfo<$ApiServicesTableTable, ApiServicesTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ApiServicesTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _priceMeta = const VerificationMeta('price');
+  @override
+  late final GeneratedColumn<double> price = GeneratedColumn<double>(
+    'price',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _durationMeta = const VerificationMeta(
+    'duration',
+  );
+  @override
+  late final GeneratedColumn<int> duration = GeneratedColumn<int>(
+    'duration',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _imgLinkMeta = const VerificationMeta(
+    'imgLink',
+  );
+  @override
+  late final GeneratedColumn<String> imgLink = GeneratedColumn<String>(
+    'img_link',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _discountPercentageMeta =
+      const VerificationMeta('discountPercentage');
+  @override
+  late final GeneratedColumn<double> discountPercentage =
+      GeneratedColumn<double>(
+        'discount_percentage',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    price,
+    description,
+    duration,
+    imgLink,
+    discountPercentage,
+    categoryId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'api_services';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ApiServicesTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('price')) {
+      context.handle(
+        _priceMeta,
+        price.isAcceptableOrUnknown(data['price']!, _priceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_priceMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descriptionMeta);
+    }
+    if (data.containsKey('duration')) {
+      context.handle(
+        _durationMeta,
+        duration.isAcceptableOrUnknown(data['duration']!, _durationMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_durationMeta);
+    }
+    if (data.containsKey('img_link')) {
+      context.handle(
+        _imgLinkMeta,
+        imgLink.isAcceptableOrUnknown(data['img_link']!, _imgLinkMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_imgLinkMeta);
+    }
+    if (data.containsKey('discount_percentage')) {
+      context.handle(
+        _discountPercentageMeta,
+        discountPercentage.isAcceptableOrUnknown(
+          data['discount_percentage']!,
+          _discountPercentageMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_discountPercentageMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ApiServicesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ApiServicesTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      price: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}price'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      duration: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration'],
+      )!,
+      imgLink: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}img_link'],
+      )!,
+      discountPercentage: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}discount_percentage'],
+      )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ApiServicesTableTable createAlias(String alias) {
+    return $ApiServicesTableTable(attachedDatabase, alias);
+  }
+}
+
+class ApiServicesTableData extends DataClass
+    implements Insertable<ApiServicesTableData> {
+  final String id;
+  final String name;
+  final double price;
+  final String description;
+  final int duration;
+  final String imgLink;
+  final double discountPercentage;
+  final String categoryId;
+  final DateTime createdAt;
+  const ApiServicesTableData({
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.description,
+    required this.duration,
+    required this.imgLink,
+    required this.discountPercentage,
+    required this.categoryId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['price'] = Variable<double>(price);
+    map['description'] = Variable<String>(description);
+    map['duration'] = Variable<int>(duration);
+    map['img_link'] = Variable<String>(imgLink);
+    map['discount_percentage'] = Variable<double>(discountPercentage);
+    map['category_id'] = Variable<String>(categoryId);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ApiServicesTableCompanion toCompanion(bool nullToAbsent) {
+    return ApiServicesTableCompanion(
+      id: Value(id),
+      name: Value(name),
+      price: Value(price),
+      description: Value(description),
+      duration: Value(duration),
+      imgLink: Value(imgLink),
+      discountPercentage: Value(discountPercentage),
+      categoryId: Value(categoryId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ApiServicesTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ApiServicesTableData(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      price: serializer.fromJson<double>(json['price']),
+      description: serializer.fromJson<String>(json['description']),
+      duration: serializer.fromJson<int>(json['duration']),
+      imgLink: serializer.fromJson<String>(json['imgLink']),
+      discountPercentage: serializer.fromJson<double>(
+        json['discountPercentage'],
+      ),
+      categoryId: serializer.fromJson<String>(json['categoryId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'price': serializer.toJson<double>(price),
+      'description': serializer.toJson<String>(description),
+      'duration': serializer.toJson<int>(duration),
+      'imgLink': serializer.toJson<String>(imgLink),
+      'discountPercentage': serializer.toJson<double>(discountPercentage),
+      'categoryId': serializer.toJson<String>(categoryId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ApiServicesTableData copyWith({
+    String? id,
+    String? name,
+    double? price,
+    String? description,
+    int? duration,
+    String? imgLink,
+    double? discountPercentage,
+    String? categoryId,
+    DateTime? createdAt,
+  }) => ApiServicesTableData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    price: price ?? this.price,
+    description: description ?? this.description,
+    duration: duration ?? this.duration,
+    imgLink: imgLink ?? this.imgLink,
+    discountPercentage: discountPercentage ?? this.discountPercentage,
+    categoryId: categoryId ?? this.categoryId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ApiServicesTableData copyWithCompanion(ApiServicesTableCompanion data) {
+    return ApiServicesTableData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      price: data.price.present ? data.price.value : this.price,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      duration: data.duration.present ? data.duration.value : this.duration,
+      imgLink: data.imgLink.present ? data.imgLink.value : this.imgLink,
+      discountPercentage: data.discountPercentage.present
+          ? data.discountPercentage.value
+          : this.discountPercentage,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ApiServicesTableData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('price: $price, ')
+          ..write('description: $description, ')
+          ..write('duration: $duration, ')
+          ..write('imgLink: $imgLink, ')
+          ..write('discountPercentage: $discountPercentage, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    price,
+    description,
+    duration,
+    imgLink,
+    discountPercentage,
+    categoryId,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ApiServicesTableData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.price == this.price &&
+          other.description == this.description &&
+          other.duration == this.duration &&
+          other.imgLink == this.imgLink &&
+          other.discountPercentage == this.discountPercentage &&
+          other.categoryId == this.categoryId &&
+          other.createdAt == this.createdAt);
+}
+
+class ApiServicesTableCompanion extends UpdateCompanion<ApiServicesTableData> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<double> price;
+  final Value<String> description;
+  final Value<int> duration;
+  final Value<String> imgLink;
+  final Value<double> discountPercentage;
+  final Value<String> categoryId;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ApiServicesTableCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.price = const Value.absent(),
+    this.description = const Value.absent(),
+    this.duration = const Value.absent(),
+    this.imgLink = const Value.absent(),
+    this.discountPercentage = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ApiServicesTableCompanion.insert({
+    required String id,
+    required String name,
+    required double price,
+    required String description,
+    required int duration,
+    required String imgLink,
+    required double discountPercentage,
+    required String categoryId,
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       price = Value(price),
+       description = Value(description),
+       duration = Value(duration),
+       imgLink = Value(imgLink),
+       discountPercentage = Value(discountPercentage),
+       categoryId = Value(categoryId);
+  static Insertable<ApiServicesTableData> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<double>? price,
+    Expression<String>? description,
+    Expression<int>? duration,
+    Expression<String>? imgLink,
+    Expression<double>? discountPercentage,
+    Expression<String>? categoryId,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (price != null) 'price': price,
+      if (description != null) 'description': description,
+      if (duration != null) 'duration': duration,
+      if (imgLink != null) 'img_link': imgLink,
+      if (discountPercentage != null) 'discount_percentage': discountPercentage,
+      if (categoryId != null) 'category_id': categoryId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ApiServicesTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<double>? price,
+    Value<String>? description,
+    Value<int>? duration,
+    Value<String>? imgLink,
+    Value<double>? discountPercentage,
+    Value<String>? categoryId,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ApiServicesTableCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      description: description ?? this.description,
+      duration: duration ?? this.duration,
+      imgLink: imgLink ?? this.imgLink,
+      discountPercentage: discountPercentage ?? this.discountPercentage,
+      categoryId: categoryId ?? this.categoryId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (price.present) {
+      map['price'] = Variable<double>(price.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (duration.present) {
+      map['duration'] = Variable<int>(duration.value);
+    }
+    if (imgLink.present) {
+      map['img_link'] = Variable<String>(imgLink.value);
+    }
+    if (discountPercentage.present) {
+      map['discount_percentage'] = Variable<double>(discountPercentage.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ApiServicesTableCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('price: $price, ')
+          ..write('description: $description, ')
+          ..write('duration: $duration, ')
+          ..write('imgLink: $imgLink, ')
+          ..write('discountPercentage: $discountPercentage, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -1248,6 +2201,15 @@ class $CartItemsTableTable extends CartItemsTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _imageMeta = const VerificationMeta('image');
   @override
   late final GeneratedColumn<String> image = GeneratedColumn<String>(
@@ -1265,6 +2227,17 @@ class $CartItemsTableTable extends CartItemsTable
     false,
     type: DriftSqlType.double,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _originalPriceMeta = const VerificationMeta(
+    'originalPrice',
+  );
+  @override
+  late final GeneratedColumn<double> originalPrice = GeneratedColumn<double>(
+    'original_price',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _quantityMeta = const VerificationMeta(
     'quantity',
@@ -1309,16 +2282,16 @@ class $CartItemsTableTable extends CartItemsTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _originalPriceMeta = const VerificationMeta(
-    'originalPrice',
-  );
+  static const VerificationMeta _discountPercentageMeta =
+      const VerificationMeta('discountPercentage');
   @override
-  late final GeneratedColumn<String> originalPrice = GeneratedColumn<String>(
-    'original_price',
+  late final GeneratedColumn<int> discountPercentage = GeneratedColumn<int>(
+    'discount_percentage',
     aliasedName,
-    true,
-    type: DriftSqlType.string,
+    false,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _typeMeta = const VerificationMeta('type');
   @override
@@ -1364,6 +2337,17 @@ class $CartItemsTableTable extends CartItemsTable
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _dateAddedMeta = const VerificationMeta(
+    'dateAdded',
+  );
+  @override
+  late final GeneratedColumn<DateTime> dateAdded = GeneratedColumn<DateTime>(
+    'date_added',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -1380,17 +2364,20 @@ class $CartItemsTableTable extends CartItemsTable
   List<GeneratedColumn> get $columns => [
     id,
     title,
+    name,
     image,
     price,
+    originalPrice,
     quantity,
     description,
     rating,
     duration,
-    originalPrice,
+    discountPercentage,
     type,
     sourcePage,
     sourceTitle,
     addedAt,
+    dateAdded,
     updatedAt,
   ];
   @override
@@ -1418,6 +2405,12 @@ class $CartItemsTableTable extends CartItemsTable
     } else if (isInserting) {
       context.missing(_titleMeta);
     }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
     if (data.containsKey('image')) {
       context.handle(
         _imageMeta,
@@ -1433,6 +2426,15 @@ class $CartItemsTableTable extends CartItemsTable
       );
     } else if (isInserting) {
       context.missing(_priceMeta);
+    }
+    if (data.containsKey('original_price')) {
+      context.handle(
+        _originalPriceMeta,
+        originalPrice.isAcceptableOrUnknown(
+          data['original_price']!,
+          _originalPriceMeta,
+        ),
+      );
     }
     if (data.containsKey('quantity')) {
       context.handle(
@@ -1461,12 +2463,12 @@ class $CartItemsTableTable extends CartItemsTable
         duration.isAcceptableOrUnknown(data['duration']!, _durationMeta),
       );
     }
-    if (data.containsKey('original_price')) {
+    if (data.containsKey('discount_percentage')) {
       context.handle(
-        _originalPriceMeta,
-        originalPrice.isAcceptableOrUnknown(
-          data['original_price']!,
-          _originalPriceMeta,
+        _discountPercentageMeta,
+        discountPercentage.isAcceptableOrUnknown(
+          data['discount_percentage']!,
+          _discountPercentageMeta,
         ),
       );
     }
@@ -1497,6 +2499,12 @@ class $CartItemsTableTable extends CartItemsTable
         addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
       );
     }
+    if (data.containsKey('date_added')) {
+      context.handle(
+        _dateAddedMeta,
+        dateAdded.isAcceptableOrUnknown(data['date_added']!, _dateAddedMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -1520,6 +2528,10 @@ class $CartItemsTableTable extends CartItemsTable
         DriftSqlType.string,
         data['${effectivePrefix}title'],
       )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
       image: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}image'],
@@ -1528,6 +2540,10 @@ class $CartItemsTableTable extends CartItemsTable
         DriftSqlType.double,
         data['${effectivePrefix}price'],
       )!,
+      originalPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}original_price'],
+      ),
       quantity: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}quantity'],
@@ -1544,10 +2560,10 @@ class $CartItemsTableTable extends CartItemsTable
         DriftSqlType.string,
         data['${effectivePrefix}duration'],
       ),
-      originalPrice: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}original_price'],
-      ),
+      discountPercentage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}discount_percentage'],
+      )!,
       type: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}type'],
@@ -1564,6 +2580,10 @@ class $CartItemsTableTable extends CartItemsTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}added_at'],
       )!,
+      dateAdded: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date_added'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -1581,32 +2601,38 @@ class CartItemsTableData extends DataClass
     implements Insertable<CartItemsTableData> {
   final String id;
   final String title;
+  final String? name;
   final String image;
   final double price;
+  final double? originalPrice;
   final int quantity;
   final String? description;
   final String? rating;
   final String? duration;
-  final String? originalPrice;
+  final int discountPercentage;
   final String type;
   final String? sourcePage;
   final String? sourceTitle;
   final DateTime addedAt;
+  final DateTime? dateAdded;
   final DateTime updatedAt;
   const CartItemsTableData({
     required this.id,
     required this.title,
+    this.name,
     required this.image,
     required this.price,
+    this.originalPrice,
     required this.quantity,
     this.description,
     this.rating,
     this.duration,
-    this.originalPrice,
+    required this.discountPercentage,
     required this.type,
     this.sourcePage,
     this.sourceTitle,
     required this.addedAt,
+    this.dateAdded,
     required this.updatedAt,
   });
   @override
@@ -1614,8 +2640,14 @@ class CartItemsTableData extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['title'] = Variable<String>(title);
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
     map['image'] = Variable<String>(image);
     map['price'] = Variable<double>(price);
+    if (!nullToAbsent || originalPrice != null) {
+      map['original_price'] = Variable<double>(originalPrice);
+    }
     map['quantity'] = Variable<int>(quantity);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
@@ -1626,9 +2658,7 @@ class CartItemsTableData extends DataClass
     if (!nullToAbsent || duration != null) {
       map['duration'] = Variable<String>(duration);
     }
-    if (!nullToAbsent || originalPrice != null) {
-      map['original_price'] = Variable<String>(originalPrice);
-    }
+    map['discount_percentage'] = Variable<int>(discountPercentage);
     map['type'] = Variable<String>(type);
     if (!nullToAbsent || sourcePage != null) {
       map['source_page'] = Variable<String>(sourcePage);
@@ -1637,6 +2667,9 @@ class CartItemsTableData extends DataClass
       map['source_title'] = Variable<String>(sourceTitle);
     }
     map['added_at'] = Variable<DateTime>(addedAt);
+    if (!nullToAbsent || dateAdded != null) {
+      map['date_added'] = Variable<DateTime>(dateAdded);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -1645,8 +2678,12 @@ class CartItemsTableData extends DataClass
     return CartItemsTableCompanion(
       id: Value(id),
       title: Value(title),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
       image: Value(image),
       price: Value(price),
+      originalPrice: originalPrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originalPrice),
       quantity: Value(quantity),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -1657,9 +2694,7 @@ class CartItemsTableData extends DataClass
       duration: duration == null && nullToAbsent
           ? const Value.absent()
           : Value(duration),
-      originalPrice: originalPrice == null && nullToAbsent
-          ? const Value.absent()
-          : Value(originalPrice),
+      discountPercentage: Value(discountPercentage),
       type: Value(type),
       sourcePage: sourcePage == null && nullToAbsent
           ? const Value.absent()
@@ -1668,6 +2703,9 @@ class CartItemsTableData extends DataClass
           ? const Value.absent()
           : Value(sourceTitle),
       addedAt: Value(addedAt),
+      dateAdded: dateAdded == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dateAdded),
       updatedAt: Value(updatedAt),
     );
   }
@@ -1680,17 +2718,20 @@ class CartItemsTableData extends DataClass
     return CartItemsTableData(
       id: serializer.fromJson<String>(json['id']),
       title: serializer.fromJson<String>(json['title']),
+      name: serializer.fromJson<String?>(json['name']),
       image: serializer.fromJson<String>(json['image']),
       price: serializer.fromJson<double>(json['price']),
+      originalPrice: serializer.fromJson<double?>(json['originalPrice']),
       quantity: serializer.fromJson<int>(json['quantity']),
       description: serializer.fromJson<String?>(json['description']),
       rating: serializer.fromJson<String?>(json['rating']),
       duration: serializer.fromJson<String?>(json['duration']),
-      originalPrice: serializer.fromJson<String?>(json['originalPrice']),
+      discountPercentage: serializer.fromJson<int>(json['discountPercentage']),
       type: serializer.fromJson<String>(json['type']),
       sourcePage: serializer.fromJson<String?>(json['sourcePage']),
       sourceTitle: serializer.fromJson<String?>(json['sourceTitle']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+      dateAdded: serializer.fromJson<DateTime?>(json['dateAdded']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -1700,17 +2741,20 @@ class CartItemsTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'title': serializer.toJson<String>(title),
+      'name': serializer.toJson<String?>(name),
       'image': serializer.toJson<String>(image),
       'price': serializer.toJson<double>(price),
+      'originalPrice': serializer.toJson<double?>(originalPrice),
       'quantity': serializer.toJson<int>(quantity),
       'description': serializer.toJson<String?>(description),
       'rating': serializer.toJson<String?>(rating),
       'duration': serializer.toJson<String?>(duration),
-      'originalPrice': serializer.toJson<String?>(originalPrice),
+      'discountPercentage': serializer.toJson<int>(discountPercentage),
       'type': serializer.toJson<String>(type),
       'sourcePage': serializer.toJson<String?>(sourcePage),
       'sourceTitle': serializer.toJson<String?>(sourceTitle),
       'addedAt': serializer.toJson<DateTime>(addedAt),
+      'dateAdded': serializer.toJson<DateTime?>(dateAdded),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -1718,51 +2762,61 @@ class CartItemsTableData extends DataClass
   CartItemsTableData copyWith({
     String? id,
     String? title,
+    Value<String?> name = const Value.absent(),
     String? image,
     double? price,
+    Value<double?> originalPrice = const Value.absent(),
     int? quantity,
     Value<String?> description = const Value.absent(),
     Value<String?> rating = const Value.absent(),
     Value<String?> duration = const Value.absent(),
-    Value<String?> originalPrice = const Value.absent(),
+    int? discountPercentage,
     String? type,
     Value<String?> sourcePage = const Value.absent(),
     Value<String?> sourceTitle = const Value.absent(),
     DateTime? addedAt,
+    Value<DateTime?> dateAdded = const Value.absent(),
     DateTime? updatedAt,
   }) => CartItemsTableData(
     id: id ?? this.id,
     title: title ?? this.title,
+    name: name.present ? name.value : this.name,
     image: image ?? this.image,
     price: price ?? this.price,
+    originalPrice: originalPrice.present
+        ? originalPrice.value
+        : this.originalPrice,
     quantity: quantity ?? this.quantity,
     description: description.present ? description.value : this.description,
     rating: rating.present ? rating.value : this.rating,
     duration: duration.present ? duration.value : this.duration,
-    originalPrice: originalPrice.present
-        ? originalPrice.value
-        : this.originalPrice,
+    discountPercentage: discountPercentage ?? this.discountPercentage,
     type: type ?? this.type,
     sourcePage: sourcePage.present ? sourcePage.value : this.sourcePage,
     sourceTitle: sourceTitle.present ? sourceTitle.value : this.sourceTitle,
     addedAt: addedAt ?? this.addedAt,
+    dateAdded: dateAdded.present ? dateAdded.value : this.dateAdded,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   CartItemsTableData copyWithCompanion(CartItemsTableCompanion data) {
     return CartItemsTableData(
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
+      name: data.name.present ? data.name.value : this.name,
       image: data.image.present ? data.image.value : this.image,
       price: data.price.present ? data.price.value : this.price,
+      originalPrice: data.originalPrice.present
+          ? data.originalPrice.value
+          : this.originalPrice,
       quantity: data.quantity.present ? data.quantity.value : this.quantity,
       description: data.description.present
           ? data.description.value
           : this.description,
       rating: data.rating.present ? data.rating.value : this.rating,
       duration: data.duration.present ? data.duration.value : this.duration,
-      originalPrice: data.originalPrice.present
-          ? data.originalPrice.value
-          : this.originalPrice,
+      discountPercentage: data.discountPercentage.present
+          ? data.discountPercentage.value
+          : this.discountPercentage,
       type: data.type.present ? data.type.value : this.type,
       sourcePage: data.sourcePage.present
           ? data.sourcePage.value
@@ -1771,6 +2825,7 @@ class CartItemsTableData extends DataClass
           ? data.sourceTitle.value
           : this.sourceTitle,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+      dateAdded: data.dateAdded.present ? data.dateAdded.value : this.dateAdded,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -1780,17 +2835,20 @@ class CartItemsTableData extends DataClass
     return (StringBuffer('CartItemsTableData(')
           ..write('id: $id, ')
           ..write('title: $title, ')
+          ..write('name: $name, ')
           ..write('image: $image, ')
           ..write('price: $price, ')
+          ..write('originalPrice: $originalPrice, ')
           ..write('quantity: $quantity, ')
           ..write('description: $description, ')
           ..write('rating: $rating, ')
           ..write('duration: $duration, ')
-          ..write('originalPrice: $originalPrice, ')
+          ..write('discountPercentage: $discountPercentage, ')
           ..write('type: $type, ')
           ..write('sourcePage: $sourcePage, ')
           ..write('sourceTitle: $sourceTitle, ')
           ..write('addedAt: $addedAt, ')
+          ..write('dateAdded: $dateAdded, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -1800,17 +2858,20 @@ class CartItemsTableData extends DataClass
   int get hashCode => Object.hash(
     id,
     title,
+    name,
     image,
     price,
+    originalPrice,
     quantity,
     description,
     rating,
     duration,
-    originalPrice,
+    discountPercentage,
     type,
     sourcePage,
     sourceTitle,
     addedAt,
+    dateAdded,
     updatedAt,
   );
   @override
@@ -1819,67 +2880,79 @@ class CartItemsTableData extends DataClass
       (other is CartItemsTableData &&
           other.id == this.id &&
           other.title == this.title &&
+          other.name == this.name &&
           other.image == this.image &&
           other.price == this.price &&
+          other.originalPrice == this.originalPrice &&
           other.quantity == this.quantity &&
           other.description == this.description &&
           other.rating == this.rating &&
           other.duration == this.duration &&
-          other.originalPrice == this.originalPrice &&
+          other.discountPercentage == this.discountPercentage &&
           other.type == this.type &&
           other.sourcePage == this.sourcePage &&
           other.sourceTitle == this.sourceTitle &&
           other.addedAt == this.addedAt &&
+          other.dateAdded == this.dateAdded &&
           other.updatedAt == this.updatedAt);
 }
 
 class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
   final Value<String> id;
   final Value<String> title;
+  final Value<String?> name;
   final Value<String> image;
   final Value<double> price;
+  final Value<double?> originalPrice;
   final Value<int> quantity;
   final Value<String?> description;
   final Value<String?> rating;
   final Value<String?> duration;
-  final Value<String?> originalPrice;
+  final Value<int> discountPercentage;
   final Value<String> type;
   final Value<String?> sourcePage;
   final Value<String?> sourceTitle;
   final Value<DateTime> addedAt;
+  final Value<DateTime?> dateAdded;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const CartItemsTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
+    this.name = const Value.absent(),
     this.image = const Value.absent(),
     this.price = const Value.absent(),
+    this.originalPrice = const Value.absent(),
     this.quantity = const Value.absent(),
     this.description = const Value.absent(),
     this.rating = const Value.absent(),
     this.duration = const Value.absent(),
-    this.originalPrice = const Value.absent(),
+    this.discountPercentage = const Value.absent(),
     this.type = const Value.absent(),
     this.sourcePage = const Value.absent(),
     this.sourceTitle = const Value.absent(),
     this.addedAt = const Value.absent(),
+    this.dateAdded = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CartItemsTableCompanion.insert({
     required String id,
     required String title,
+    this.name = const Value.absent(),
     required String image,
     required double price,
+    this.originalPrice = const Value.absent(),
     this.quantity = const Value.absent(),
     this.description = const Value.absent(),
     this.rating = const Value.absent(),
     this.duration = const Value.absent(),
-    this.originalPrice = const Value.absent(),
+    this.discountPercentage = const Value.absent(),
     this.type = const Value.absent(),
     this.sourcePage = const Value.absent(),
     this.sourceTitle = const Value.absent(),
     this.addedAt = const Value.absent(),
+    this.dateAdded = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1889,34 +2962,40 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
   static Insertable<CartItemsTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
+    Expression<String>? name,
     Expression<String>? image,
     Expression<double>? price,
+    Expression<double>? originalPrice,
     Expression<int>? quantity,
     Expression<String>? description,
     Expression<String>? rating,
     Expression<String>? duration,
-    Expression<String>? originalPrice,
+    Expression<int>? discountPercentage,
     Expression<String>? type,
     Expression<String>? sourcePage,
     Expression<String>? sourceTitle,
     Expression<DateTime>? addedAt,
+    Expression<DateTime>? dateAdded,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (title != null) 'title': title,
+      if (name != null) 'name': name,
       if (image != null) 'image': image,
       if (price != null) 'price': price,
+      if (originalPrice != null) 'original_price': originalPrice,
       if (quantity != null) 'quantity': quantity,
       if (description != null) 'description': description,
       if (rating != null) 'rating': rating,
       if (duration != null) 'duration': duration,
-      if (originalPrice != null) 'original_price': originalPrice,
+      if (discountPercentage != null) 'discount_percentage': discountPercentage,
       if (type != null) 'type': type,
       if (sourcePage != null) 'source_page': sourcePage,
       if (sourceTitle != null) 'source_title': sourceTitle,
       if (addedAt != null) 'added_at': addedAt,
+      if (dateAdded != null) 'date_added': dateAdded,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1925,34 +3004,40 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
   CartItemsTableCompanion copyWith({
     Value<String>? id,
     Value<String>? title,
+    Value<String?>? name,
     Value<String>? image,
     Value<double>? price,
+    Value<double?>? originalPrice,
     Value<int>? quantity,
     Value<String?>? description,
     Value<String?>? rating,
     Value<String?>? duration,
-    Value<String?>? originalPrice,
+    Value<int>? discountPercentage,
     Value<String>? type,
     Value<String?>? sourcePage,
     Value<String?>? sourceTitle,
     Value<DateTime>? addedAt,
+    Value<DateTime?>? dateAdded,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
     return CartItemsTableCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
+      name: name ?? this.name,
       image: image ?? this.image,
       price: price ?? this.price,
+      originalPrice: originalPrice ?? this.originalPrice,
       quantity: quantity ?? this.quantity,
       description: description ?? this.description,
       rating: rating ?? this.rating,
       duration: duration ?? this.duration,
-      originalPrice: originalPrice ?? this.originalPrice,
+      discountPercentage: discountPercentage ?? this.discountPercentage,
       type: type ?? this.type,
       sourcePage: sourcePage ?? this.sourcePage,
       sourceTitle: sourceTitle ?? this.sourceTitle,
       addedAt: addedAt ?? this.addedAt,
+      dateAdded: dateAdded ?? this.dateAdded,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1967,11 +3052,17 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
     if (image.present) {
       map['image'] = Variable<String>(image.value);
     }
     if (price.present) {
       map['price'] = Variable<double>(price.value);
+    }
+    if (originalPrice.present) {
+      map['original_price'] = Variable<double>(originalPrice.value);
     }
     if (quantity.present) {
       map['quantity'] = Variable<int>(quantity.value);
@@ -1985,8 +3076,8 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     if (duration.present) {
       map['duration'] = Variable<String>(duration.value);
     }
-    if (originalPrice.present) {
-      map['original_price'] = Variable<String>(originalPrice.value);
+    if (discountPercentage.present) {
+      map['discount_percentage'] = Variable<int>(discountPercentage.value);
     }
     if (type.present) {
       map['type'] = Variable<String>(type.value);
@@ -1999,6 +3090,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     }
     if (addedAt.present) {
       map['added_at'] = Variable<DateTime>(addedAt.value);
+    }
+    if (dateAdded.present) {
+      map['date_added'] = Variable<DateTime>(dateAdded.value);
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
@@ -2014,17 +3108,20 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     return (StringBuffer('CartItemsTableCompanion(')
           ..write('id: $id, ')
           ..write('title: $title, ')
+          ..write('name: $name, ')
           ..write('image: $image, ')
           ..write('price: $price, ')
+          ..write('originalPrice: $originalPrice, ')
           ..write('quantity: $quantity, ')
           ..write('description: $description, ')
           ..write('rating: $rating, ')
           ..write('duration: $duration, ')
-          ..write('originalPrice: $originalPrice, ')
+          ..write('discountPercentage: $discountPercentage, ')
           ..write('type: $type, ')
           ..write('sourcePage: $sourcePage, ')
           ..write('sourceTitle: $sourceTitle, ')
           ..write('addedAt: $addedAt, ')
+          ..write('dateAdded: $dateAdded, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2345,7 +3442,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ServiceCategoriesTableTable serviceCategoriesTable =
       $ServiceCategoriesTableTable(this);
+  late final $CategoriesTableTable categoriesTable = $CategoriesTableTable(
+    this,
+  );
   late final $ServicesTableTable servicesTable = $ServicesTableTable(this);
+  late final $ApiServicesTableTable apiServicesTable = $ApiServicesTableTable(
+    this,
+  );
   late final $UserPreferencesTableTable userPreferencesTable =
       $UserPreferencesTableTable(this);
   late final $LocationDataTableTable locationDataTable =
@@ -2358,7 +3461,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     serviceCategoriesTable,
+    categoriesTable,
     servicesTable,
+    apiServicesTable,
     userPreferencesTable,
     locationDataTable,
     cartItemsTable,
@@ -2560,6 +3665,222 @@ typedef $$ServiceCategoriesTableTableProcessedTableManager =
       ServiceCategoriesTableData,
       PrefetchHooks Function()
     >;
+typedef $$CategoriesTableTableCreateCompanionBuilder =
+    CategoriesTableCompanion Function({
+      required String categoryId,
+      required String categoryName,
+      required String imgLink,
+      required String serviceCategory,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$CategoriesTableTableUpdateCompanionBuilder =
+    CategoriesTableCompanion Function({
+      Value<String> categoryId,
+      Value<String> categoryName,
+      Value<String> imgLink,
+      Value<String> serviceCategory,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$CategoriesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $CategoriesTableTable> {
+  $$CategoriesTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imgLink => $composableBuilder(
+    column: $table.imgLink,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serviceCategory => $composableBuilder(
+    column: $table.serviceCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CategoriesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $CategoriesTableTable> {
+  $$CategoriesTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imgLink => $composableBuilder(
+    column: $table.imgLink,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serviceCategory => $composableBuilder(
+    column: $table.serviceCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CategoriesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CategoriesTableTable> {
+  $$CategoriesTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get imgLink =>
+      $composableBuilder(column: $table.imgLink, builder: (column) => column);
+
+  GeneratedColumn<String> get serviceCategory => $composableBuilder(
+    column: $table.serviceCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CategoriesTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CategoriesTableTable,
+          CategoriesTableData,
+          $$CategoriesTableTableFilterComposer,
+          $$CategoriesTableTableOrderingComposer,
+          $$CategoriesTableTableAnnotationComposer,
+          $$CategoriesTableTableCreateCompanionBuilder,
+          $$CategoriesTableTableUpdateCompanionBuilder,
+          (
+            CategoriesTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $CategoriesTableTable,
+              CategoriesTableData
+            >,
+          ),
+          CategoriesTableData,
+          PrefetchHooks Function()
+        > {
+  $$CategoriesTableTableTableManager(
+    _$AppDatabase db,
+    $CategoriesTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CategoriesTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoriesTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CategoriesTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> categoryId = const Value.absent(),
+                Value<String> categoryName = const Value.absent(),
+                Value<String> imgLink = const Value.absent(),
+                Value<String> serviceCategory = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CategoriesTableCompanion(
+                categoryId: categoryId,
+                categoryName: categoryName,
+                imgLink: imgLink,
+                serviceCategory: serviceCategory,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String categoryId,
+                required String categoryName,
+                required String imgLink,
+                required String serviceCategory,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CategoriesTableCompanion.insert(
+                categoryId: categoryId,
+                categoryName: categoryName,
+                imgLink: imgLink,
+                serviceCategory: serviceCategory,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CategoriesTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CategoriesTableTable,
+      CategoriesTableData,
+      $$CategoriesTableTableFilterComposer,
+      $$CategoriesTableTableOrderingComposer,
+      $$CategoriesTableTableAnnotationComposer,
+      $$CategoriesTableTableCreateCompanionBuilder,
+      $$CategoriesTableTableUpdateCompanionBuilder,
+      (
+        CategoriesTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $CategoriesTableTable,
+          CategoriesTableData
+        >,
+      ),
+      CategoriesTableData,
+      PrefetchHooks Function()
+    >;
 typedef $$ServicesTableTableCreateCompanionBuilder =
     ServicesTableCompanion Function({
       Value<int> id,
@@ -2756,6 +4077,298 @@ typedef $$ServicesTableTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $ServicesTableTable, ServicesTableData>,
       ),
       ServicesTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$ApiServicesTableTableCreateCompanionBuilder =
+    ApiServicesTableCompanion Function({
+      required String id,
+      required String name,
+      required double price,
+      required String description,
+      required int duration,
+      required String imgLink,
+      required double discountPercentage,
+      required String categoryId,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$ApiServicesTableTableUpdateCompanionBuilder =
+    ApiServicesTableCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<double> price,
+      Value<String> description,
+      Value<int> duration,
+      Value<String> imgLink,
+      Value<double> discountPercentage,
+      Value<String> categoryId,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ApiServicesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $ApiServicesTableTable> {
+  $$ApiServicesTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get price => $composableBuilder(
+    column: $table.price,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get duration => $composableBuilder(
+    column: $table.duration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imgLink => $composableBuilder(
+    column: $table.imgLink,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get discountPercentage => $composableBuilder(
+    column: $table.discountPercentage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ApiServicesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $ApiServicesTableTable> {
+  $$ApiServicesTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get price => $composableBuilder(
+    column: $table.price,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get duration => $composableBuilder(
+    column: $table.duration,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imgLink => $composableBuilder(
+    column: $table.imgLink,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get discountPercentage => $composableBuilder(
+    column: $table.discountPercentage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ApiServicesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ApiServicesTableTable> {
+  $$ApiServicesTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get price =>
+      $composableBuilder(column: $table.price, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get duration =>
+      $composableBuilder(column: $table.duration, builder: (column) => column);
+
+  GeneratedColumn<String> get imgLink =>
+      $composableBuilder(column: $table.imgLink, builder: (column) => column);
+
+  GeneratedColumn<double> get discountPercentage => $composableBuilder(
+    column: $table.discountPercentage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ApiServicesTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ApiServicesTableTable,
+          ApiServicesTableData,
+          $$ApiServicesTableTableFilterComposer,
+          $$ApiServicesTableTableOrderingComposer,
+          $$ApiServicesTableTableAnnotationComposer,
+          $$ApiServicesTableTableCreateCompanionBuilder,
+          $$ApiServicesTableTableUpdateCompanionBuilder,
+          (
+            ApiServicesTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $ApiServicesTableTable,
+              ApiServicesTableData
+            >,
+          ),
+          ApiServicesTableData,
+          PrefetchHooks Function()
+        > {
+  $$ApiServicesTableTableTableManager(
+    _$AppDatabase db,
+    $ApiServicesTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ApiServicesTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ApiServicesTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ApiServicesTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double> price = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<int> duration = const Value.absent(),
+                Value<String> imgLink = const Value.absent(),
+                Value<double> discountPercentage = const Value.absent(),
+                Value<String> categoryId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ApiServicesTableCompanion(
+                id: id,
+                name: name,
+                price: price,
+                description: description,
+                duration: duration,
+                imgLink: imgLink,
+                discountPercentage: discountPercentage,
+                categoryId: categoryId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required double price,
+                required String description,
+                required int duration,
+                required String imgLink,
+                required double discountPercentage,
+                required String categoryId,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ApiServicesTableCompanion.insert(
+                id: id,
+                name: name,
+                price: price,
+                description: description,
+                duration: duration,
+                imgLink: imgLink,
+                discountPercentage: discountPercentage,
+                categoryId: categoryId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ApiServicesTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ApiServicesTableTable,
+      ApiServicesTableData,
+      $$ApiServicesTableTableFilterComposer,
+      $$ApiServicesTableTableOrderingComposer,
+      $$ApiServicesTableTableAnnotationComposer,
+      $$ApiServicesTableTableCreateCompanionBuilder,
+      $$ApiServicesTableTableUpdateCompanionBuilder,
+      (
+        ApiServicesTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $ApiServicesTableTable,
+          ApiServicesTableData
+        >,
+      ),
+      ApiServicesTableData,
       PrefetchHooks Function()
     >;
 typedef $$UserPreferencesTableTableCreateCompanionBuilder =
@@ -3134,17 +4747,20 @@ typedef $$CartItemsTableTableCreateCompanionBuilder =
     CartItemsTableCompanion Function({
       required String id,
       required String title,
+      Value<String?> name,
       required String image,
       required double price,
+      Value<double?> originalPrice,
       Value<int> quantity,
       Value<String?> description,
       Value<String?> rating,
       Value<String?> duration,
-      Value<String?> originalPrice,
+      Value<int> discountPercentage,
       Value<String> type,
       Value<String?> sourcePage,
       Value<String?> sourceTitle,
       Value<DateTime> addedAt,
+      Value<DateTime?> dateAdded,
       Value<DateTime> updatedAt,
       Value<int> rowid,
     });
@@ -3152,17 +4768,20 @@ typedef $$CartItemsTableTableUpdateCompanionBuilder =
     CartItemsTableCompanion Function({
       Value<String> id,
       Value<String> title,
+      Value<String?> name,
       Value<String> image,
       Value<double> price,
+      Value<double?> originalPrice,
       Value<int> quantity,
       Value<String?> description,
       Value<String?> rating,
       Value<String?> duration,
-      Value<String?> originalPrice,
+      Value<int> discountPercentage,
       Value<String> type,
       Value<String?> sourcePage,
       Value<String?> sourceTitle,
       Value<DateTime> addedAt,
+      Value<DateTime?> dateAdded,
       Value<DateTime> updatedAt,
       Value<int> rowid,
     });
@@ -3186,6 +4805,11 @@ class $$CartItemsTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get image => $composableBuilder(
     column: $table.image,
     builder: (column) => ColumnFilters(column),
@@ -3193,6 +4817,11 @@ class $$CartItemsTableTableFilterComposer
 
   ColumnFilters<double> get price => $composableBuilder(
     column: $table.price,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get originalPrice => $composableBuilder(
+    column: $table.originalPrice,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3216,8 +4845,8 @@ class $$CartItemsTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get originalPrice => $composableBuilder(
-    column: $table.originalPrice,
+  ColumnFilters<int> get discountPercentage => $composableBuilder(
+    column: $table.discountPercentage,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3238,6 +4867,11 @@ class $$CartItemsTableTableFilterComposer
 
   ColumnFilters<DateTime> get addedAt => $composableBuilder(
     column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get dateAdded => $composableBuilder(
+    column: $table.dateAdded,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3266,6 +4900,11 @@ class $$CartItemsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get image => $composableBuilder(
     column: $table.image,
     builder: (column) => ColumnOrderings(column),
@@ -3273,6 +4912,11 @@ class $$CartItemsTableTableOrderingComposer
 
   ColumnOrderings<double> get price => $composableBuilder(
     column: $table.price,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get originalPrice => $composableBuilder(
+    column: $table.originalPrice,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3296,8 +4940,8 @@ class $$CartItemsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get originalPrice => $composableBuilder(
-    column: $table.originalPrice,
+  ColumnOrderings<int> get discountPercentage => $composableBuilder(
+    column: $table.discountPercentage,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3318,6 +4962,11 @@ class $$CartItemsTableTableOrderingComposer
 
   ColumnOrderings<DateTime> get addedAt => $composableBuilder(
     column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get dateAdded => $composableBuilder(
+    column: $table.dateAdded,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3342,11 +4991,19 @@ class $$CartItemsTableTableAnnotationComposer
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
   GeneratedColumn<String> get image =>
       $composableBuilder(column: $table.image, builder: (column) => column);
 
   GeneratedColumn<double> get price =>
       $composableBuilder(column: $table.price, builder: (column) => column);
+
+  GeneratedColumn<double> get originalPrice => $composableBuilder(
+    column: $table.originalPrice,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get quantity =>
       $composableBuilder(column: $table.quantity, builder: (column) => column);
@@ -3362,8 +5019,8 @@ class $$CartItemsTableTableAnnotationComposer
   GeneratedColumn<String> get duration =>
       $composableBuilder(column: $table.duration, builder: (column) => column);
 
-  GeneratedColumn<String> get originalPrice => $composableBuilder(
-    column: $table.originalPrice,
+  GeneratedColumn<int> get discountPercentage => $composableBuilder(
+    column: $table.discountPercentage,
     builder: (column) => column,
   );
 
@@ -3382,6 +5039,9 @@ class $$CartItemsTableTableAnnotationComposer
 
   GeneratedColumn<DateTime> get addedAt =>
       $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dateAdded =>
+      $composableBuilder(column: $table.dateAdded, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -3426,33 +5086,39 @@ class $$CartItemsTableTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> title = const Value.absent(),
+                Value<String?> name = const Value.absent(),
                 Value<String> image = const Value.absent(),
                 Value<double> price = const Value.absent(),
+                Value<double?> originalPrice = const Value.absent(),
                 Value<int> quantity = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<String?> rating = const Value.absent(),
                 Value<String?> duration = const Value.absent(),
-                Value<String?> originalPrice = const Value.absent(),
+                Value<int> discountPercentage = const Value.absent(),
                 Value<String> type = const Value.absent(),
                 Value<String?> sourcePage = const Value.absent(),
                 Value<String?> sourceTitle = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
+                Value<DateTime?> dateAdded = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CartItemsTableCompanion(
                 id: id,
                 title: title,
+                name: name,
                 image: image,
                 price: price,
+                originalPrice: originalPrice,
                 quantity: quantity,
                 description: description,
                 rating: rating,
                 duration: duration,
-                originalPrice: originalPrice,
+                discountPercentage: discountPercentage,
                 type: type,
                 sourcePage: sourcePage,
                 sourceTitle: sourceTitle,
                 addedAt: addedAt,
+                dateAdded: dateAdded,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -3460,33 +5126,39 @@ class $$CartItemsTableTableTableManager
               ({
                 required String id,
                 required String title,
+                Value<String?> name = const Value.absent(),
                 required String image,
                 required double price,
+                Value<double?> originalPrice = const Value.absent(),
                 Value<int> quantity = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<String?> rating = const Value.absent(),
                 Value<String?> duration = const Value.absent(),
-                Value<String?> originalPrice = const Value.absent(),
+                Value<int> discountPercentage = const Value.absent(),
                 Value<String> type = const Value.absent(),
                 Value<String?> sourcePage = const Value.absent(),
                 Value<String?> sourceTitle = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
+                Value<DateTime?> dateAdded = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CartItemsTableCompanion.insert(
                 id: id,
                 title: title,
+                name: name,
                 image: image,
                 price: price,
+                originalPrice: originalPrice,
                 quantity: quantity,
                 description: description,
                 rating: rating,
                 duration: duration,
-                originalPrice: originalPrice,
+                discountPercentage: discountPercentage,
                 type: type,
                 sourcePage: sourcePage,
                 sourceTitle: sourceTitle,
                 addedAt: addedAt,
+                dateAdded: dateAdded,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -3709,8 +5381,12 @@ class $AppDatabaseManager {
         _db,
         _db.serviceCategoriesTable,
       );
+  $$CategoriesTableTableTableManager get categoriesTable =>
+      $$CategoriesTableTableTableManager(_db, _db.categoriesTable);
   $$ServicesTableTableTableManager get servicesTable =>
       $$ServicesTableTableTableManager(_db, _db.servicesTable);
+  $$ApiServicesTableTableTableManager get apiServicesTable =>
+      $$ApiServicesTableTableTableManager(_db, _db.apiServicesTable);
   $$UserPreferencesTableTableTableManager get userPreferencesTable =>
       $$UserPreferencesTableTableTableManager(_db, _db.userPreferencesTable);
   $$LocationDataTableTableTableManager get locationDataTable =>

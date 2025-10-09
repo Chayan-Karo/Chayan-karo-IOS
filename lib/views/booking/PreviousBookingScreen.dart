@@ -24,7 +24,7 @@ class PreviousBookingScreen extends StatelessWidget {
                 children: [
                   ChayanHeader(
                     title: 'Previous Booking',
-                    onBackTap: () => Navigator.pop(context),
+                    onBack: () => Navigator.pop(context),
                   ),
                   SizedBox(height: 16.h * scaleFactor),
                   Padding(

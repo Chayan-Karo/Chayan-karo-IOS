@@ -28,7 +28,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 children: [
                   ChayanHeader(
                     title: 'Feedback',
-                    onBackTap: () => Navigator.pop(context),
+                    onBack: () => Navigator.pop(context),
                   ),
                   SizedBox(height: 16.h * scaleFactor),
 

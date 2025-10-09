@@ -62,7 +62,7 @@ class _HelpScreenState extends State<HelpScreen> {
               // ✅ Custom Header used across screens
               ChayanHeader(
                 title: 'Help',
-                onBackTap: () => Navigator.pop(context),
+                onBack: () => Navigator.pop(context),
               ),
 
               Expanded(

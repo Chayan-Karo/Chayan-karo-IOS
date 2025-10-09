@@ -31,7 +31,7 @@ class AuthRepository {
       final data = {'mobileNo': phoneNumber};
       print('📤 Sending OTP request (generic): $data');
       final response = await _networkClient.dio.post(
-        '/Authentication/login',
+        '/user/login',
         data: data,
       );
       print('📥 Raw send OTP response: ${response.data}');
@@ -74,7 +74,7 @@ class AuthRepository {
       };
       print('📤 Verifying OTP request (generic): $data');
       final response = await _networkClient.dio.post(
-        '/Authentication/verifyOTP',
+        '/user/verifyOTP',
         data: data,
       );
       print('📥 Raw verify response: ${response.data}');
@@ -107,7 +107,7 @@ class AuthRepository {
       };
       print('📤 Test request data: $data');
       final response = await _networkClient.dio.post(
-        '/Authentication/login',
+        '/user/login',
         data: data,
       );
       print('✅ Test request successful: ${response.statusCode}');
@@ -131,7 +131,7 @@ class AuthRepository {
       };
       print('📤 Test verify request data: $data');
       final response = await _networkClient.dio.post(
-        '/Authentication/verifyOTP',
+        '/user/verifyOTP',
         data: data,
       );
       print('✅ Test verify request successful: ${response.statusCode}');

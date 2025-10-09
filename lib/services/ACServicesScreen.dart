@@ -97,7 +97,7 @@ class _ACServicesScreenState extends State<ACServicesScreen> {
   }
 
   // UPDATED: Add to cart with source information
-  void _addToCart(ACService service) {
+ /* void _addToCart(ACService service) {
     cartController.addItem(
       service,
       sourcePage: SOURCE_PAGE,
@@ -107,7 +107,7 @@ class _ACServicesScreenState extends State<ACServicesScreen> {
     if (!_currentPageSelectedServices.contains(service.id)) {
       _currentPageSelectedServices.add(service.id);
     }
-  }
+  } */
 
   void _incrementCart(String serviceId) {
     cartController.incrementQuantity(serviceId);
@@ -874,7 +874,7 @@ class _ACServicesScreenState extends State<ACServicesScreen> {
 
       if (quantity == 0 || !hasInteractedOnThisPage) {
         return GestureDetector(
-          onTap: () => _addToCart(service),
+       //   onTap: () => _addToCart(service),
           child: Container(
             width: 75.w * scaleFactor,
             height: 29.h * scaleFactor,

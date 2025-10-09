@@ -11,7 +11,6 @@ import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../widgets/chayan_header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-
 class ReferAndEarnScreen extends StatefulWidget {
   const ReferAndEarnScreen({super.key});
 
@@ -40,259 +39,243 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  return AnnotatedRegion<SystemUiOverlayStyle>(
-    value: SystemUiOverlayStyle.dark.copyWith(
-      statusBarColor: const Color(0xFFFFEEE0),
-    ),
-    child: LayoutBuilder(
-      builder: (context, constraints) {
-        bool isTablet = constraints.maxWidth > 600;
-        double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: const Color(0xFFFFEEE0),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isTablet = constraints.maxWidth > 600;
+          double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
-        return Scaffold(
-          backgroundColor: Colors.white,
-          bottomNavigationBar: CustomBottomNavBar(
-            selectedIndex: _selectedIndex,
-            onItemTapped: _onItemTapped,
-          ),
-          body: Stack(
-            children: [
-              Container(
-                height: 140.h * scaleFactor,
-                width: double.infinity,
-                color: const Color(0xFFFFEEE0),
-              ),
-              SafeArea(
-                child: Column(
-                  children: [
-                    SizedBox(height: 10.h * scaleFactor),
-                    ChayanHeader(
-                      title: 'Refer & Earn',
-                      onBackTap: () => Navigator.pop(context),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Container(
-                          color: Colors.white,
-                          padding: EdgeInsets.only(top: 16.r * scaleFactor),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: double.infinity,
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [Color(0xFFE47830), Color(0xFFFF6E00)],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                  ),
-                                ),
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 20.h * scaleFactor,
-                                  horizontal: 16.h * scaleFactor,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Refer and get FREE\nServices',
-                                                style: TextStyle(
-                                                  fontSize: 18.sp * scaleFactor,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                              SizedBox(height: 6.h * scaleFactor),
-                                              Text(
-                                                'Invite your friends to try Chayan Karo services. They get instant 100 coins off. You win 100 coins once they take a service.',
-                                                style: TextStyle(
-                                                  fontSize: 13.sp * scaleFactor,
-                                                  color: Colors.white70,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        SizedBox(width: 10.w * scaleFactor),
-                                        SvgPicture.asset(
-                                          'assets/icons/Gift.svg',
-                                          width: 80.w * scaleFactor,
-                                          height: 80.h * scaleFactor,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 16.h * scaleFactor),
-                                    Center(
-                                      child: Text(
-                                        'Refer via',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12.sp * scaleFactor,
-                                          letterSpacing: 0.8,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(height: 12.h * scaleFactor),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                      children: [
-                                        _socialIcon(
-                                          FontAwesomeIcons.whatsapp,
-                                          'Whatsapp',
-                                          const Color(0xFF25D366),
-                                          scaleFactor,
-                                        ),
-                                        _socialIcon(
-                                          FontAwesomeIcons.facebookMessenger,
-                                          'Messenger',
-                                          const Color(0xFF0084FF),
-                                          scaleFactor,
-                                        ),
-                                        _socialIcon(
-                                          Icons.copy,
-                                          'Copy Link',
-                                          Colors.black87,
-                                          scaleFactor,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 24.h * scaleFactor),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-                                child: Container(
+          return Scaffold(
+            backgroundColor: Colors.white,
+            bottomNavigationBar: CustomBottomNavBar(
+              selectedIndex: _selectedIndex,
+              onItemTapped: _onItemTapped,
+            ),
+            body: Stack(
+              children: [
+                Container(
+                  height: 140.h * scaleFactor,
+                  width: double.infinity,
+                  color: const Color(0xFFFFEEE0),
+                ),
+                SafeArea(
+                  child: Column(
+                    children: [
+                      SizedBox(height: 10.h * scaleFactor),
+                      ChayanHeader(
+                        title: 'Refer a Friend',
+                        onBack: () => Navigator.pop(context),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Container(
+                            color: Colors.white,
+                            padding: EdgeInsets.only(top: 16.r * scaleFactor),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
                                   width: double.infinity,
-                                  padding: EdgeInsets.all(16.r * scaleFactor),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0x66FF9437),
-                                    borderRadius: BorderRadius.circular(10.r * scaleFactor),
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Color(0xFFE47830), Color(0xFFFF6E00)],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                    ),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: 20.h * scaleFactor,
+                                    horizontal: 16.h * scaleFactor,
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'How it works?',
-                                        style: TextStyle(
-                                          fontSize: 18.sp * scaleFactor,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Invite your friends to try\nChayan Karo services',
+                                                  style: TextStyle(
+                                                    fontSize: 18.sp * scaleFactor,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 6.h * scaleFactor),
+                                                Text(
+                                                  'Share the app with friends and let them explore our services.',
+                                                  style: TextStyle(
+                                                    fontSize: 13.sp * scaleFactor,
+                                                    color: Colors.white70,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(width: 10.w * scaleFactor),
+                                          SvgPicture.asset(
+                                            'assets/icons/Gift.svg',
+                                            width: 80.w * scaleFactor,
+                                            height: 80.h * scaleFactor,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ],
                                       ),
                                       SizedBox(height: 16.h * scaleFactor),
-                                      Text(
-                                        '1. Invite your friends & get rewarded',
-                                        style: TextStyle(fontSize: 14.sp * scaleFactor),
+                                      Center(
+                                        child: Text(
+                                          'Refer via',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12.sp * scaleFactor,
+                                            letterSpacing: 0.8,
+                                          ),
+                                        ),
                                       ),
-                                      SizedBox(height: 8.h * scaleFactor),
-                                      Text(
-                                        '2. They get 100 coins on their first service',
-                                        style: TextStyle(fontSize: 14.sp * scaleFactor),
-                                      ),
-                                      SizedBox(height: 8.h * scaleFactor),
-                                      Text(
-                                        '3. You get 100 coins once their service is completed',
-                                        style: TextStyle(fontSize: 14.sp * scaleFactor),
+                                      SizedBox(height: 12.h * scaleFactor),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                        children: [
+                                          _socialIcon(
+                                            FontAwesomeIcons.whatsapp,
+                                            'Whatsapp',
+                                            const Color(0xFF25D366),
+                                            scaleFactor,
+                                          ),
+                                          _socialIcon(
+                                            FontAwesomeIcons.facebookMessenger,
+                                            'Messenger',
+                                            const Color(0xFF0084FF),
+                                            scaleFactor,
+                                          ),
+                                          _socialIcon(
+                                            Icons.copy,
+                                            'Copy Link',
+                                            Colors.black87,
+                                            scaleFactor,
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
-                              SizedBox(height: 24.h * scaleFactor),
-                              Center(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'You are yet to earn any scratch cards',
-                                      style: TextStyle(
-                                        fontSize: 17.sp * scaleFactor,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.5,
-                                      ),
+                                SizedBox(height: 24.h * scaleFactor),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.all(16.r * scaleFactor),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0x66FF9437),
+                                      borderRadius: BorderRadius.circular(10.r * scaleFactor),
                                     ),
-                                    SizedBox(height: 4.h * scaleFactor),
-                                    Opacity(
-                                      opacity: 0.75,
-                                      child: Text(
-                                        'Start referring to get surprises',
-                                        style: TextStyle(fontSize: 13.sp * scaleFactor),
-                                      ),
-                                    ),
-                                    SizedBox(height: 8.h * scaleFactor),
-                                    Text(
-                                      '......................................................................................',
-                                      style: TextStyle(
-                                        fontSize: 12.sp * scaleFactor,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8.h * scaleFactor),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        SvgPicture.asset(
-                                          'assets/icons/gifty.svg',
-                                          width: 37.w * scaleFactor,
-                                          height: 37.h * scaleFactor,
-                                        ),
-                                        SizedBox(width: 6.w * scaleFactor),
                                         Text(
-                                          'Earn 100 coins on every successful referral',
-                                          style: TextStyle(fontSize: 12.sp * scaleFactor),
+                                          'How it works?',
+                                          style: TextStyle(
+                                            fontSize: 18.sp * scaleFactor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        SizedBox(height: 16.h * scaleFactor),
+                                        Text(
+                                          '1. Share your referral link with friends',
+                                          style: TextStyle(fontSize: 14.sp * scaleFactor),
+                                        ),
+                                        SizedBox(height: 8.h * scaleFactor),
+                                        Text(
+                                          '2. Your friends download and explore the app',
+                                          style: TextStyle(fontSize: 14.sp * scaleFactor),
+                                        ),
+                                        SizedBox(height: 8.h * scaleFactor),
+                                        Text(
+                                          '3. Enjoy helping your friends discover Chayan Karo services!',
+                                          style: TextStyle(fontSize: 14.sp * scaleFactor),
                                         ),
                                       ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 60.h * scaleFactor),
-                            ],
+                                SizedBox(height: 24.h * scaleFactor),
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Start referring your friends today!',
+                                        style: TextStyle(
+                                          fontSize: 17.sp * scaleFactor,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4.h * scaleFactor),
+                                      Opacity(
+                                        opacity: 0.75,
+                                        child: Text(
+                                          'Spread the word and help your friends.',
+                                          style: TextStyle(fontSize: 13.sp * scaleFactor),
+                                        ),
+                                      ),
+                                      SizedBox(height: 8.h * scaleFactor),
+                                      Text(
+                                        '......................................................................................',
+                                        style: TextStyle(
+                                          fontSize: 12.sp * scaleFactor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8.h * scaleFactor),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: 60.h * scaleFactor),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _socialIcon(IconData icon, String label, Color color, double scaleFactor) {
+    return Column(
+      children: [
+        Container(
+          width: 54.w * scaleFactor,
+          height: 54.h * scaleFactor,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
           ),
-        );
-      },
-    ),
-  );
-}
-
-Widget _socialIcon(IconData icon, String label, Color color, double scaleFactor) {
-  return Column(
-    children: [
-      Container(
-        width: 54.w * scaleFactor,
-        height: 54.h * scaleFactor,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
+          child: Center(
+            child: Icon(icon, color: Colors.white, size: 24 * scaleFactor),
+          ),
         ),
-        child: Center(
-          child: Icon(icon, color: Colors.white, size: 24 * scaleFactor),
+        SizedBox(height: 8.h * scaleFactor),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.black),
         ),
-      ),
-      SizedBox(height: 8.h * scaleFactor),
-      Text(
-        label,
-        style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.black),
-      ),
-    ],
-  );
-}
-
+      ],
+    );
+  }
 }

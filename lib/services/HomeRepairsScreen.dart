@@ -99,7 +99,7 @@ class _HomeRepairsScreenState extends State<HomeRepairsScreen> {
   }
 
   // UPDATED: Add to cart with source information
-  void _addToCart(HomeRepairService service) {
+  /*void _addToCart(HomeRepairService service) {
     cartController.addItem(
       service,
       sourcePage: SOURCE_PAGE,
@@ -110,7 +110,7 @@ class _HomeRepairsScreenState extends State<HomeRepairsScreen> {
       _currentPageSelectedServices.add(service.id);
     }
   }
-
+*/
   void _incrementCart(String serviceId) {
     cartController.incrementQuantity(serviceId);
     if (!_currentPageSelectedServices.contains(serviceId)) {
@@ -876,7 +876,7 @@ class _HomeRepairsScreenState extends State<HomeRepairsScreen> {
 
       if (quantity == 0 || !hasInteractedOnThisPage) {
         return GestureDetector(
-          onTap: () => _addToCart(service),
+      //    onTap: () => _addToCart(service),
           child: Container(
             width: 75.w * scaleFactor,
             height: 29.h * scaleFactor,

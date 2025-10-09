@@ -29,7 +29,7 @@ class ChayanSathiScreen extends StatelessWidget {
                     /// Header
                     ChayanHeader(
                       title: 'Chayan Saathi',
-                      onBackTap: () => Navigator.pop(context),
+                      onBack: () => Navigator.pop(context),
                     ),
 
                     /// Grid content

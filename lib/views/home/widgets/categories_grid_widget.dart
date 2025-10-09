@@ -3,15 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
-import '../../../controllers/home_controller.dart';
-import '../../../services/saloonservicescreen.dart';
-import '../../../services/SalonMenServiceScreen.dart';
-import '../../../services/HairSkinScreen.dart';
-import '../../../services/MaleSpaScreen.dart';
-import '../../../services/ACServicesScreen.dart';
-import '../../../services/CleaningScreen.dart';
-import '../../../services/HomeRepairsScreen.dart';
-import '../../../services/FemaleSpaScreen.dart';
+import '../../../controllers/category_controller.dart';
+import '../../../models/category_models.dart';
+import '../../../services/universal_service_screen.dart'; // Your existing screen
 
 class CategoriesGridWidget extends StatelessWidget {
   final double scaleFactor;
@@ -23,58 +17,64 @@ class CategoriesGridWidget extends StatelessWidget {
     required this.horizontalPadding,
   }) : super(key: key);
 
-  void _navigateToService(String title) {
-    switch (title) {
-      case 'Female Saloon':
-        Get.to(() => SalonServiceScreen());
-        break;
-      case 'Male Saloon':
-        Get.to(() => SalonMenServiceScreen());
-        break;
-      case 'Female Spa':
-        Get.to(() => FemaleSpaScreen());
-        break;
-      case 'Male Spa':
-        Get.to(() => MaleSpaScreen());
-        break;
-      case 'Hair & Skin':
-        Get.to(() => HairSkinScreen());
-        break;
-      case 'Home Repairs':
-        Get.to(() => HomeRepairsScreen());
-        break;
-      case 'Cleaning':
-        Get.to(() => CleaningScreen());
-        break;
-      case 'AC Services':
-        Get.to(() => ACServicesScreen());
-        break;
-      default:
-        Get.snackbar(
-          'Coming Soon',
-          'Service "$title" coming soon!',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFFF6F00),
-          colorText: Colors.white,
-          duration: Duration(seconds: 2),
-        );
-    }
+  void _navigateToCategory(Category category) {
+    // Navigate directly to your existing CategoryServiceScreen
+    Get.to(() => CategoryServiceScreen(category: category));
   }
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final homeController = Get.find<HomeController>();
-      final categories = homeController.categories;
+      final categoryController = Get.find<CategoryController>();
+      final categories = categoryController.filteredCategories;
 
       // Show loading state
-      if (homeController.isLoading && categories.isEmpty) {
+      if (categoryController.isLoading && categories.isEmpty) {
         return Container(
           height: 200.h * scaleFactor,
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: const Center(
             child: CircularProgressIndicator(
               color: Color(0xFFFF6F00),
+            ),
+          ),
+        );
+      }
+
+      // Show error state
+      if (categoryController.hasError && categories.isEmpty) {
+        return Container(
+          height: 200.h * scaleFactor,
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: Colors.red,
+                  size: 48,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Failed to load categories',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () => categoryController.retry(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFFF6F00),
+                  ),
+                  child: Text(
+                    'Retry',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -97,7 +97,7 @@ class CategoriesGridWidget extends StatelessWidget {
         );
       }
 
-      // Display categories grid
+      // Display categories grid - clean and simple
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
         child: GridView.builder(
@@ -114,7 +114,7 @@ class CategoriesGridWidget extends StatelessWidget {
             final category = categories[index];
             
             return GestureDetector(
-              onTap: () => _navigateToService(category.title),
+              onTap: () => _navigateToCategory(category),
               child: Container(
                 decoration: ShapeDecoration(
                   color: Colors.white,
@@ -137,23 +137,29 @@ class CategoriesGridWidget extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Category icon with error handling
-                      SvgPicture.asset(
-                        category.icon,
-                        width: 40.w * scaleFactor,
-                        height: 40.h * scaleFactor,
-                        placeholderBuilder: (_) => Container(
+                      // Category icon
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          category.imgLink,
                           width: 40.w * scaleFactor,
                           height: 40.h * scaleFactor,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF6F00).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.category,
-                            color: const Color(0xFFFF6F00),
-                            size: 24.sp * scaleFactor,
-                          ),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 40.w * scaleFactor,
+                              height: 40.h * scaleFactor,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF6F00).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.category,
+                                color: const Color(0xFFFF6F00),
+                                size: 24.sp * scaleFactor,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       SizedBox(height: 6.h * scaleFactor),
@@ -162,7 +168,7 @@ class CategoriesGridWidget extends StatelessWidget {
                           horizontal: 2.w * scaleFactor,
                         ),
                         child: Text(
-                          category.title,
+                          category.categoryName,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.black,

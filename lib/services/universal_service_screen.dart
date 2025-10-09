@@ -1,113 +1,124 @@
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+// screens/category_service_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import '../../models/cleaning_service.dart';
-import '../../controllers/cleaning_service_controller.dart';
-import '../../controllers/cart_controller.dart';
+import '../controllers/service_controller.dart';
+import '../controllers/cart_controller.dart';
+import '../models/category_models.dart';
+import '../models/service_models.dart';
 import '../views/cart/cart_screen.dart';
 import '../views/booking/Summaryscreen.dart';
 
-class CleaningScreen extends StatefulWidget {
-  final String? scrollToServiceId;
-  const CleaningScreen({Key? key, this.scrollToServiceId}) : super(key: key);
+class CategoryServiceScreen extends StatefulWidget {
+  final Category category; // Now takes the main Category
+  final String? scrollToServiceCategoryId;
+
+  const CategoryServiceScreen({
+    Key? key,
+    required this.category,
+    this.scrollToServiceCategoryId,
+  }) : super(key: key);
 
   @override
-  _CleaningScreenState createState() => _CleaningScreenState();
+  State<CategoryServiceScreen> createState() => _CategoryServiceScreenState();
 }
 
-class _CleaningScreenState extends State<CleaningScreen> {
+class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
   final ScrollController _scrollController = ScrollController();
-  final CleaningServiceController controller = Get.put(CleaningServiceController());
-  final CartController cartController = Get.find<CartController>();
-  
+  late ServiceController serviceController;
+  late CartController cartController;
+
+  // Track services that show increment/decrement controls on this page session
   final RxSet<String> _currentPageInteractedServices = <String>{}.obs;
+  // Track services selected on this page only
   final RxList<String> _currentPageSelectedServices = <String>[].obs;
 
-  // Source page information - CONSTANTS
-  static const String SOURCE_PAGE = 'cleaning_services';
-  static const String SOURCE_TITLE = 'Clean Zone';
+  // Dynamic category keys for scrolling
+  final Map<String, GlobalKey> _serviceCategoryKeys = {};
 
-  final Map<String, GlobalKey> _categoryKeys = {
-    'Bathroom Cleaning': GlobalKey(),
-    'Kitchen Cleaning': GlobalKey(),
-    'Sofa & Carpet Cleaning': GlobalKey(),
-    'Full Home Deep Cleaning': GlobalKey(),
-    'Mattress Cleaning': GlobalKey(),
-    'Balcony & Window Cleaning': GlobalKey(),
-  };
-
-  final Map<String, String> _serviceToCategory = {
-    'basic_bathroom_cleaning': 'Bathroom Cleaning',
-    'deep_bathroom_sanitization': 'Bathroom Cleaning',
-    'basic_kitchen_cleaning': 'Kitchen Cleaning',
-    'deep_kitchen_degreasing': 'Kitchen Cleaning',
-    'sofa_shampooing_5_seater': 'Sofa & Carpet Cleaning',
-    'carpet_vacuum_wash': 'Sofa & Carpet Cleaning',
-  };
-
-  final Map<String, String> _categoryGridToSection = {
-    'Bathroom Cleaning': 'Bathroom Cleaning',
-    'Kitchen Cleaning': 'Kitchen Cleaning',
-    'Sofa & Carpet Cleaning': 'Sofa & Carpet Cleaning',
-    'Full Home Deep Cleaning': 'Bathroom Cleaning',
-    'Mattress Cleaning': 'Sofa & Carpet Cleaning',
-    'Balcony & Window Cleaning': 'Kitchen Cleaning',
-  };
+  // Store services for each service category
+  final RxMap<String, List<Service>> _servicesByCategory = <String, List<Service>>{}.obs;
+  final RxMap<String, bool> _loadingByCategory = <String, bool>{}.obs;
+  final RxMap<String, bool> _errorByCategory = <String, bool>{}.obs;
 
   @override
   void initState() {
     super.initState();
-    print('🟢 CleaningScreen initialized with scrollToServiceId: ${widget.scrollToServiceId}');
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.scrollToServiceId != null) {
-        _scrollToService(widget.scrollToServiceId!);
+    serviceController = Get.find<ServiceController>();
+    cartController = Get.find<CartController>();
+
+    print('🟢 CategoryServiceScreen initialized for ${widget.category.categoryName}');
+
+    // Initialize keys for each service category
+    for (var serviceCategory in widget.category.serviceCategory) {
+      _serviceCategoryKeys[serviceCategory.serviceCategoryId] = GlobalKey();
+    }
+
+    _loadAllServices();
+  }
+
+  void _loadAllServices() async {
+    // Load services for each service category
+    for (var serviceCategory in widget.category.serviceCategory) {
+      _loadServicesForCategory(serviceCategory.serviceCategoryId);
+    }
+
+    // Auto-scroll to specific service category if provided
+    if (widget.scrollToServiceCategoryId != null) {
+      _scrollToServiceCategory(widget.scrollToServiceCategoryId!);
+    }
+  }
+
+  void _loadServicesForCategory(String serviceCategoryId) async {
+    _loadingByCategory[serviceCategoryId] = true;
+    _errorByCategory[serviceCategoryId] = false;
+
+    try {
+      print('🔄 Loading services for service category: $serviceCategoryId');
+
+      // Use the service controller to load services
+      await serviceController.loadServices(serviceCategoryId);
+
+      // Store the services for this category
+      _servicesByCategory[serviceCategoryId] = List.from(serviceController.services);
+
+      print('✅ Loaded ${serviceController.services.length} services for category $serviceCategoryId');
+    } catch (e) {
+      print('❌ Error loading services for category $serviceCategoryId: $e');
+      _errorByCategory[serviceCategoryId] = true;
+    } finally {
+      _loadingByCategory[serviceCategoryId] = false;
+    }
+  }
+
+  void _scrollToServiceCategory(String serviceCategoryId) {
+    Future.delayed(Duration(milliseconds: 500), () {
+      final key = _serviceCategoryKeys[serviceCategoryId];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+          alignment: 0.1,
+        );
       }
     });
   }
 
-  void _scrollToService(String serviceId) {
-    String? categoryName = _serviceToCategory[serviceId];
-    if (categoryName != null) {
-      _scrollToCategory(categoryName);
-    }
-  }
-
-  void _scrollToCategory(String categoryName) {
-    final key = _categoryKeys[categoryName];
-    if (key?.currentContext != null) {
-      Scrollable.ensureVisible(
-        key!.currentContext!,
-        duration: const Duration(milliseconds: 800),
-        curve: Curves.easeInOut,
-        alignment: 0.1,
-      );
-    }
-  }
-
-  void _onCategoryGridTap(String categoryTitle) {
-    String? targetSection = _categoryGridToSection[categoryTitle];
-    if (targetSection != null) {
-      _scrollToCategory(targetSection);
-    } else {
-      _scrollToCategory('Bathroom Cleaning');
-    }
-  }
-
-  // UPDATED: Add to cart with source information
- /* void _addToCart(CleaningService service) {
+  // Add to cart with source information
+  void _addToCart(Service service) {
     cartController.addServiceToCart(
       service,
-      sourcePage: SOURCE_PAGE,
-      sourceTitle: SOURCE_TITLE,
+      sourcePage: 'category_service_${widget.category.categoryId}',
+      sourceTitle: widget.category.categoryName,
     );
     _currentPageInteractedServices.add(service.id);
     if (!_currentPageSelectedServices.contains(service.id)) {
       _currentPageSelectedServices.add(service.id);
     }
-  } */
+  }
 
   void _incrementCart(String serviceId) {
     cartController.incrementQuantity(serviceId);
@@ -125,8 +136,8 @@ class _CleaningScreenState extends State<CleaningScreen> {
   }
 
   bool get _hasCurrentPageSelections {
-    return _currentPageSelectedServices.isNotEmpty && 
-           _currentPageSelectedServices.any((serviceId) => cartController.getQuantity(serviceId) > 0);
+    return _currentPageSelectedServices.isNotEmpty &&
+        _currentPageSelectedServices.any((serviceId) => cartController.getQuantity(serviceId) > 0);
   }
 
   double get _currentPageTotal {
@@ -134,9 +145,14 @@ class _CleaningScreenState extends State<CleaningScreen> {
     for (String serviceId in _currentPageSelectedServices) {
       final quantity = cartController.getQuantity(serviceId);
       if (quantity > 0) {
-        final cartItem = cartController.cartItems.firstWhereOrNull((item) => item.id == serviceId);
-        if (cartItem != null) {
-          total += cartItem.price * quantity;
+        // Find service across all categories
+        Service? service;
+        for (var serviceList in _servicesByCategory.values) {
+          service = serviceList.firstWhereOrNull((s) => s.id == serviceId);
+          if (service != null) break;
+        }
+        if (service != null) {
+          total += service.discountedPrice * quantity;
         }
       }
     }
@@ -152,22 +168,16 @@ class _CleaningScreenState extends State<CleaningScreen> {
   }
 
   @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: const Color(0xFFFFEEE0),
+      statusBarIconBrightness: Brightness.dark,
+    ));
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isTablet = constraints.maxWidth > 600;
         final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
-
-        SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-          statusBarColor: const Color(0xFFFFEEE0),
-          statusBarIconBrightness: Brightness.dark,
-        ));
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -185,15 +195,15 @@ class _CleaningScreenState extends State<CleaningScreen> {
                           SizedBox(height: 12.h * scaleFactor),
                           _buildTopBanner(scaleFactor),
                           SizedBox(height: 12.h * scaleFactor),
-                          _buildSalonInfoBlock(scaleFactor),
+                          _buildCategoryInfoBlock(scaleFactor),
                           SizedBox(height: 16.h * scaleFactor),
                           _buildDiscountCards(scaleFactor),
                           SizedBox(height: 16.h * scaleFactor),
                           _buildCustomPackageSection(scaleFactor),
                           SizedBox(height: 16.h * scaleFactor),
-                          _buildCategoryGrid(scaleFactor),
+                          _buildServiceCategoryGrid(scaleFactor),
                           SizedBox(height: 16.h * scaleFactor),
-                          _buildServiceCards(scaleFactor),
+                          _buildServiceCategorySections(scaleFactor),
                           Obx(() => _hasCurrentPageSelections
                               ? SizedBox(height: 100.h * scaleFactor)
                               : SizedBox(height: 16.h * scaleFactor)),
@@ -248,7 +258,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
             SizedBox(width: 8.w * scaleFactor),
             Expanded(
               child: Text(
-                SOURCE_TITLE, // Use the constant
+                widget.category.categoryName,
                 style: TextStyle(
                   fontSize: 16.sp * scaleFactor,
                   fontWeight: FontWeight.w600,
@@ -259,11 +269,17 @@ class _CleaningScreenState extends State<CleaningScreen> {
               ),
             ),
             SizedBox(width: 8.w * scaleFactor),
+            // Cart icon (SVG like salon screen)
             Obx(() => GestureDetector(
                   onTap: () {
-                    Get.to(() => CartScreen());
+                    // Navigate to CartScreen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CartScreen()),
+                    );
                   },
                   child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       SvgPicture.asset(
                         'assets/icons/cart.svg',
@@ -273,8 +289,8 @@ class _CleaningScreenState extends State<CleaningScreen> {
                       ),
                       if (cartController.cartItemCount > 0)
                         Positioned(
-                          right: 0,
-                          top: 0,
+                          right: -2 * scaleFactor,
+                          top: -2 * scaleFactor,
                           child: Container(
                             padding: EdgeInsets.all(4 * scaleFactor),
                             decoration: BoxDecoration(
@@ -312,41 +328,72 @@ class _CleaningScreenState extends State<CleaningScreen> {
         borderRadius: BorderRadius.circular(12 * scaleFactor),
         child: Stack(
           children: [
-            Image.asset(
-              'assets/single_use_product.webp',
+            // background image (same asset usage as salon screen — here category provides image URL)
+            Image.network(
+              widget.category.imgLink,
               width: double.infinity,
               height: 160.h * scaleFactor,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: double.infinity,
+                  height: 160.h * scaleFactor,
+                  color: Colors.grey[200],
+                  child: Icon(
+                    Icons.category,
+                    size: 48 * scaleFactor,
+                    color: const Color(0xFFFF6F00),
+                  ),
+                );
+              },
             ),
+
+            // subtle gradient overlay to match salon look
+            Container(
+              width: double.infinity,
+              height: 160.h * scaleFactor,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.35),
+                  ],
+                ),
+              ),
+            ),
+
+            // white rounded chip (matches salon style)
             Positioned(
               bottom: 12.r * scaleFactor,
               left: 12.r * scaleFactor,
-              child: Container(
+             child: Container(
                 padding: EdgeInsets.symmetric(
-                  horizontal: 12.h * scaleFactor,
-                  vertical: 6.h * scaleFactor,
+                  horizontal: 12.h * scaleFactor, 
+                  vertical: 6.h * scaleFactor
                 ),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.6),
                   borderRadius: BorderRadius.circular(20 * scaleFactor),
                 ),
                 child: Text(
-                  "Single use products",
+                  widget.category.categoryName,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.white, 
                     fontWeight: FontWeight.bold,
                     fontSize: 14.sp * scaleFactor,
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSalonInfoBlock(double scaleFactor) {
+  Widget _buildCategoryInfoBlock(double scaleFactor) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
       child: Column(
@@ -355,11 +402,13 @@ class _CleaningScreenState extends State<CleaningScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                "Sweep & Shine", // Keep the company name different from header title
-                style: TextStyle(
-                  fontSize: 16.sp * scaleFactor,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  widget.category.categoryName,
+                  style: TextStyle(
+                    fontSize: 16.sp * scaleFactor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               Padding(
@@ -372,7 +421,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
                       height: 20.h * scaleFactor,
                       color: Colors.black,
                     ),
-                    SizedBox(width: 4.w * scaleFactor),
+                    SizedBox(width: 6.w * scaleFactor),
                     Text(
                       'CK safe',
                       style: TextStyle(
@@ -390,12 +439,8 @@ class _CleaningScreenState extends State<CleaningScreen> {
           SizedBox(height: 4.h * scaleFactor),
           Row(
             children: [
-              SvgPicture.asset(
-                'assets/icons/star.svg',
-                width: 18.w * scaleFactor,
-                height: 18.h * scaleFactor,
-                color: Colors.black,
-              ),
+              SvgPicture.asset('assets/icons/star.svg',
+                  width: 18.w * scaleFactor, height: 18.h * scaleFactor, color: Colors.black),
               SizedBox(width: 6.w * scaleFactor),
               Text(
                 "4.8 (23k)",
@@ -410,14 +455,11 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 width: 20.w * scaleFactor,
                 height: 20.h * scaleFactor,
                 alignment: Alignment.center,
-                child: SvgPicture.asset(
-                  'assets/icons/tick.svg',
-                  color: Colors.black,
-                ),
+                child: SvgPicture.asset('assets/icons/tick.svg', color: Colors.black),
               ),
               SizedBox(width: 6.w * scaleFactor),
               Text(
-                "354 jobs completed",
+                "${widget.category.serviceCategory.length} service categories available",
                 style: TextStyle(fontSize: 14.sp * scaleFactor),
               ),
             ],
@@ -457,6 +499,13 @@ class _CleaningScreenState extends State<CleaningScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFFF6F6F6),
               borderRadius: BorderRadius.circular(12 * scaleFactor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 6 * scaleFactor,
+                  offset: Offset(0, 2 * scaleFactor),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -511,8 +560,19 @@ class _CleaningScreenState extends State<CleaningScreen> {
         height: 100.h * scaleFactor,
         padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
         decoration: BoxDecoration(
-          color: const Color(0xFFE47830),
+          gradient: LinearGradient(
+            colors: [Color(0xFFE47830), Color(0xFFFA9441)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(12 * scaleFactor),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x33E47830),
+              blurRadius: 8 * scaleFactor,
+              offset: Offset(0, 4 * scaleFactor),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -531,22 +591,19 @@ class _CleaningScreenState extends State<CleaningScreen> {
                   children: [
                     SizedBox(
                       width: 205.67.w * scaleFactor,
-                      height: 26.46.h * scaleFactor,
                       child: Text(
-                        'Create a Customer Package',
+                        'Create a Custom Package',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.sp * scaleFactor,
                           fontFamily: 'Roboto',
                           fontWeight: FontWeight.w600,
-                          height: 1.50,
                         ),
                       ),
                     ),
                     SizedBox(height: 4.h * scaleFactor),
                     SizedBox(
                       width: 156.31.w * scaleFactor,
-                      height: 26.46.h * scaleFactor,
                       child: Opacity(
                         opacity: 0.50,
                         child: Text(
@@ -556,7 +613,6 @@ class _CleaningScreenState extends State<CleaningScreen> {
                             fontSize: 13.sp * scaleFactor,
                             fontFamily: 'Roboto',
                             fontWeight: FontWeight.w400,
-                            height: 1.85,
                           ),
                         ),
                       ),
@@ -576,16 +632,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
     );
   }
 
-  Widget _buildCategoryGrid(double scaleFactor) {
-    final categories = [
-      {'title': 'Bathroom Cleaning', 'image': 'assets/z2.webp'},
-      {'title': 'Kitchen Cleaning', 'image': 'assets/s1.webp'},
-      {'title': 'Sofa & Carpet Cleaning', 'image': 'assets/s2.webp'},
-      {'title': 'Full Home Deep Cleaning', 'image': 'assets/s3.webp'},
-      {'title': 'Mattress Cleaning', 'image': 'assets/s4.webp'},
-      {'title': 'Balcony & Window Cleaning', 'image': 'assets/s5.webp'},
-    ];
-
+  Widget _buildServiceCategoryGrid(double scaleFactor) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
       child: Column(
@@ -603,7 +650,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: categories.length,
+            itemCount: widget.category.serviceCategory.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               mainAxisSpacing: 20 * scaleFactor,
@@ -611,9 +658,9 @@ class _CleaningScreenState extends State<CleaningScreen> {
               childAspectRatio: 0.78,
             ),
             itemBuilder: (context, index) {
-              final item = categories[index];
+              final serviceCategory = widget.category.serviceCategory[index];
               return GestureDetector(
-                onTap: () => _onCategoryGridTap(item['title']!),
+                onTap: () => _scrollToServiceCategory(serviceCategory.serviceCategoryId),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -648,15 +695,22 @@ class _CleaningScreenState extends State<CleaningScreen> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8 * scaleFactor),
-                            child: Image.asset(
-                              item['image']!,
+                            child: Image.network(
+                              serviceCategory.imgLink,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.home_repair_service,
+                                  color: const Color(0xFFFF6F00),
+                                  size: 24 * scaleFactor,
+                                );
+                              },
                             ),
                           ),
                         ),
                         SizedBox(height: 8.h * scaleFactor),
                         Text(
-                          item['title']!,
+                          serviceCategory.serviceCategoryName,
                           style: TextStyle(
                             fontSize: 11.5.sp * scaleFactor,
                             fontWeight: FontWeight.w500,
@@ -679,28 +733,29 @@ class _CleaningScreenState extends State<CleaningScreen> {
     );
   }
 
-  Widget _buildServiceCards(double scaleFactor) {
+  Widget _buildServiceCategorySections(double scaleFactor) {
     return Obx(() {
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: controller.groupedServices.entries.map((entry) {
-            final String category = entry.key;
-            final List<CleaningService> services = entry.value;
+          children: widget.category.serviceCategory.map((serviceCategory) {
             return Container(
-              key: _categoryKeys[category],
+              key: _serviceCategoryKeys[serviceCategory.serviceCategoryId],
               margin: EdgeInsets.only(bottom: 24.h * scaleFactor),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(category,
-                      style: TextStyle(
-                          fontSize: 16.sp * scaleFactor,
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    serviceCategory.serviceCategoryName,
+                    style: TextStyle(
+                      fontSize: 16.sp * scaleFactor,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
                   SizedBox(height: 12.h * scaleFactor),
-                  ...services.map((service) =>
-                      _buildServiceCard(service, scaleFactor, category)),
+                  _buildServicesForCategory(serviceCategory, scaleFactor),
                 ],
               ),
             );
@@ -710,197 +765,322 @@ class _CleaningScreenState extends State<CleaningScreen> {
     });
   }
 
-  Widget _buildServiceCard(CleaningService service, double scaleFactor, String category) {
-    if (category == 'Sofa & Carpet Cleaning') {
-      return _buildSofaCarpetCard(service, scaleFactor);
-    } else {
-      return _buildRegularServiceCard(service, scaleFactor);
+  Widget _buildServicesForCategory(ServiceSubCategory serviceCategory, double scaleFactor) {
+    final serviceCategoryId = serviceCategory.serviceCategoryId;
+    final isLoading = _loadingByCategory[serviceCategoryId] ?? true;
+    final hasError = _errorByCategory[serviceCategoryId] ?? false;
+    final services = _servicesByCategory[serviceCategoryId] ?? [];
+
+    if (isLoading && services.isEmpty) {
+      return Container(
+        height: 100.h * scaleFactor,
+        child: const Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF6F00)),
+        ),
+      );
+    }
+
+    if (hasError && services.isEmpty) {
+      return Container(
+        height: 100.h * scaleFactor,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 24),
+              SizedBox(height: 4.h * scaleFactor),
+              Text(
+                'Failed to load services',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 12.sp * scaleFactor,
+                ),
+              ),
+              SizedBox(height: 4.h * scaleFactor),
+              ElevatedButton(
+                onPressed: () => _loadServicesForCategory(serviceCategoryId),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6F00),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                ),
+                child: Text(
+                  'Retry',
+                  style: TextStyle(color: Colors.white, fontSize: 10.sp),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (services.isEmpty) {
+      return Container(
+        height: 60.h * scaleFactor,
+        child: Center(
+          child: Text(
+            'No services available',
+            style: TextStyle(color: Colors.grey, fontSize: 12.sp * scaleFactor),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: services.map((service) => _buildServiceCard(service, scaleFactor)).toList(),
+    );
+  }
+
+Widget _buildServiceCard(Service service, double scaleFactor) {
+  final RxBool isExpanded = false.obs;
+
+  return Obx(() => Container(
+        margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
+        padding: EdgeInsets.all(12.r * scaleFactor),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12 * scaleFactor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.orange.withOpacity(0.05),
+              blurRadius: 10 * scaleFactor,
+              offset: Offset(0, 4 * scaleFactor),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8 * scaleFactor),
+                  child: Image.network(
+                    service.imgLink,
+                    width: 70.w * scaleFactor,
+                    height: 70.h * scaleFactor,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 70.w * scaleFactor,
+                      height: 70.h * scaleFactor,
+                      color: Colors.grey[200],
+                      child: Icon(Icons.image_not_supported,
+                          color: Colors.grey, size: 30 * scaleFactor),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w * scaleFactor),
+
+                // Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Service name + arrow with forced line break
+                      GestureDetector(
+                        onTap: () => isExpanded.toggle(),
+                        behavior: HitTestBehavior.translucent,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return _buildSmartServiceName(service.name, isExpanded, scaleFactor, constraints.maxWidth);
+                          },
+                        ),
+                      ),
+
+                      SizedBox(height: 4.h * scaleFactor),
+
+                      // Rating + duration
+                      Row(
+                        children: [
+                          SvgPicture.asset('assets/icons/star.svg',
+                              width: 16.w * scaleFactor,
+                              height: 16.h * scaleFactor,
+                              color: Colors.black),
+                          SizedBox(width: 4.w * scaleFactor),
+                          Text(
+                            "${service.rating} | ${service.formattedDuration}",
+                            style: TextStyle(
+                              fontSize: 12.sp * scaleFactor,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 6.h * scaleFactor),
+
+                      // Price
+                      Text(
+                        service.formattedPrice,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14.sp * scaleFactor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Quantity selector
+                _buildQuantitySelector(service, scaleFactor),
+              ],
+            ),
+
+            // Expandable description
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: service.description.isNotEmpty
+                  ? Padding(
+                      padding: EdgeInsets.only(
+                          top: 8.h * scaleFactor,
+                          left: 4.w * scaleFactor,
+                          right: 4.w * scaleFactor),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          service.description,
+                          style: TextStyle(
+                            fontSize: 12.sp * scaleFactor,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+              crossFadeState: isExpanded.value
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            ),
+          ],
+        ),
+      ));
+}
+
+Widget _buildSmartServiceName(String serviceName, RxBool isExpanded, double scaleFactor, double availableWidth) {
+  final words = serviceName.split(' ');
+  final textStyle = TextStyle(
+    fontSize: 14.sp * scaleFactor,
+    fontWeight: FontWeight.bold,
+    color: Colors.black,
+  );
+  
+  // For services with 3+ words, check if we should force a line break
+  if (words.length >= 3) {
+    // Calculate width of full text + arrow
+    final fullTextPainter = TextPainter(
+      text: TextSpan(text: serviceName, style: textStyle),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    );
+    fullTextPainter.layout();
+    
+    final arrowWidth = 28 * scaleFactor; // Arrow + padding
+    final totalWidth = fullTextPainter.width + arrowWidth;
+    
+    // If text + arrow is close to or exceeds available width (80% threshold)
+    if (totalWidth > availableWidth * 0.8) {
+      // Force break: move last word to next line with arrow
+      final firstPart = words.sublist(0, words.length - 1).join(' ');
+      final lastWord = words.last;
+      
+      return RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(text: firstPart, style: textStyle),
+            TextSpan(text: '\n$lastWord', style: textStyle),
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: EdgeInsets.only(left: 4.w * scaleFactor),
+                child: AnimatedRotation(
+                  turns: isExpanded.value ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 20 * scaleFactor,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     }
   }
+  
+  // Default: no forced line break
+  return RichText(
+    text: TextSpan(
+      children: [
+        TextSpan(text: serviceName, style: textStyle),
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Padding(
+            padding: EdgeInsets.only(left: 4.w * scaleFactor),
+            child: AnimatedRotation(
+              turns: isExpanded.value ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 20 * scaleFactor,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildRegularServiceCard(CleaningService service, double scaleFactor) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
-      padding: EdgeInsets.all(12.r * scaleFactor),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12 * scaleFactor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.05),
-            blurRadius: 10 * scaleFactor,
-            offset: Offset(0, 4 * scaleFactor),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8 * scaleFactor),
-            child: Image.asset(
-              service.image,
-              width: 60.w * scaleFactor,
-              height: 60.h * scaleFactor,
-              fit: BoxFit.cover,
-            ),
-          ),
-          SizedBox(width: 12.w * scaleFactor),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(service.title,
-                    style: TextStyle(
-                        fontSize: 14.sp * scaleFactor,
-                        fontWeight: FontWeight.bold)),
-                SizedBox(height: 4.h * scaleFactor),
-                Row(
-                  children: [
-                    SvgPicture.asset('assets/icons/star.svg',
-                        width: 18.w * scaleFactor, color: Colors.black),
-                    SizedBox(width: 4.w * scaleFactor),
-                    Text("${service.rating} | ${service.duration}",
-                        style: TextStyle(
-                            fontSize: 12.sp * scaleFactor,
-                            color: Colors.grey)),
-                  ],
-                ),
-                SizedBox(height: 4.h * scaleFactor),
-                Text(service.price,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.sp * scaleFactor)),
-              ],
-            ),
-          ),
-          _buildQuantitySelector(service, scaleFactor),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildSofaCarpetCard(CleaningService service, double scaleFactor) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12 * scaleFactor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.05),
-            blurRadius: 10 * scaleFactor,
-            offset: Offset(0, 4 * scaleFactor),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(12.h * scaleFactor)),
-            child: Image.asset(
-              service.image,
-              width: double.infinity,
-              height: 180.h * scaleFactor,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(12.r * scaleFactor),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                        child: Text(service.title,
-                            style: TextStyle(
-                                fontSize: 15.sp * scaleFactor,
-                                fontWeight: FontWeight.bold))),
-                    _buildQuantitySelector(service, scaleFactor),
-                  ],
-                ),
-                SizedBox(height: 4.h * scaleFactor),
-                Row(
-                  children: [
-                    SvgPicture.asset('assets/icons/star.svg',
-                        width: 18.w * scaleFactor, color: Colors.black),
-                    SizedBox(width: 4.w * scaleFactor),
-                    Text("${service.rating} | ${service.duration}",
-                        style: TextStyle(
-                            fontSize: 12.sp * scaleFactor, color: Colors.grey)),
-                  ],
-                ),
-                SizedBox(height: 6.h * scaleFactor),
-                Row(
-                  children: [
-                    Text(service.price,
-                        style: TextStyle(
-                            fontSize: 16.sp * scaleFactor,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black)),
-                    if (service.originalPrice != null) ...[
-                      SizedBox(width: 6.w * scaleFactor),
-                      Text(service.originalPrice!,
-                          style: TextStyle(
-                              fontSize: 14.sp * scaleFactor,
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.grey)),
-                    ],
-                  ],
-                ),
-                if (service.desc != null && service.desc!.isNotEmpty) ...[
-                  SizedBox(height: 8.h * scaleFactor),
-                  Text(
-                    service.desc!,
-                    style: TextStyle(
-                        fontSize: 12.sp * scaleFactor, color: Colors.black87),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildQuantitySelector(CleaningService service, double scaleFactor) {
+
+
+  Widget _buildQuantitySelector(Service service, double scaleFactor) {
     return Obx(() {
       final quantity = cartController.getQuantity(service.id);
       final hasInteractedOnThisPage = _currentPageInteractedServices.contains(service.id);
 
       if (quantity == 0 || !hasInteractedOnThisPage) {
         return GestureDetector(
-          //onTap: () => _addToCart(service),
+          onTap: () => _addToCart(service),
           child: Container(
             width: 75.w * scaleFactor,
             height: 29.h * scaleFactor,
             decoration: ShapeDecoration(
               color: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8 * scaleFactor)),
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+              ),
               shadows: [
                 BoxShadow(
                   color: const Color(0x33000000),
                   blurRadius: 4 * scaleFactor,
                   offset: Offset(0, 1 * scaleFactor),
-                )
+                ),
               ],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add,
-                    size: 12 * scaleFactor, color: Color(0xFFE47830)),
+                Icon(
+                  Icons.add,
+                  size: 12 * scaleFactor,
+                  color: Color(0xFFE47830),
+                ),
                 SizedBox(width: 4.w * scaleFactor),
-                Text('Add',
-                    style: TextStyle(
-                        color: Color(0xFFE47830),
-                        fontSize: 14.sp * scaleFactor,
-                        fontWeight: FontWeight.w500)),
+                Text(
+                  'Add',
+                  style: TextStyle(
+                    color: Color(0xFFE47830),
+                    fontSize: 14.sp * scaleFactor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -912,13 +1092,14 @@ class _CleaningScreenState extends State<CleaningScreen> {
           decoration: ShapeDecoration(
             color: Colors.white,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8 * scaleFactor)),
+              borderRadius: BorderRadius.circular(8 * scaleFactor),
+            ),
             shadows: [
               BoxShadow(
                 color: const Color(0x33000000),
                 blurRadius: 4 * scaleFactor,
                 offset: Offset(0, 1 * scaleFactor),
-              )
+              ),
             ],
           ),
           child: Row(
@@ -926,18 +1107,27 @@ class _CleaningScreenState extends State<CleaningScreen> {
             children: [
               GestureDetector(
                 onTap: () => _decrementCart(service.id),
-                child: Icon(Icons.remove,
-                    size: 14 * scaleFactor, color: Color(0xFFE47830)),
+                child: Icon(
+                  Icons.remove,
+                  size: 14 * scaleFactor,
+                  color: Color(0xFFE47830),
+                ),
               ),
-              Text('$quantity',
-                  style: TextStyle(
-                      color: Color(0xFFE47830),
-                      fontSize: 14.sp * scaleFactor,
-                      fontWeight: FontWeight.w600)),
+              Text(
+                '$quantity',
+                style: TextStyle(
+                  color: Color(0xFFE47830),
+                  fontSize: 14.sp * scaleFactor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               GestureDetector(
                 onTap: () => _incrementCart(service.id),
-                child: Icon(Icons.add,
-                    size: 14 * scaleFactor, color: Color(0xFFE47830)),
+                child: Icon(
+                  Icons.add,
+                  size: 14 * scaleFactor,
+                  color: Color(0xFFE47830),
+                ),
               ),
             ],
           ),
@@ -967,7 +1157,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 offset: Offset(0, -2 * scaleFactor),
                 blurRadius: 8 * scaleFactor,
                 spreadRadius: 0,
-              )
+              ),
             ],
           ),
           child: Row(
@@ -977,35 +1167,55 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text("$_currentPageItemCount items",
-                      style: TextStyle(
-                          fontSize: 12.sp * scaleFactor, color: Colors.grey)),
+                  Text(
+                    "$_currentPageItemCount items",
+                    style: TextStyle(
+                      fontSize: 12.sp * scaleFactor,
+                      color: Colors.grey,
+                    ),
+                  ),
                   SizedBox(height: 4.h * scaleFactor),
-                  Text("₹${_currentPageTotal.toInt()}",
-                      style: TextStyle(
-                          fontSize: 16.sp * scaleFactor,
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    "₹${_currentPageTotal.toInt()}",
+                    style: TextStyle(
+                      fontSize: 16.sp * scaleFactor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
+              // Buy Now button navigates to SummaryScreen (keeps same parameters as before)
               GestureDetector(
                 onTap: () {
-                  Get.to(() => SummaryScreen(
-                    currentPageSelectedServices: _currentPageSelectedServices.toList(),
-                  ));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SummaryScreen(
+                        currentPageSelectedServices: _currentPageSelectedServices.toList(),
+                        initialAddress: 'Static address 123, City XYZ',
+                        initialTimeSlot: 'Select time slot',
+                        initialSaathi: null,
+                      ),
+                    ),
+                  );
                 },
                 child: Container(
                   padding: EdgeInsets.symmetric(
-                      horizontal: 24.w * scaleFactor, 
-                      vertical: 12.h * scaleFactor),
+                    horizontal: 24.w * scaleFactor,
+                    vertical: 12.h * scaleFactor,
+                  ),
                   decoration: BoxDecoration(
                     color: Color(0xFFE47830),
                     borderRadius: BorderRadius.circular(30 * scaleFactor),
                   ),
-                  child: Text("Buy Now",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.sp * scaleFactor)),
+                  child: Text(
+                    "Buy Now",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.sp * scaleFactor,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1013,5 +1223,11 @@ class _CleaningScreenState extends State<CleaningScreen> {
         );
       }),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 }

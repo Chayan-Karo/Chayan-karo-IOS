@@ -307,7 +307,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: Colors.white,
           body: Column(
             children: [
-              ChayanHeader(title: 'Profile', onBackTap: () {}),
+              ChayanHeader(title: 'Profile',                       
+              onBack: () => Navigator.pop(context),
+),
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
@@ -360,49 +362,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     
                     SizedBox(height: 20.h * scaleFactor),
-                    GestureDetector(
-                      onTap: () => Get.to(() => const ReferAndEarnScreen()),
-                      child: Container(
-                        padding: EdgeInsets.all(20.r * scaleFactor),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEDE0),
-                          borderRadius: BorderRadius.circular(12.r * scaleFactor),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Refer & earn 100 coins',
-                                    style: TextStyle(
-                                      fontFamily: 'SF Pro',
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 18.sp * scaleFactor,
-                                    ),
-                                  ),
-                                  SizedBox(height: 6.h * scaleFactor),
-                                  Text(
-                                    'Get 100 coins when your friend completes their first booking',
-                                    style: TextStyle(
-                                      fontFamily: 'SF Pro',
-                                      fontSize: 14.sp * scaleFactor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: 16.w * scaleFactor),
-                            SvgPicture.asset(
-                              'assets/icons/gifty.svg',
-                              height: 57.h * scaleFactor,
-                              width: 57.w * scaleFactor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                   GestureDetector(
+  onTap: () => Get.to(() => const ReferAndEarnScreen()),
+  child: Container(
+    padding: EdgeInsets.all(20.r * scaleFactor),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFEDE0),
+      borderRadius: BorderRadius.circular(12.r * scaleFactor),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Refer a Friend',
+                style: TextStyle(
+                  fontFamily: 'SF Pro',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18.sp * scaleFactor,
+                ),
+              ),
+              SizedBox(height: 6.h * scaleFactor),
+              Text(
+                'Share the app and let your friends discover Chayan Karo services',
+                style: TextStyle(
+                  fontFamily: 'SF Pro',
+                  fontSize: 14.sp * scaleFactor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: 16.w * scaleFactor),
+        SvgPicture.asset(
+          'assets/icons/gifty.svg',
+          height: 57.h * scaleFactor,
+          width: 57.w * scaleFactor,
+        ),
+      ],
+    ),
+  ),
+),
+
                     SizedBox(height: 30.h * scaleFactor),
                   ],
                 ),

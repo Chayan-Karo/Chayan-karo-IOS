@@ -99,7 +99,7 @@ class _HairSkinScreenState extends State<HairSkinScreen> {
   }
 
   // UPDATED: Add to cart with source information
-  void _addToCart(HairSkinService service) {
+  /* void _addToCart(HairSkinService service) {
     cartController.addItem(
       service,
       sourcePage: SOURCE_PAGE,
@@ -109,7 +109,7 @@ class _HairSkinScreenState extends State<HairSkinScreen> {
     if (!_currentPageSelectedServices.contains(service.id)) {
       _currentPageSelectedServices.add(service.id);
     }
-  }
+  } */
 
   void _incrementCart(String serviceId) {
     cartController.incrementQuantity(serviceId);
@@ -876,7 +876,7 @@ class _HairSkinScreenState extends State<HairSkinScreen> {
 
       if (quantity == 0 || !hasInteractedOnThisPage) {
         return GestureDetector(
-          onTap: () => _addToCart(service),
+     //     onTap: () => _addToCart(service),
           child: Container(
             width: 75.w * scaleFactor,
             height: 29.h * scaleFactor,

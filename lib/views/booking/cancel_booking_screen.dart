@@ -40,7 +40,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                 children: [
                   ChayanHeader(
                     title: 'Cancel Booking',
-                    onBackTap: () => Navigator.pop(context),
+                    onBack: () => Navigator.pop(context),
                   ),
 
                   Expanded(
@@ -246,7 +246,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                 children: [
                   ChayanHeader(
                     title: 'Cancel Booking',
-                    onBackTap: () => Navigator.pop(context),
+                    onBack: () => Navigator.pop(context),
                   ),
 
                   Expanded(

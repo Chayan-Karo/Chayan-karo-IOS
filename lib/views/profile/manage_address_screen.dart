@@ -45,7 +45,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
               ChayanHeader(
                 title: 'Manage Address',
                 onBack: () => Navigator.pop(context),
-                onBackTap: () {},
+                //onBackTap: () {},
               ),
               SizedBox(height: 16.h * scaleFactor),
 

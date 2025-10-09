@@ -1,4 +1,3 @@
-// lib/models/customer_models.dart
 import 'package:json_annotation/json_annotation.dart';
 
 part 'customer_models.g.dart';
@@ -28,8 +27,13 @@ class Customer {
   final String? middleName;
   final String? lastName;
   final String? gender;
+
+  @JsonKey(defaultValue: 0.0)
   final double averageRating;
+
   final String? imgLink;
+
+  @JsonKey(defaultValue: 1)
   final int status;
 
   const Customer({
@@ -40,9 +44,9 @@ class Customer {
     this.middleName,
     this.lastName,
     this.gender,
-    required this.averageRating,
+    this.averageRating = 0.0,
     this.imgLink,
-    required this.status,
+    this.status = 1,
   });
 
   factory Customer.fromJson(Map<String, dynamic> json) =>
@@ -52,13 +56,13 @@ class Customer {
 
   // Helper methods
   String get fullName {
-    final parts = [firstName, middleName, lastName]
-        .where((part) => part != null && part.isNotEmpty);
+    final parts =
+        [firstName, middleName, lastName].where((part) => part != null && part.isNotEmpty);
     return parts.isNotEmpty ? parts.join(' ') : '';
   }
 
   bool get isActive => status == 1;
-  
+
   bool get hasCompleteProfile {
     return firstName != null && lastName != null && emailId != null;
   }
@@ -87,13 +91,13 @@ class Customer {
   String get profileCompleteness {
     int completed = 0;
     int total = 5;
-    
+
     if (firstName != null && firstName!.isNotEmpty) completed++;
     if (lastName != null && lastName!.isNotEmpty) completed++;
     if (emailId != null && emailId!.isNotEmpty) completed++;
     if (gender != null && gender!.isNotEmpty) completed++;
     if (imgLink != null && imgLink!.isNotEmpty) completed++;
-    
+
     return '${((completed / total) * 100).round()}%';
   }
 }

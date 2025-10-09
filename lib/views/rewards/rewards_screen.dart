@@ -74,7 +74,7 @@ Widget build(BuildContext context) {
                 color: const Color(0xFFFFEEE0),
                 child: SafeArea(
                   bottom: false,
-                  child: ChayanHeader(title: 'Chayan Coins', onBackTap: () {}),
+                  child: ChayanHeader(title: 'Chayan Coins', onBack: () {}),
                 ),
               ),
 

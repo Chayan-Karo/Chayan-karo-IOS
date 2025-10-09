@@ -1,6 +1,4 @@
-// lib/controllers/profile_controller.dart
 import 'package:get/get.dart';
-import 'package:dio/dio.dart';
 import '../data/repository/profile_repository.dart';
 import '../models/customer_models.dart';
 
@@ -10,28 +8,23 @@ class ProfileController extends GetxController {
   final _customer = Rxn<Customer>();
   final _isLoading = false.obs;
   final _errorMessage = ''.obs;
-  
-  // Getters
+
   Customer? get customer => _customer.value;
   bool get isLoading => _isLoading.value;
   String get errorMessage => _errorMessage.value;
-  
+
   @override
   void onInit() {
     super.onInit();
     loadProfile();
   }
-  
+
   Future<void> loadProfile() async {
     try {
       _isLoading.value = true;
       _errorMessage.value = '';
-      
       final customerData = await _profileRepository.getCustomer();
       _customer.value = customerData;
-      
-     // print('✅ Profile loaded successfully: ${customerData.displayName}');
-      
     } catch (e) {
       _errorMessage.value = _getErrorMessage(e.toString());
       print('❌ Error loading profile: $e');
@@ -39,11 +32,35 @@ class ProfileController extends GetxController {
       _isLoading.value = false;
     }
   }
-  
+
   Future<void> refreshProfile() async {
     await loadProfile();
   }
-  
+
+  Future<bool> updateProfile({
+    required String emailId,
+    required String fullName,
+    required String gender,
+  }) async {
+    try {
+      final names = fullName.trim().split(' ');
+      final firstName = names.isNotEmpty ? names.first : '';
+      final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+      
+      await _profileRepository.updateCustomerProfile(
+        emailId: emailId.trim(),
+        firstName: firstName,
+        lastName: lastName,
+        gender: gender,
+      );
+      await refreshProfile();
+      return true;
+    } catch (e) {
+      _errorMessage.value = _getErrorMessage(e.toString());
+      return false;
+    }
+  }
+
   String getStatusText() {
     final status = _customer.value?.status;
     switch (status) {
@@ -72,10 +89,8 @@ class ProfileController extends GetxController {
     }
   }
 
-  // Helper method to check if user needs to login
   bool get needsLogin => _errorMessage.value.contains('login again');
-  
-  // Helper method to get display information
+
   String get userDisplayName => _customer.value?.displayName ?? 'User';
   String get userPhone => _customer.value?.mobileNo ?? '';
   double get userRating => _customer.value?.averageRating ?? 0.0;

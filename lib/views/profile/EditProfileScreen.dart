@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:flutter/services.dart';
+
 import '../../widgets/chayan_header.dart';
 import '../../models/customer_models.dart';
+import '../../controllers/profile_controller.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final Customer? customer;
-  
   const EditProfileScreen({Key? key, this.customer}) : super(key: key);
 
   @override
@@ -16,27 +17,19 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  // Controllers for editable fields
   late TextEditingController _fullNameController;
   late TextEditingController _emailController;
   late TextEditingController _genderController;
 
+  final ProfileController _profileController = Get.find();
+
   @override
   void initState() {
     super.initState();
-    
-    // Initialize controllers with API data or empty strings
-    final customer = widget.customer;
-    
-    _fullNameController = TextEditingController(
-      text: customer?.fullName ?? ''
-    );
-    _emailController = TextEditingController(
-      text: customer?.emailId ?? ''
-    );
-    _genderController = TextEditingController(
-      text: customer?.gender ?? ''
-    );
+    final c = widget.customer ?? _profileController.customer;
+    _fullNameController = TextEditingController(text: c?.fullName ?? '');
+    _emailController = TextEditingController(text: c?.emailId ?? '');
+    _genderController = TextEditingController(text: c?.gender ?? '');
   }
 
   @override
@@ -51,9 +44,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool isTablet = constraints.maxWidth > 600;
-        final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
-
+        final isTablet = constraints.maxWidth > 600;
+        final scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark.copyWith(
             statusBarColor: const Color(0xFFFFEDE0),
@@ -61,22 +53,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
           child: Scaffold(
             backgroundColor: Colors.white,
-            // Fix keyboard overflow with resizeToAvoidBottomInset
             resizeToAvoidBottomInset: true,
             body: SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height,
-                ),
+                constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
                 child: Column(
                   children: [
-                    // Header
                     ChayanHeader(
                       title: 'Edit Profile',
-                      onBackTap: () => Get.back(),
+                      onBack: () => Navigator.pop(context),
                     ),
-
-                    // Profile image
                     Container(
                       margin: EdgeInsets.only(top: 40.h * scaleFactor),
                       child: Stack(
@@ -90,9 +76,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   ? DecorationImage(
                                       image: NetworkImage(widget.customer!.imgLink!),
                                       fit: BoxFit.cover,
-                                      onError: (exception, stackTrace) {
-                                        // Fallback to default image on error
-                                      },
                                     )
                                   : const DecorationImage(
                                       image: AssetImage('assets/userprofile.webp'),
@@ -110,34 +93,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 color: const Color(0xFFE47830),
                                 borderRadius: BorderRadius.circular(9 * scaleFactor),
                               ),
-                              child: Icon(
-                                Icons.edit,
-                                size: 15 * scaleFactor,
-                                color: Colors.white,
-                              ),
+                              child: const Icon(Icons.edit, color: Colors.white),
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    // Form fields
                     Padding(
                       padding: EdgeInsets.all(16.w * scaleFactor),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(height: 30.h * scaleFactor),
-                          
-                          // Editable Full Name
                           editableProfileField(
                             label: 'Full Name',
                             controller: _fullNameController,
                             scaleFactor: scaleFactor,
                             hintText: 'Enter your full name',
                           ),
-                          
-                          // Editable Email
                           editableProfileField(
                             label: 'Email',
                             controller: _emailController,
@@ -145,27 +118,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             keyboardType: TextInputType.emailAddress,
                             hintText: 'Enter your email address',
                           ),
-                          
-                          // Read-only Mobile Number
                           readOnlyProfileField(
                             label: 'Mobile Number',
-                            value: widget.customer?.mobileNo != null 
-                                ? '+91 ${widget.customer!.mobileNo}' 
-                                : 'Not provided',
+                            value: widget.customer?.mobileNo != null ? '+91 ${widget.customer!.mobileNo}' : 'Not provided',
                             scaleFactor: scaleFactor,
                             hasValue: widget.customer?.mobileNo != null,
                           ),
-                          
-                          // Gender Selection Field
                           genderSelectionField(
                             label: 'Gender',
                             controller: _genderController,
                             scaleFactor: scaleFactor,
                           ),
-                          
                           SizedBox(height: 40.h * scaleFactor),
-                          
-                          // Save button
                           SizedBox(
                             width: double.infinity,
                             height: 47.h * scaleFactor,
@@ -173,15 +137,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               onPressed: _saveChanges,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFE47830),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10 * scaleFactor),
-                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                               child: Text(
                                 'Save changes',
                                 style: TextStyle(
                                   fontFamily: 'SF Pro Display',
-                                  fontSize: 16.sp * scaleFactor,
+                                  fontSize: 16.sp,
                                   fontWeight: FontWeight.w500,
                                   letterSpacing: 0.32,
                                   color: Colors.white,
@@ -189,7 +151,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ),
                             ),
                           ),
-                          
                           SizedBox(height: 30.h * scaleFactor),
                         ],
                       ),
@@ -212,21 +173,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     TextInputType keyboardType = TextInputType.text,
   }) {
     final hasValue = controller.text.isNotEmpty;
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12.sp * scaleFactor,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-            height: 1.83,
-          ),
-        ),
-        SizedBox(height: 4.h * scaleFactor),
+        Text(label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
+              height: 1.83,
+            )),
+        SizedBox(height: 4.h),
         Row(
           children: [
             Expanded(
@@ -235,7 +193,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 keyboardType: keyboardType,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 16.sp * scaleFactor,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.black,
                 ),
@@ -244,28 +202,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   hintText: hintText,
                   hintStyle: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 16.sp * scaleFactor,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.black.withOpacity(0.4),
                   ),
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    // Trigger rebuild to update icon
-                  });
-                },
+                onChanged: (_) => setState(() {}),
               ),
             ),
-            _buildStatusIcon(hasValue, scaleFactor),
+            _buildStatusIcon(hasValue),
           ],
         ),
-        SizedBox(height: 12.h * scaleFactor),
-        Container(
-          height: 2.h * scaleFactor,
-          width: double.infinity,
-          color: const Color(0xFFEBEBEB),
-        ),
-        SizedBox(height: 20.h * scaleFactor),
+        SizedBox(height: 12.h),
+        Container(height: 2.h, width: double.infinity, color: const Color(0xFFEBEBEB)),
+        SizedBox(height: 20.h),
       ],
     );
   }
@@ -273,193 +223,135 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget readOnlyProfileField({
     required String label,
     required String value,
-    required double scaleFactor,
     required bool hasValue,
+    required double scaleFactor,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12.sp * scaleFactor,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-            height: 1.83,
-          ),
-        ),
-        SizedBox(height: 4.h * scaleFactor),
+        Text(label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
+              height: 1.83,
+            )),
+        SizedBox(height: 4.h),
         Row(
           children: [
             Expanded(
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16.sp * scaleFactor,
-                  fontWeight: FontWeight.w600,
-                  color: hasValue ? Colors.black : Colors.black.withOpacity(0.4),
-                ),
-              ),
+              child: Text(value,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                    color: hasValue ? Colors.black : Colors.black.withOpacity(0.4),
+                  )),
             ),
-            _buildStatusIcon(hasValue, scaleFactor),
+            _buildStatusIcon(hasValue),
           ],
         ),
-        SizedBox(height: 12.h * scaleFactor),
-        Container(
-          height: 2.h * scaleFactor,
-          width: double.infinity,
-          color: const Color(0xFFEBEBEB),
-        ),
-        SizedBox(height: 20.h * scaleFactor),
+        SizedBox(height: 12.h),
+        Container(height: 2.h, width: double.infinity, color: const Color(0xFFEBEBEB)),
+        SizedBox(height: 20.h),
       ],
     );
   }
 
-  // New Gender Selection Field with Popup
   Widget genderSelectionField({
     required String label,
     required TextEditingController controller,
     required double scaleFactor,
   }) {
     final hasValue = controller.text.isNotEmpty;
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12.sp * scaleFactor,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-            height: 1.83,
-          ),
-        ),
-        SizedBox(height: 4.h * scaleFactor),
+        Text(label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
+              height: 1.83,
+            )),
+        SizedBox(height: 4.h),
         Row(
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () => _showGenderSelectionDialog(),
+                onTap: _showGenderDialog,
                 child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 8.h * scaleFactor),
-                  child: Text(
-                    hasValue ? controller.text : 'Select your gender',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16.sp * scaleFactor,
-                      fontWeight: FontWeight.w600,
-                      color: hasValue ? Colors.black : Colors.black.withOpacity(0.4),
-                    ),
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                  child: Text(controller.text.isNotEmpty ? controller.text : 'Select your gender',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: hasValue ? Colors.black : Colors.black.withOpacity(0.4),
+                      )),
                 ),
               ),
             ),
-            _buildStatusIcon(hasValue, scaleFactor),
+            _buildStatusIcon(hasValue),
           ],
         ),
-        SizedBox(height: 12.h * scaleFactor),
-        Container(
-          height: 2.h * scaleFactor,
-          width: double.infinity,
-          color: const Color(0xFFEBEBEB),
-        ),
-        SizedBox(height: 20.h * scaleFactor),
+        SizedBox(height: 12.h),
+        Container(height: 2.h, width: double.infinity, color: const Color(0xFFEBEBEB)),
+        SizedBox(height: 20.h),
       ],
     );
   }
 
-  Widget _buildStatusIcon(bool hasValue, double scaleFactor) {
+  Widget _buildStatusIcon(bool hasValue) {
     if (hasValue) {
-      // Show green check icon for filled fields
       return SvgPicture.asset(
         'assets/icons/check.svg',
-        width: 18.w * scaleFactor,
-        height: 18.h * scaleFactor,
+        width: 18.w,
+        height: 18.h,
       );
     } else {
-      // Show red cross icon for empty fields
       return Container(
-        width: 18.w * scaleFactor,
-        height: 18.h * scaleFactor,
-        decoration: BoxDecoration(
-          color: Colors.red,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.close,
-          size: 12.sp * scaleFactor,
-          color: Colors.white,
-        ),
+        width: 18.w,
+        height: 18.h,
+        decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+        child: Icon(Icons.close, size: 12.sp, color: Colors.white),
       );
     }
   }
 
-  // Full Width Gender Selection Dialog
-  void _showGenderSelectionDialog() {
+  void _showGenderDialog() {
     showDialog(
       context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+        child: Padding(
+          padding: EdgeInsets.all(30.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Select your gender', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w600)),
+              SizedBox(height: 30.h),
+              Row(
+                children: [
+                  Expanded(child: _genderOption('Male')),
+                  SizedBox(width: 15.w),
+                  Expanded(child: _genderOption('Female')),
+                ],
+              ),
+              SizedBox(height: 15.h),
+              Center(child: SizedBox(width: 120.w, child: _genderOption('Other'))),
+              SizedBox(height: 20.h),
+            ],
           ),
-          insetPadding: EdgeInsets.symmetric(horizontal: 20.w), // Full width with margins
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(30.w),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Title
-                Text(
-                  'Select your gender',
-                  style: TextStyle(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-                SizedBox(height: 30.h),
-                
-                // Gender Options in a column layout
-                Column(
-                  children: [
-                    // Male and Female in same row
-                    Row(
-                      children: [
-                        Expanded(child: _buildGenderOption('Male')),
-                        SizedBox(width: 15.w),
-                        Expanded(child: _buildGenderOption('Female')),
-                      ],
-                    ),
-                    SizedBox(height: 15.h),
-                    
-                    // Other centered in its own row
-                    Center(
-                      child: Container(
-                        width: 120.w,
-                        child: _buildGenderOption('Other'),
-                      ),
-                    ),
-                  ],
-                ),
-                
-                SizedBox(height: 20.h),
-              ],
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildGenderOption(String gender) {
+  Widget _genderOption(String gender) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 5.h),
       child: ElevatedButton(
@@ -480,70 +372,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             side: BorderSide(color: Colors.grey.withOpacity(0.2)),
           ),
         ),
-        child: Text(
-          gender,
-          style: TextStyle(
-            fontSize: 16.sp,
-            color: Colors.black,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        child: Text(gender, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w500)),
       ),
     );
   }
 
-  void _saveChanges() {
-    // Validate required fields
+  void _saveChanges() async {
     if (_fullNameController.text.trim().isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter your full name',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      Get.snackbar('Error', 'Please enter your full name', snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
-
     if (_emailController.text.trim().isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter your email address',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      Get.snackbar('Error', 'Please enter your email address', snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
-
-    // Basic email validation
     if (!GetUtils.isEmail(_emailController.text.trim())) {
-      Get.snackbar(
-        'Error',
-        'Please enter a valid email address',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      Get.snackbar('Error', 'Please enter a valid email address', snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
 
-    // TODO: Implement save functionality with API call
-    print('Saving changes:');
-    print('Full Name: ${_fullNameController.text.trim()}');
-    print('Email: ${_emailController.text.trim()}');
-    print('Gender: ${_genderController.text.trim()}');
-    
-    // Show success message
-    Get.snackbar(
-      'Success',
-      'Profile updated successfully!',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
+    final profileController = Get.find<ProfileController>();
+    bool success = await profileController.updateProfile(
+      emailId: _emailController.text.trim(),
+      fullName: _fullNameController.text.trim(),
+      gender: _genderController.text.trim(),
     );
-    
-    // Go back to profile screen
-    Get.back();
+
+    if (success) {
+      Get.snackbar('Success', 'Profile updated successfully', snackPosition: SnackPosition.TOP, backgroundColor: Colors.green, colorText: Colors.white);
+    Get.offAllNamed('/profile'); 
+    } else {
+      Get.snackbar('Error', profileController.errorMessage, snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white);
+    }
   }
 }

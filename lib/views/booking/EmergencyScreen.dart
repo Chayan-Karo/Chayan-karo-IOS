@@ -17,7 +17,7 @@ class EmergencyScreen extends StatelessWidget {
         body: Column(
           children: [
             // Header stays at top
-            ChayanHeader(title: 'Emergency', onBackTap: () {}),
+            ChayanHeader(title: 'Emergency', onBack: () => Navigator.pop(context)),
 
             // Main content below header
             Expanded(

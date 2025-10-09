@@ -23,9 +23,9 @@ Customer _$CustomerFromJson(Map<String, dynamic> json) => Customer(
   middleName: json['middleName'] as String?,
   lastName: json['lastName'] as String?,
   gender: json['gender'] as String?,
-  averageRating: (json['averageRating'] as num).toDouble(),
+  averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
   imgLink: json['imgLink'] as String?,
-  status: (json['status'] as num).toInt(),
+  status: (json['status'] as num?)?.toInt() ?? 1,
 );
 
 Map<String, dynamic> _$CustomerToJson(Customer instance) => <String, dynamic>{

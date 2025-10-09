@@ -1,12 +1,15 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
-// Import your models with a prefix to avoid conflicts
+// Import your models with prefixes to avoid conflicts
 import '../../models/home_models.dart' as models;
 import '../../models/cart_models.dart' as cart_models;
+import '../../models/category_models.dart';
+import '../../models/service_models.dart' as service_models;
 
 part 'database.g.dart';
 
@@ -21,7 +24,22 @@ class ServiceCategoriesTable extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-// Services table
+// Categories table for API categories
+class CategoriesTable extends Table {
+  @override
+  String get tableName => 'categories';
+
+  TextColumn get categoryId => text()();
+  TextColumn get categoryName => text()();
+  TextColumn get imgLink => text()();
+  TextColumn get serviceCategory => text()(); // JSON string of ServiceSubCategory array
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {categoryId};
+}
+
+// Services table (Legacy)
 class ServicesTable extends Table {
   @override
   String get tableName => 'services';
@@ -31,6 +49,25 @@ class ServicesTable extends Table {
   TextColumn get image => text()();
   TextColumn get type => text()(); // For example: 'mostUsed', 'acRepair'
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// API Services table for service API integration
+class ApiServicesTable extends Table {
+  @override
+  String get tableName => 'api_services';
+
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  RealColumn get price => real()();
+  TextColumn get description => text()();
+  IntColumn get duration => integer()();
+  TextColumn get imgLink => text()();
+  RealColumn get discountPercentage => real()();
+  TextColumn get categoryId => text()(); // To link services to categories
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 // User Preferences table
@@ -60,24 +97,27 @@ class LocationDataTable extends Table {
   Set<Column> get primaryKey => {label};
 }
 
-// Cart Items table - UPDATED to store source page and title
+// UPDATED: Cart Items table - Enhanced to support new cart functionality
 class CartItemsTable extends Table {
   @override
   String get tableName => 'cart_items';
 
   TextColumn get id => text()();
-  TextColumn get title => text()();
+  TextColumn get title => text()(); // Keep title for backward compatibility
+  TextColumn get name => text().nullable()(); // NEW: Add name column for new cart model
   TextColumn get image => text()();
   RealColumn get price => real()();
+  RealColumn get originalPrice => real().nullable()(); // UPDATED: Changed to RealColumn
   IntColumn get quantity => integer().withDefault(const Constant(1))();
   TextColumn get description => text().nullable()();
   TextColumn get rating => text().nullable()();
   TextColumn get duration => text().nullable()();
-  TextColumn get originalPrice => text().nullable()();
+  IntColumn get discountPercentage => integer().withDefault(const Constant(0))(); // NEW: Added discount percentage
   TextColumn get type => text().withDefault(const Constant('general'))(); // ServiceType enum
-  TextColumn get sourcePage => text().nullable()(); // NEW: Source page identifier
-  TextColumn get sourceTitle => text().nullable()(); // NEW: Human-readable source title
+  TextColumn get sourcePage => text().nullable()(); // Source page identifier
+  TextColumn get sourceTitle => text().nullable()(); // Human-readable source title
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get dateAdded => dateTime().nullable()(); // NEW: Support for new model dateAdded
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
@@ -101,7 +141,9 @@ class AuthDataTable extends Table {
 @DriftDatabase(
   tables: [
     ServiceCategoriesTable,
+    CategoriesTable,
     ServicesTable,
+    ApiServicesTable,
     UserPreferencesTable,
     LocationDataTable,
     CartItemsTable,
@@ -122,7 +164,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 3; // Increment schema version for cart table updates
+  int get schemaVersion => 6; // UPDATED: Increment schema version for enhanced cart
 
   // Migration strategy to handle schema updates
   @override
@@ -144,6 +186,20 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(cartItemsTable, cartItemsTable.type);
           await m.addColumn(cartItemsTable, cartItemsTable.sourcePage);
           await m.addColumn(cartItemsTable, cartItemsTable.sourceTitle);
+        }
+        if (from < 4) {
+          // Add categories table in version 4
+          await m.createTable(categoriesTable);
+        }
+        if (from < 5) {
+          // Add api_services table in version 5
+          await m.createTable(apiServicesTable);
+        }
+        if (from < 6) {
+          // NEW: Enhanced cart support in version 6
+          await m.addColumn(cartItemsTable, cartItemsTable.name);
+          await m.addColumn(cartItemsTable, cartItemsTable.discountPercentage);
+          await m.addColumn(cartItemsTable, cartItemsTable.dateAdded);
         }
       },
     );
@@ -298,16 +354,16 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  // --- Service Categories ---
+  // --- Service Categories (Legacy) - RENAMED to avoid conflicts ---
 
-  Future<List<models.ServiceCategory>> getAllCategories() async {
+  Future<List<models.ServiceCategory>> getAllServiceCategories() async {
     final categories = await select(serviceCategoriesTable).get();
     return categories
         .map((c) => models.ServiceCategory(title: c.title, icon: c.icon))
         .toList();
   }
 
-  Future<void> insertCategories(List<models.ServiceCategory> categories) async {
+  Future<void> insertServiceCategories(List<models.ServiceCategory> categories) async {
     await batch((batch) {
       batch.insertAll(
         serviceCategoriesTable,
@@ -319,18 +375,393 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  Future<void> clearCategories() async {
+  Future<void> clearServiceCategories() async {
     await delete(serviceCategoriesTable).go();
   }
 
-  // --- Services ---
+  // --- API Categories Methods (Primary category methods) ---
+
+  /// Insert categories from API
+  Future<void> insertCategories(List<Category> categories) async {
+    try {
+      await transaction(() async {
+        for (final category in categories) {
+          await into(categoriesTable).insertOnConflictUpdate(
+            CategoriesTableCompanion(
+              categoryId: Value(category.categoryId),
+              categoryName: Value(category.categoryName),
+              imgLink: Value(category.imgLink),
+              serviceCategory: Value(jsonEncode(category.serviceCategory.map((e) => e.toJson()).toList())),
+              createdAt: Value(DateTime.now()),
+            ),
+          );
+        }
+      });
+      print('💾 Inserted ${categories.length} API categories into database');
+    } catch (e) {
+      print('❌ Error inserting API categories: $e');
+      throw e;
+    }
+  }
+
+  /// Get all API categories
+  Future<List<Category>> getAllCategories() async {
+    try {
+      final results = await (select(categoriesTable)
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+        ])
+      ).get();
+      
+      return results.map((row) {
+        final serviceCategories = (jsonDecode(row.serviceCategory) as List)
+            .map((e) => ServiceSubCategory.fromJson(e as Map<String, dynamic>))
+            .toList();
+        
+        return Category(
+          categoryId: row.categoryId,
+          categoryName: row.categoryName,
+          imgLink: row.imgLink,
+          serviceCategory: serviceCategories,
+        );
+      }).toList();
+    } catch (e) {
+      print('❌ Error getting API categories: $e');
+      return [];
+    }
+  }
+
+  /// Clear API categories
+  Future<void> clearCategories() async {
+    try {
+      await delete(categoriesTable).go();
+      print('🗑️ Cleared API categories table');
+    } catch (e) {
+      print('❌ Error clearing API categories: $e');
+      throw e;
+    }
+  }
+
+  /// Get category by ID
+  Future<Category?> getCategoryById(String categoryId) async {
+    try {
+      final query = select(categoriesTable)..where((c) => c.categoryId.equals(categoryId));
+      final result = await query.getSingleOrNull();
+      
+      if (result == null) return null;
+      
+      final serviceCategories = (jsonDecode(result.serviceCategory) as List)
+          .map((e) => ServiceSubCategory.fromJson(e as Map<String, dynamic>))
+          .toList();
+      
+      return Category(
+        categoryId: result.categoryId,
+        categoryName: result.categoryName,
+        imgLink: result.imgLink,
+        serviceCategory: serviceCategories,
+      );
+    } catch (e) {
+      print('❌ Error getting category by ID: $e');
+      return null;
+    }
+  }
+
+  /// Search categories by name
+  Future<List<Category>> searchCategories(String query) async {
+    try {
+      final results = await (select(categoriesTable)
+        ..where((c) => c.categoryName.like('%$query%'))
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.categoryName, mode: OrderingMode.asc)
+        ])
+      ).get();
+      
+      return results.map((row) {
+        final serviceCategories = (jsonDecode(row.serviceCategory) as List)
+            .map((e) => ServiceSubCategory.fromJson(e as Map<String, dynamic>))
+            .toList();
+        
+        return Category(
+          categoryId: row.categoryId,
+          categoryName: row.categoryName,
+          imgLink: row.imgLink,
+          serviceCategory: serviceCategories,
+        );
+      }).toList();
+    } catch (e) {
+      print('❌ Error searching categories: $e');
+      return [];
+    }
+  }
+
+  /// Get categories count
+  Future<int> getCategoriesCount() async {
+    try {
+      final result = await (selectOnly(categoriesTable)..addColumns([countAll()])).getSingleOrNull();
+      return result?.read(countAll()) ?? 0;
+    } catch (e) {
+      print('❌ Error getting categories count: $e');
+      return 0;
+    }
+  }
+
+  /// Check if categories exist
+  Future<bool> hasCachedCategories() async {
+    final count = await getCategoriesCount();
+    return count > 0;
+  }
+
+  /// Get categories cache age
+  Future<Duration?> getCategoriesCacheAge() async {
+    try {
+      final query = select(categoriesTable)
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+        ])
+        ..limit(1);
+      
+      final result = await query.getSingleOrNull();
+      if (result == null) return null;
+      
+      return DateTime.now().difference(result.createdAt);
+    } catch (e) {
+      print('❌ Error getting categories cache age: $e');
+      return null;
+    }
+  }
+
+  // --- API Services Methods ---
+
+  /// Insert services from API
+  Future<void> insertServices(List<service_models.Service> services, String categoryId) async {
+    try {
+      await transaction(() async {
+        for (final service in services) {
+          await into(apiServicesTable).insertOnConflictUpdate(
+            ApiServicesTableCompanion(
+              id: Value(service.id),
+              name: Value(service.name),
+              price: Value(service.price),
+              description: Value(service.description),
+              duration: Value(service.duration),
+              imgLink: Value(service.imgLink),
+              discountPercentage: Value(service.discountPercentage),
+              categoryId: Value(categoryId),
+              createdAt: Value(DateTime.now()),
+            ),
+          );
+        }
+      });
+      print('💾 Inserted ${services.length} API services for category $categoryId into database');
+    } catch (e) {
+      print('❌ Error inserting API services: $e');
+      throw e;
+    }
+  }
+
+  /// Get services by category from local database
+  Future<List<service_models.Service>> getServicesByCategory(String categoryId) async {
+    try {
+      final results = await (select(apiServicesTable)
+        ..where((s) => s.categoryId.equals(categoryId))
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+        ])
+      ).get();
+      
+      return results.map((row) => service_models.Service(
+        id: row.id,
+        name: row.name,
+        price: row.price,
+        description: row.description,
+        duration: row.duration,
+        imgLink: row.imgLink,
+        discountPercentage: row.discountPercentage,
+      )).toList();
+    } catch (e) {
+      print('❌ Error getting services by category: $e');
+      return [];
+    }
+  }
+
+  /// Get all API services
+  Future<List<service_models.Service>> getAllServices() async {
+    try {
+      final results = await (select(apiServicesTable)
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+        ])
+      ).get();
+      
+      return results.map((row) => service_models.Service(
+        id: row.id,
+        name: row.name,
+        price: row.price,
+        description: row.description,
+        duration: row.duration,
+        imgLink: row.imgLink,
+        discountPercentage: row.discountPercentage,
+      )).toList();
+    } catch (e) {
+      print('❌ Error getting all API services: $e');
+      return [];
+    }
+  }
+
+  /// Clear services by category
+  Future<void> clearServicesByCategory(String categoryId) async {
+    try {
+      await (delete(apiServicesTable)..where((s) => s.categoryId.equals(categoryId))).go();
+      print('🗑️ Cleared services for category $categoryId');
+    } catch (e) {
+      print('❌ Error clearing services by category: $e');
+      throw e;
+    }
+  }
+
+  /// Clear all API services
+  Future<void> clearServices() async {
+    try {
+      await delete(apiServicesTable).go();
+      print('🗑️ Cleared all API services table');
+    } catch (e) {
+      print('❌ Error clearing API services: $e');
+      throw e;
+    }
+  }
+
+  /// Get service by ID
+  Future<service_models.Service?> getServiceById(String serviceId) async {
+    try {
+      final query = select(apiServicesTable)..where((s) => s.id.equals(serviceId));
+      final result = await query.getSingleOrNull();
+      
+      if (result == null) return null;
+      
+      return service_models.Service(
+        id: result.id,
+        name: result.name,
+        price: result.price,
+        description: result.description,
+        duration: result.duration,
+        imgLink: result.imgLink,
+        discountPercentage: result.discountPercentage,
+      );
+    } catch (e) {
+      print('❌ Error getting service by ID: $e');
+      return null;
+    }
+  }
+
+  /// Search services by name or description
+  Future<List<service_models.Service>> searchServices(String query) async {
+    try {
+      final results = await (select(apiServicesTable)
+        ..where((s) => s.name.like('%$query%') | s.description.like('%$query%'))
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.name, mode: OrderingMode.asc)
+        ])
+      ).get();
+      
+      return results.map((row) => service_models.Service(
+        id: row.id,
+        name: row.name,
+        price: row.price,
+        description: row.description,
+        duration: row.duration,
+        imgLink: row.imgLink,
+        discountPercentage: row.discountPercentage,
+      )).toList();
+    } catch (e) {
+      print('❌ Error searching services: $e');
+      return [];
+    }
+  }
+
+  /// Get services count for a category
+  Future<int> getServicesCategoryCount(String categoryId) async {
+    try {
+      final result = await (selectOnly(apiServicesTable)
+        ..addColumns([countAll()])
+        ..where(apiServicesTable.categoryId.equals(categoryId))
+      ).getSingleOrNull();
+      return result?.read(countAll()) ?? 0;
+    } catch (e) {
+      print('❌ Error getting services count for category: $e');
+      return 0;
+    }
+  }
+
+  /// Get total services count
+  Future<int> getTotalServicesCount() async {
+    try {
+      final result = await (selectOnly(apiServicesTable)..addColumns([countAll()])).getSingleOrNull();
+      return result?.read(countAll()) ?? 0;
+    } catch (e) {
+      print('❌ Error getting total services count: $e');
+      return 0;
+    }
+  }
+
+  /// Check if services exist for category
+  Future<bool> hasCachedServices(String categoryId) async {
+    final count = await getServicesCategoryCount(categoryId);
+    return count > 0;
+  }
+
+  /// Get services cache age for category
+  Future<Duration?> getServicesCacheAge(String categoryId) async {
+    try {
+      final query = select(apiServicesTable)
+        ..where((s) => s.categoryId.equals(categoryId))
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+        ])
+        ..limit(1);
+      
+      final result = await query.getSingleOrNull();
+      if (result == null) return null;
+      
+      return DateTime.now().difference(result.createdAt);
+    } catch (e) {
+      print('❌ Error getting services cache age: $e');
+      return null;
+    }
+  }
+
+  /// Get popular services (placeholder logic)
+  Future<List<service_models.Service>> getPopularServices({int limit = 10}) async {
+    try {
+      final results = await (select(apiServicesTable)
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+        ])
+        ..limit(limit)
+      ).get();
+      
+      return results.map((row) => service_models.Service(
+        id: row.id,
+        name: row.name,
+        price: row.price,
+        description: row.description,
+        duration: row.duration,
+        imgLink: row.imgLink,
+        discountPercentage: row.discountPercentage,
+      )).toList();
+    } catch (e) {
+      print('❌ Error getting popular services: $e');
+      return [];
+    }
+  }
+
+  // --- Legacy Services (keeping existing functionality) ---
 
   Future<List<models.Service>> getServicesByType(String type) async {
     final services = await (select(servicesTable)..where((s) => s.type.equals(type))).get();
     return services.map((s) => models.Service(title: s.title, image: s.image)).toList();
   }
 
-  Future<void> insertServices(List<models.Service> services, String type) async {
+  Future<void> insertLegacyServices(List<models.Service> services, String type) async {
     await (delete(servicesTable)..where((s) => s.type.equals(type))).go();
     await batch((batch) {
       batch.insertAll(
@@ -394,8 +825,9 @@ class AppDatabase extends _$AppDatabase {
     await delete(locationDataTable).go();
   }
 
-  // --- Cart Items - UPDATED to handle new model structure ---
+  // --- ENHANCED Cart Items - Supporting both old and new cart models ---
 
+  /// Get all cart items (Legacy support with cart_models)
   Future<List<cart_models.CartItem>> getAllCartItems() async {
     final items = await (select(cartItemsTable)
       ..orderBy([
@@ -413,16 +845,46 @@ class AppDatabase extends _$AppDatabase {
               description: item.description,
               rating: item.rating,
               duration: item.duration,
-              originalPrice: item.originalPrice,
+              originalPrice: item.originalPrice?.toString(),
               type: _parseServiceType(item.type),
               sourcePage: item.sourcePage,
               sourceTitle: item.sourceTitle,
-              dateAdded: item.addedAt,
+              dateAdded: item.dateAdded ?? item.addedAt,
             ))
         .toList();
   }
 
-  // Fixed: Remove the null-aware operator since dateAdded is non-nullable
+  /// NEW: Get all cart items using new service_models.CartItem
+  Future<List<service_models.CartItem>> getAllNewCartItems() async {
+    try {
+      final items = await (select(cartItemsTable)
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.dateAdded, mode: OrderingMode.desc)
+        ])
+      ).get();
+      
+      return items.map((item) => service_models.CartItem(
+        id: item.id,
+        name: item.name ?? item.title, // Use name if available, fallback to title
+        image: item.image,
+        price: item.price,
+        originalPrice: item.originalPrice ?? item.price,
+        quantity: item.quantity,
+        description: item.description ?? '',
+        rating: item.rating ?? '0.0',
+        duration: item.duration ?? '',
+        discountPercentage: item.discountPercentage,
+        sourcePage: item.sourcePage ?? 'unknown',
+        sourceTitle: item.sourceTitle ?? 'Unknown Service',
+        dateAdded: item.dateAdded ?? item.addedAt,
+      )).toList();
+    } catch (e) {
+      print('❌ Error getting new cart items: $e');
+      return [];
+    }
+  }
+
+  /// Legacy cart item insertion (backward compatibility)
   Future<void> insertCartItem(cart_models.CartItem item) async {
     // Check if item already exists
     final existingItem = await (select(cartItemsTable)
@@ -436,14 +898,16 @@ class AppDatabase extends _$AppDatabase {
           quantity: Value(item.quantity),
           price: Value(item.price),
           title: Value(item.title),
+          name: Value(item.title), // Set name same as title for compatibility
           image: Value(item.image),
           description: Value(item.description),
           rating: Value(item.rating),
           duration: Value(item.duration),
-          originalPrice: Value(item.originalPrice),
+          originalPrice: Value(double.tryParse(item.originalPrice ?? '0') ?? item.price),
           type: Value(item.type.toString().split('.').last),
           sourcePage: Value(item.sourcePage),
           sourceTitle: Value(item.sourceTitle),
+          discountPercentage: Value(0), // Default for legacy items
           // Keep original addedAt, only update updatedAt
           updatedAt: Value(DateTime.now()),
         ),
@@ -454,20 +918,53 @@ class AppDatabase extends _$AppDatabase {
         CartItemsTableCompanion(
           id: Value(item.id),
           title: Value(item.title),
+          name: Value(item.title), // Set name same as title for compatibility
           image: Value(item.image),
           price: Value(item.price),
+          originalPrice: Value(double.tryParse(item.originalPrice ?? '0') ?? item.price),
           quantity: Value(item.quantity),
           description: Value(item.description),
           rating: Value(item.rating),
           duration: Value(item.duration),
-          originalPrice: Value(item.originalPrice),
           type: Value(item.type.toString().split('.').last),
           sourcePage: Value(item.sourcePage),
           sourceTitle: Value(item.sourceTitle),
-          addedAt: Value(item.dateAdded), // FIXED: Removed ?? DateTime.now()
+          discountPercentage: Value(0), // Default for legacy items
+          addedAt: Value(item.dateAdded),
+          dateAdded: Value(item.dateAdded),
           updatedAt: Value(DateTime.now()),
         ),
       );
+    }
+  }
+
+  /// NEW: Insert or update cart item using new service_models.CartItem
+  Future<void> insertOrUpdateCartItem(service_models.CartItem item) async {
+    try {
+      await into(cartItemsTable).insertOnConflictUpdate(
+        CartItemsTableCompanion(
+          id: Value(item.id),
+          title: Value(item.name), // Use name for title (backward compatibility)
+          name: Value(item.name),
+          image: Value(item.image),
+          price: Value(item.price),
+          originalPrice: Value(item.originalPrice),
+          quantity: Value(item.quantity),
+          description: Value(item.description),
+          rating: Value(item.rating),
+          duration: Value(item.duration),
+          discountPercentage: Value(item.discountPercentage),
+          sourcePage: Value(item.sourcePage),
+          sourceTitle: Value(item.sourceTitle),
+          addedAt: Value(item.dateAdded),
+          dateAdded: Value(item.dateAdded),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+      print('💾 Cart item saved: ${item.name}');
+    } catch (e) {
+      print('❌ Error inserting/updating cart item: $e');
+      throw e;
     }
   }
 
@@ -488,6 +985,9 @@ class AppDatabase extends _$AppDatabase {
     await delete(cartItemsTable).go();
   }
 
+  /// NEW: Clear all cart items (alias for clearCart)
+  Future<void> clearAllCartItems() async => clearCart();
+
   Future<int> getCartItemCount() async {
     final result =
         await (selectOnly(cartItemsTable)..addColumns([cartItemsTable.quantity.sum()]))
@@ -504,7 +1004,74 @@ class AppDatabase extends _$AppDatabase {
     return total;
   }
 
-  // Helper method to parse ServiceType from string
+  /// NEW: Get total cart amount (alias for getTotalAmount)
+  Future<double> getTotalCartAmount() async => getTotalAmount();
+
+  /// NEW: Get cart items by source
+  Future<List<service_models.CartItem>> getCartItemsBySource(String sourcePage) async {
+    try {
+      final items = await (select(cartItemsTable)
+        ..where((item) => item.sourcePage.equals(sourcePage))
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.dateAdded, mode: OrderingMode.desc)
+        ])
+      ).get();
+      
+      return items.map((item) => service_models.CartItem(
+        id: item.id,
+        name: item.name ?? item.title,
+        image: item.image,
+        price: item.price,
+        originalPrice: item.originalPrice ?? item.price,
+        quantity: item.quantity,
+        description: item.description ?? '',
+        rating: item.rating ?? '0.0',
+        duration: item.duration ?? '',
+        discountPercentage: item.discountPercentage,
+        sourcePage: item.sourcePage ?? 'unknown',
+        sourceTitle: item.sourceTitle ?? 'Unknown Service',
+        dateAdded: item.dateAdded ?? item.addedAt,
+      )).toList();
+    } catch (e) {
+      print('❌ Error getting cart items by source: $e');
+      return [];
+    }
+  }
+
+  /// NEW: Get comprehensive cart statistics
+  Future<Map<String, dynamic>> getCartStats() async {
+    try {
+      final items = await getAllNewCartItems();
+      final totalItems = items.fold(0, (sum, item) => sum + item.quantity);
+      final totalPrice = items.fold(0.0, (sum, item) => sum + item.totalPrice);
+      final totalSavings = items.fold(0.0, (sum, item) => sum + item.totalSavings);
+      
+      // Group by source
+      final sourceGroups = <String, List<service_models.CartItem>>{};
+      for (var item in items) {
+        if (!sourceGroups.containsKey(item.sourceTitle)) {
+          sourceGroups[item.sourceTitle] = [];
+        }
+        sourceGroups[item.sourceTitle]!.add(item);
+      }
+      
+      return {
+        'totalItems': totalItems,
+        'uniqueItems': items.length,
+        'totalPrice': totalPrice,
+        'totalSavings': totalSavings,
+        'sourceCount': sourceGroups.length,
+        'sources': sourceGroups.keys.toList(),
+        'averageItemPrice': totalItems > 0 ? totalPrice / totalItems : 0.0,
+        'hasDiscounts': items.any((item) => item.hasDiscount),
+      };
+    } catch (e) {
+      print('❌ Error getting cart statistics: $e');
+      return {};
+    }
+  }
+
+  // Helper method to parse ServiceType from string (for legacy compatibility)
   cart_models.ServiceType _parseServiceType(String typeString) {
     switch (typeString) {
       case 'salon':
@@ -516,29 +1083,7 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  // --- Utility ---
-
-  Future<void> clearAllCache() async {
-    await Future.wait([
-      clearCategories(),
-      delete(servicesTable).go(),
-      delete(userPreferencesTable).go(),
-      clearLocationData(),
-      clearCart(),
-    ]);
-  }
-
-  /// Clear all data except authentication (for app reset)
-  Future<void> clearAllDataExceptAuth() async {
-    await Future.wait([
-      clearCategories(),
-      delete(servicesTable).go(),
-      clearLocationData(),
-      clearCart(),
-    ]);
-  }
-
-  // --- NEW AUTHENTICATION METHODS ---
+  // --- Enhanced Authentication Methods ---
 
   /// Save authentication token
   Future<void> saveAuthToken(String token) async {
@@ -577,7 +1122,7 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  /// Save user data as JSON-like key-value pairs (FIXED)
+  /// Save user data as JSON-like key-value pairs
   Future<void> saveUserData(Map<String, dynamic> userData) async {
     try {
       // Use transaction for atomic operation
@@ -761,20 +1306,52 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  // --- Utility Methods ---
+
+  Future<void> clearAllCache() async {
+    await Future.wait([
+      clearCategories(), // API categories
+      clearServices(), // API services
+      clearServiceCategories(), // Legacy service categories
+      delete(servicesTable).go(),
+      delete(userPreferencesTable).go(),
+      clearLocationData(),
+      clearCart(),
+    ]);
+  }
+
+  /// Clear all data except authentication (for app reset)
+  Future<void> clearAllDataExceptAuth() async {
+    await Future.wait([
+      clearCategories(),
+      clearServices(),
+      clearServiceCategories(),
+      delete(servicesTable).go(),
+      clearLocationData(),
+      clearCart(),
+    ]);
+  }
+
   // Database Stats for Debugging
   Future<Map<String, int>> getDatabaseStats() async {
-    final categoriesCount =
+    final serviceCategoriesCount =
         await (selectOnly(serviceCategoriesTable)..addColumns([countAll()])).getSingleOrNull();
+    final categoriesCount =
+        await (selectOnly(categoriesTable)..addColumns([countAll()])).getSingleOrNull();
     final servicesCount =
         await (selectOnly(servicesTable)..addColumns([countAll()])).getSingleOrNull();
+    final apiServicesCount =
+        await (selectOnly(apiServicesTable)..addColumns([countAll()])).getSingleOrNull();
     final preferencesCount =
         await (selectOnly(userPreferencesTable)..addColumns([countAll()])).getSingleOrNull();
     final cartCount = await (selectOnly(cartItemsTable)..addColumns([countAll()])).getSingleOrNull();
     final authCount = await (selectOnly(authDataTable)..addColumns([countAll()])).getSingleOrNull();
 
     return {
-      'categories': categoriesCount?.read(countAll()) ?? 0,
+      'service_categories': serviceCategoriesCount?.read(countAll()) ?? 0,
+      'api_categories': categoriesCount?.read(countAll()) ?? 0,
       'services': servicesCount?.read(countAll()) ?? 0,
+      'api_services': apiServicesCount?.read(countAll()) ?? 0,
       'preferences': preferencesCount?.read(countAll()) ?? 0,
       'cart_items': cartCount?.read(countAll()) ?? 0,
       'auth_data': authCount?.read(countAll()) ?? 0,
@@ -785,7 +1362,6 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'chazan_karo_db.sqlite'));
-    return NativeDatabase(file);
+    return NativeDatabase(File(p.join(dbFolder.path, 'chazan_karo_db.sqlite')));
   });
 }

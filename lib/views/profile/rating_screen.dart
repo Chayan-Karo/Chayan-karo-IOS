@@ -62,7 +62,7 @@ class _RatingScreenState extends State<RatingScreen> {
               /// ✅ Reusable Header
               ChayanHeader(
                 title: 'Rate Us',
-                onBackTap: () {},
+                onBack: () => Navigator.pop(context),
               ),
 
               Expanded(

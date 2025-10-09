@@ -26,7 +26,7 @@ class AboutChaynkaroServicesScreen extends StatelessWidget {
                 // Header
                 ChayanHeader(
                   title: 'About Chayan Karo',
-                  onBackTap: () {},
+                      onBack: () => Navigator.pop(context),
                 ),
 
                 // Company Logo - Only Logo image displayed, takes large space and acts as box

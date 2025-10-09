@@ -9,7 +9,7 @@ class ChayanHeader extends StatelessWidget {
   const ChayanHeader({
     Key? key,
     required this.title,
-    this.onBack, required void Function() onBackTap,
+    this.onBack,
   }) : super(key: key);
 
   @override
@@ -39,7 +39,11 @@ class ChayanHeader extends StatelessWidget {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: onBack ?? () => Navigator.pop(context),
+                      onTap: onBack ?? () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      },
                       child: Icon(
                         Icons.arrow_back_ios_new,
                         size: 20 * scaleFactor,

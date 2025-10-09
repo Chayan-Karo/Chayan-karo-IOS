@@ -1,53 +1,53 @@
+// lib/controllers/home_controller.dart
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 
 import '../data/repository/home_repository.dart';
 import '../models/home_models.dart';
 import '../services/cache_service.dart';
-import '../data/local/database.dart'; // Add this import
+import '../data/local/database.dart';
 
 class HomeController extends GetxController {
   // Dependencies
   HomeRepository get _homeRepository => Get.find<HomeRepository>();
   CacheService get _cacheService => Get.find<CacheService>();
-  AppDatabase get _database => Get.find<AppDatabase>(); // Add database dependency
+  AppDatabase get _database => Get.find<AppDatabase>();
 
-  // Existing reactive variables
+  // Existing reactive variables (REMOVED: categories)
   final _address = 'Fetching location...'.obs;
   final _locationLabel = 'Home'.obs;
   final _isLoading = false.obs;
 
-  final RxList<ServiceCategory> _categories = <ServiceCategory>[].obs;
+  // REMOVED: final RxList<ServiceCategory> _categories = <ServiceCategory>[].obs;
   final RxList<GoToService> _goToServices = <GoToService>[].obs;
   final RxList<Service> _mostUsedServices = <Service>[].obs;
 
-  // Authentication reactive variables (NEW)
+  // Authentication reactive variables
   final _isLoggedIn = false.obs;
   final _currentUser = Rxn<Map<String, String?>>();
   final _isSessionValid = true.obs;
 
-  // Getters
+  // Getters (REMOVED: categories getter)
   String get address => _address.value;
   String get locationLabel => _locationLabel.value;
   bool get isLoading => _isLoading.value;
   
-  // Authentication getters (NEW)
   bool get isLoggedIn => _isLoggedIn.value;
   Map<String, String?>? get currentUser => _currentUser.value;
   String get userName => _currentUser.value?['name'] ?? 'User';
   String get userPhone => _currentUser.value?['phone'] ?? '';
   bool get isSessionValid => _isSessionValid.value;
   
-  RxList<ServiceCategory> get categories => _categories;
   RxList<GoToService> get goToServices => _goToServices;
   RxList<Service> get mostUsedServices => _mostUsedServices;
 
-  // Static data
+  // ADD: AC Repair Items (static data for AC repair section)
   final List<Map<String, String>> acRepairItems = [
     {'imagePath': 'assets/ac_services.webp', 'title': 'AC Services'},
     {'imagePath': 'assets/ac_repair.webp', 'title': 'AC Repair & Gas Refill'},
     {'imagePath': 'assets/ac_installation.webp', 'title': 'AC Installation'},
     {'imagePath': 'assets/ac_uninstallation.webp', 'title': 'AC Uninstallation'},
+    {'imagePath': 'assets/ac_cleaning.webp', 'title': 'AC Deep Cleaning'},
   ];
 
   @override
@@ -57,29 +57,22 @@ class HomeController extends GetxController {
     initialize();
   }
 
-  @override
-  void onReady() {
-    super.onReady();
-    print('🏠 HomeController ready');
-  }
-
-  // Initialize (UPDATED)
+  // Initialize (REMOVED: _loadCategories call)
   Future<void> initialize() async {
     print('🏠 Starting initialization...');
     _isLoading.value = true;
 
     try {
       await Future.wait([
-        _loadAuthState(), // Load authentication state first
+        _loadAuthState(),
         _loadSavedAddress(),
-        _loadCategories(),
+        // REMOVED: _loadCategories(), // Categories now handled by CategoryController
         _loadGoToServices(),
         _loadMostUsedServices(),
       ]);
       
       print('🏠 Initialization completed successfully');
       print('🔐 Auth State: ${_isLoggedIn.value} | User: ${userName}');
-      print('📊 Categories: ${_categories.length}');
       print('📊 GoTo Services: ${_goToServices.length}');
       print('📊 Most Used Services: ${_mostUsedServices.length}');
       
@@ -237,17 +230,7 @@ class HomeController extends GetxController {
     }
   }
 
-  // Existing methods remain the same...
-
-  Future<void> _loadCategories() async {
-    try {
-      final categories = await _homeRepository.getCategories();
-      _categories.assignAll(categories);
-      print('✅ Categories loaded: ${categories.length}');
-    } catch (e) {
-      print('❌ Error loading categories: $e');
-    }
-  }
+  // REMOVED: _loadCategories method entirely
 
   Future<void> _loadGoToServices() async {
     try {

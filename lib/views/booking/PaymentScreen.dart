@@ -45,7 +45,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 children: [
                   ChayanHeader(
                     title: 'Payment Option',
-                    onBackTap: () => Navigator.pop(context),
+                    onBack: () => Navigator.pop(context),
                   ),
                   Expanded(
                     child: Container(
