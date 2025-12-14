@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../../controllers/home_controller.dart';
+import '../../../controllers/profile_controller.dart';
 
 class HomeBannerWidget extends StatelessWidget {
   final double scaleFactor;
@@ -20,8 +21,9 @@ class HomeBannerWidget extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Obx(() {
         final homeController = Get.find<HomeController>();
-        
-        // Only show loading for banner if controller is loading
+        final profileController = Get.find<ProfileController>();
+
+        // Show loading indicator if homeController is loading
         if (homeController.isLoading) {
           return Container(
             height: 120.h * scaleFactor,
@@ -37,29 +39,51 @@ class HomeBannerWidget extends StatelessWidget {
           );
         }
 
-        // Static banner content (can be made dynamic later)
-        return _buildBannerContent();
+        // Get user's first name
+        final customer = profileController.customer;
+        String userName = 'Chayan Customer';
+        if (customer?.fullName != null &&
+            customer!.fullName.isNotEmpty &&
+            customer.fullName != 'User') {
+          // Split and take the first name part, fallback safe
+          userName = customer.fullName.trim().split(' ').first;
+        }
+
+        // Banner text
+        final bannerTitle = "Let's make a package just\nfor you, $userName!";
+        const bannerSubtitle = "Salon for women";
+        const bannerImage = 'assets/banner_woman.webp';
+
+        return _buildBannerContent(
+          userName: userName,
+          scaleFactor: scaleFactor,
+          bannerTitle: bannerTitle,
+          bannerSubtitle: bannerSubtitle,
+          bannerImage: bannerImage,
+        );
       }),
     );
   }
 
-  Widget _buildBannerContent() {
-    const bannerTitle = "Let's make a package just\nfor you, Manvi!";
-    const bannerSubtitle = "Salon for women";
-    const bannerImage = 'assets/banner_woman.webp';
-
+  Widget _buildBannerContent({
+    required String userName,
+    required double scaleFactor,
+    required String bannerTitle,
+    required String bannerSubtitle,
+    required String bannerImage,
+  }) {
     return GestureDetector(
-      onTap: () {
-        // Navigate to women salon services
-        Get.snackbar(
-          'Redirecting',
-          'Redirecting to Women Salon Services...',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFFF6F00),
-          colorText: Colors.white,
-          duration: Duration(seconds: 2),
-        );
-      },
+      // onTap: () {
+      //   // Navigation/tap functionality commented out
+      //   Get.snackbar(
+      //     'Redirecting',
+      //     'Redirecting to Women Salon Services...',
+      //     snackPosition: SnackPosition.BOTTOM,
+      //     backgroundColor: const Color(0xFFFF6F00),
+      //     colorText: Colors.white,
+      //     duration: Duration(seconds: 2),
+      //   );
+      // },
       child: Container(
         height: 120.h * scaleFactor,
         decoration: BoxDecoration(

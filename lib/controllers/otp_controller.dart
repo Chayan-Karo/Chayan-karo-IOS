@@ -3,19 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'dart:async';
 import '../data/repository/auth_repository.dart';
-import '../data/repository/location_repository.dart'; // NEW
+import '../data/repository/location_repository.dart';
 import '../data/local/database.dart';
+import '../controllers/profile_controller.dart'; 
 
 class OtpController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
-  final LocationRepository _locationRepository = Get.find<LocationRepository>(); // NEW
+  final LocationRepository _locationRepository = Get.find<LocationRepository>();
   final AppDatabase _database = Get.find<AppDatabase>();
 
   // Observable variables
   final _phoneNumber = ''.obs;
   final _otp = ''.obs;
   final _isLoading = false.obs;
-  final _errorMessage = ''.obs;
+  final _errorMessage = ''.obs; // Kept to avoid breaking existing bindings, but we rely on Snackbar now
   final _isButtonEnabled = false.obs;
   final _canResend = false.obs;
   final _secondsRemaining = 30.obs;
@@ -69,23 +70,74 @@ class OtpController extends GetxController {
     super.onClose();
   }
 
-  void onOtpChanged(String value, int index) {
-    // Clear error when user starts typing
+  // --- NEW HELPER METHOD FOR SNACKBAR ---
+  void _showErrorSnackbar(String message) {
+    if (Get.isSnackbarOpen) return; // Prevent stacking
+    Get.snackbar(
+      "Error",
+      message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(10),
+      borderRadius: 10,
+      icon: const Icon(Icons.error_outline, color: Colors.white),
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+void onOtpChanged(String value, int index) {
+    // 1. 📋 HANDLE PASTE EVENT (Length is 4)
+    if (value.length == 4) {
+      // Check if the pasted content is actually numbers
+      if (int.tryParse(value) != null) {
+        for (int i = 0; i < 4; i++) {
+          if (i < otpControllers.length) {
+            otpControllers[i].text = value[i];
+          }
+        }
+        _updateOtpValue();
+        Get.focusScope?.unfocus(); // Close keyboard after pasting
+        // Optional: verifyOTP(); // Uncomment if you want auto-submit
+      }
+      return;
+    }
+
+    // 2. 🚫 VALIDATION (Single Digit)
+    // We strictly allow only 0-9 for single keystrokes
+    if (value.isNotEmpty && !RegExp(r'^[0-9]$').hasMatch(value)) {
+      otpControllers[index].text = '';
+      return;
+    }
+
+    // Clear error if user starts typing again
     if (_errorMessage.value.isNotEmpty) {
       _errorMessage.value = '';
     }
 
-    // Auto-move to next field
-    if (value.isNotEmpty && index < 3) {
-      focusNodes[index + 1].requestFocus();
+    // 3. ⏩ SMOOTH AUTO FORWARD
+    if (value.length == 1 && index < 3) {
+      Future.microtask(() {
+        focusNodes[index].unfocus();
+        focusNodes[index + 1].requestFocus();
+      });
     }
 
-    // Auto-move to previous field when deleting
-    if (value.isEmpty && index > 0) {
-      focusNodes[index - 1].requestFocus();
+    // 4. ⏪ SMOOTH AUTO BACKSPACE
+    else if (value.isEmpty && index > 0) {
+      Future.microtask(() {
+        focusNodes[index].unfocus();
+        focusNodes[index - 1].requestFocus();
+        
+        // Ensure cursor is at the end to prevent weird selection issues
+        if (otpControllers[index - 1].text.isNotEmpty) {
+          otpControllers[index - 1].selection = TextSelection.collapsed(
+              offset: otpControllers[index - 1].text.length);
+        }
+      });
     }
 
-    // Update OTP value
+    // Update OTP Observable
     _updateOtpValue();
   }
 
@@ -97,12 +149,12 @@ class OtpController extends GetxController {
 
   Future<void> verifyOTP() async {
     if (_otp.value.length != 4) {
-      _errorMessage.value = 'Please enter complete OTP';
+      _showErrorSnackbar('Please enter complete OTP');
       return;
     }
 
     if (_phoneNumber.value.isEmpty) {
-      _errorMessage.value = 'Phone number not found';
+      _showErrorSnackbar('Phone number not found');
       return;
     }
 
@@ -127,7 +179,7 @@ class OtpController extends GetxController {
       _handleDioError(e);
       _clearOtpFields();
     } catch (e) {
-      _errorMessage.value = 'An unexpected error occurred. Please try again.';
+      _showErrorSnackbar('An unexpected error occurred. Please try again.');
       print('❌ Unexpected error verifying OTP: $e');
       print('❌ Error type: ${e.runtimeType}');
       _clearOtpFields();
@@ -158,7 +210,7 @@ class OtpController extends GetxController {
           // Access the AuthResponse properties
           type = response.type;
 
-          // CRITICAL FIX: Get the AuthResult object and extract the JWT
+          // Get the AuthResult object and extract the JWT
           final authResult = response.result;
 
           if (authResult != null) {
@@ -167,10 +219,12 @@ class OtpController extends GetxController {
             try {
               // Try to access the message and result (JWT) from AuthResult
               message = authResult.message;
-              token = authResult.result; // This should be the JWT token string
+              token = authResult.result; // JWT token string
 
               print('🔍 Debug - Message from AuthResult: $message');
-              print('🔍 Debug - Token from AuthResult: ${token?.substring(0, 30) ?? 'null'}...');
+              print(
+                '🔍 Debug - Token from AuthResult: ${token?.substring(0, 30) ?? 'null'}...',
+              );
             } catch (e) {
               print('⚠️ Error accessing AuthResult properties: $e');
 
@@ -236,7 +290,9 @@ class OtpController extends GetxController {
           authData['jwt_token'] = token;
           print('🔑 JWT token will be saved: ${token.substring(0, 30)}...');
         } else {
-          print('⚠️ WARNING: No JWT token found in response - this will cause profile API to fail!');
+          print(
+            '⚠️ WARNING: No JWT token found in response - this will cause profile API to fail!',
+          );
         }
 
         if (refreshToken != null && refreshToken.isNotEmpty) {
@@ -246,24 +302,27 @@ class OtpController extends GetxController {
 
         await _saveAuthenticationData(authData);
 
-        // ✨ Check server addresses before navigating (no local cache)
+        // Smart navigation based on profile + address
         await _navigateToCorrectScreen();
       } else {
-        _errorMessage.value = message?.isNotEmpty == true ? message! : 'Invalid OTP. Please try again.';
+        // ERROR STATE -> Use Snackbar
+        String displayMsg = message?.isNotEmpty == true ? message! : 'Invalid OTP. Please try again.';
+        _showErrorSnackbar(displayMsg);
+        
         print('❌ OTP verification failed: $message');
         _clearOtpFields();
       }
     } catch (e) {
       print('❌ Error in universal response handler: $e');
-      _errorMessage.value = 'Response processing failed. Please try again.';
+      _showErrorSnackbar('Response processing failed. Please try again.');
       _clearOtpFields();
     }
   }
 
-  // ✨ NEW: Smart navigation using server addresses (no local cache)
+  // ✨ Smart navigation: check profile basic fields, then address
   Future<void> _navigateToCorrectScreen() async {
     try {
-      print('🔍 OTP Success: Checking customer addresses from API before navigation...');
+      print('🔍 OTP Success: Checking profile + customer addresses before navigation...');
 
       // Ensure token exists (already saved)
       final token = await _database.getAuthToken();
@@ -273,7 +332,35 @@ class OtpController extends GetxController {
         return;
       }
 
-      // Fetch from LocationRepository
+      // 1) Load profile through ProfileController
+      final profileController = Get.put(ProfileController(), permanent: true);
+      await profileController.loadProfile();
+
+      // 2) Check only necessary fields: firstName, emailId, gender
+      final isBasicInfoComplete = profileController.isBasicInfoComplete;
+      print('🔍 isBasicInfoComplete: $isBasicInfoComplete');
+
+      if (!isBasicInfoComplete) {
+        print('✏️ Incomplete basic profile info - navigating to EditProfileScreen');
+
+        // use the same route + argument style as ProfileScreen/Home
+        Get.offAllNamed(
+          '/edit-profile',
+          arguments: profileController.customer,
+        );
+
+        Get.snackbar(
+          'Complete profile',
+          'Please complete your profile to continue',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[800],
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
+      // 3) If basic profile is complete, check server addresses
       final addresses = await _locationRepository.getCustomerAddresses();
       final hasAnyAddress = addresses.isNotEmpty;
 
@@ -284,8 +371,8 @@ class OtpController extends GetxController {
           'Success',
           'Login successful!',
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[800],
           duration: const Duration(seconds: 2),
         );
       } else {
@@ -295,15 +382,21 @@ class OtpController extends GetxController {
           'Success',
           'Login successful! Please set your location',
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[800],
           duration: const Duration(seconds: 2),
         );
       }
     } catch (e) {
-      print('❌ Error checking server addresses: $e');
-      // Fail-safe: if API fails, show location to collect address
-      Get.offAllNamed('/location_popup');
+      print('❌ Error in _navigateToCorrectScreen: $e');
+      // Fail-safe: if anything fails, send to edit profile first
+      Get.offAllNamed(
+        '/edit_profile',
+        arguments: {
+          'phone': _phoneNumber.value,
+          'source': 'otp_flow_error',
+        },
+      );
     }
   }
 
@@ -333,7 +426,9 @@ class OtpController extends GetxController {
 
         if (token != null && token.isNotEmpty) {
           await _database.saveAuthToken(token);
-          print('🔑 JWT token saved to database: ${token.substring(0, 30)}...');
+          print(
+            '🔑 JWT token saved to database: ${token.substring(0, 30)}...',
+          );
 
           // Verify token was saved correctly
           final savedToken = await _database.getAuthToken();
@@ -347,7 +442,8 @@ class OtpController extends GetxController {
         }
 
         // Save refresh token if available
-        if (result.containsKey('refresh_token') && result['refresh_token'] != null) {
+        if (result.containsKey('refresh_token') &&
+            result['refresh_token'] != null) {
           await _database.saveRefreshToken(result['refresh_token']);
           print('✅ Refresh token saved');
         }
@@ -377,17 +473,18 @@ class OtpController extends GetxController {
   }
 
   void _clearOtpFields() {
-    for (var controller in otpControllers) {
-      controller.clear();
-    }
-    _otp.value = '';
-    _isButtonEnabled.value = false;
-
-    // Focus on first field
-    if (focusNodes.isNotEmpty) {
-      focusNodes[0].requestFocus();
-    }
+  for (var controller in otpControllers) {
+    controller.clear();
   }
+
+  _otp.value = '';
+  _isButtonEnabled.value = false;
+
+  Future.microtask(() {
+    focusNodes[0].requestFocus();
+  });
+}
+
 
   Future<void> resendOTP() async {
     if (!_canResend.value || _phoneNumber.value.isEmpty) {
@@ -407,7 +504,8 @@ class OtpController extends GetxController {
       final result = response['result'] as Map<String, dynamic>?;
       final message = result?['message'] as String? ?? '';
 
-      if (type == 'Authentication' && message.toLowerCase().contains('successfully')) {
+      if (type == 'Authentication' &&
+          message.toLowerCase().contains('successfully')) {
         print('✅ OTP resent successfully');
 
         // Clear current OTP and restart timer
@@ -419,18 +517,18 @@ class OtpController extends GetxController {
           'OTP Sent',
           'A new OTP has been sent to +91 ${_phoneNumber.value}',
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[800],
           duration: const Duration(seconds: 2),
         );
       } else {
-        _errorMessage.value = 'Failed to resend OTP. Please try again.';
+        _showErrorSnackbar('Failed to resend OTP. Please try again.');
         print('❌ Resend OTP failed: $message');
       }
     } on DioException catch (e) {
       _handleDioError(e);
     } catch (e) {
-      _errorMessage.value = 'Failed to resend OTP. Please try again.';
+      _showErrorSnackbar('Failed to resend OTP. Please try again.');
       print('❌ Error resending OTP: $e');
     } finally {
       _isLoading.value = false;
@@ -463,41 +561,27 @@ class OtpController extends GetxController {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.sendTimeout:
-        _errorMessage.value = 'Connection timeout. Please check your internet connection.';
+        _showErrorSnackbar('Connection timeout. Please check your internet connection.');
         break;
       case DioExceptionType.connectionError:
-        _errorMessage.value = 'No internet connection. Please try again.';
+        _showErrorSnackbar('No internet connection. Please try again.');
         break;
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
-        final responseData = error.response?.data;
-
-        String message = 'Invalid OTP. Please try again.';
-
-        // Handle 403 specifically
-        if (statusCode == 403) {
-          message = 'OTP verification failed. Please ensure you are using the correct OTP.';
-
-          if (responseData is Map<String, dynamic>) {
-            final result = responseData['result'] as Map<String, dynamic>?;
-            if (result != null && result.containsKey('message')) {
-              message = result['message'];
-            } else if (responseData.containsKey('message')) {
-              message = responseData['message'];
-            }
-          }
-        } else if (statusCode == 400) {
-          _errorMessage.value = message;
-        } else if (statusCode == 401) {
-          _errorMessage.value = 'Invalid or expired OTP. Please try again.';
-        } else if (statusCode == 429) {
-          _errorMessage.value = 'Too many attempts. Please wait before trying again.';
+        
+        // --- CUSTOM HANDLER FOR WRONG OTP ---
+        if (statusCode == 403 || statusCode == 401 || statusCode == 400) {
+          // You explicitly asked for this message for wrong OTP
+          _showErrorSnackbar("Wrong OTP, please write valid OTP");
+        } 
+        else if (statusCode == 429) {
+          _showErrorSnackbar('Too many attempts. Please wait before trying again.');
         } else {
-          _errorMessage.value = 'Server error. Please try again later.';
+          _showErrorSnackbar('Wrong OTP, please write valid OTP');
         }
         break;
       default:
-        _errorMessage.value = 'Something went wrong. Please try again.';
+        _showErrorSnackbar('Something went wrong. Please try again.');
     }
   }
 

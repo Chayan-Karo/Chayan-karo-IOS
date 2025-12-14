@@ -1,21 +1,24 @@
-// Updated ProfileScreen with Chayan Customer and no rating/refresh
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
+
+// Screens
 import 'package:chayankaro/views/chayan_sathi/previouschayansathiscreen.dart';
 import 'package:chayankaro/views/profile/aboutscreen.dart';
 import '/views/booking/PaymentScreen.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '/views/rewards/ReferAndEarnScreen.dart';
-import 'package:flutter/material.dart';
 import '../home/home_screen.dart';
 import '../booking/booking_screen.dart';
 import '../chayan_sathi/chayan_sathi_screen.dart';
-import '../../widgets/custom_bottom_nav_bar.dart';
 import '../profile/EditProfileScreen.dart';
 import '../profile/manage_address_screen.dart';
 import '../profile/help_screen.dart';
 import '../profile/rating_screen.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+
+// Widgets & Controllers
+import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../widgets/chayan_header.dart';
-import 'package:get/get.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../data/local/database.dart';
@@ -31,13 +34,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedIndex = 4;
   bool _isLoggingOut = false;
   
-  // Add ProfileController
+  // Profile Controller Dependency
   late ProfileController _profileController;
 
   @override
   void initState() {
     super.initState();
-    // Initialize ProfileController
+    // Initialize or Find the Controller
     _profileController = Get.put(ProfileController());
   }
 
@@ -61,17 +64,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Updated user profile with Chayan Customer and no rating/refresh
-  Widget _buildUserProfile(double scaleFactor) {
+  // UPDATED: User profile widget using imageUrl and default "Chayan Customer"
+Widget _buildUserProfile(double scaleFactor) {
     return Obx(() {
-      // Show loading indicator while fetching profile
+      // 1. Loading State
       if (_profileController.isLoading && _profileController.customer == null) {
         return Row(
           children: [
             CircleAvatar(
               radius: 40 * scaleFactor,
               backgroundColor: Colors.grey[300],
-              child: CircularProgressIndicator(
+              child: const CircularProgressIndicator(
                 color: Color(0xFFE47830),
                 strokeWidth: 2,
               ),
@@ -103,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
-      // Show error state with retry option
+      // 2. Error State
       if (_profileController.errorMessage.isNotEmpty && _profileController.customer == null) {
         return Row(
           children: [
@@ -145,66 +148,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
-      // Show profile data with Chayan Customer as default
+      // 3. Success State
       final customer = _profileController.customer;
-      
-      // Use Chayan Customer as default name if API data is null/empty
+
+      // Name Logic
       String userName = 'Chayan Customer';
       if (customer?.fullName != null && customer!.fullName.isNotEmpty && customer.fullName != 'User') {
         userName = customer.fullName;
       }
-      
-      // Use API phone number if available, otherwise fallback
-      final userPhone = customer?.mobileNo ?? '7355640235';
-      
-      return Row(
-        children: [
-          CircleAvatar(
-            radius: 40 * scaleFactor,
-            backgroundImage: customer?.imgLink != null 
-              ? NetworkImage(customer!.imgLink!)
-              : const AssetImage('assets/userprofile.webp') as ImageProvider,
-            onBackgroundImageError: customer?.imgLink != null 
-              ? (exception, stackTrace) {
-                  // Fallback to default image on error
-                }
-              : null,
-          ),
-          SizedBox(width: 16.w * scaleFactor),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userName,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16.sp * scaleFactor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 4.h * scaleFactor),
-                Text(
-                  '+91 $userPhone',
-                  style: TextStyle(
-                    fontSize: 12.sp * scaleFactor,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF161616),
-                  ),
-                ),
-                // Removed rating display completely
-              ],
+
+      // Phone Logic
+      final userPhone = customer?.mobileNo ?? '';
+
+      return GestureDetector(
+        // UPDATED: Using Named route with arguments
+        onTap: () {
+          Get.toNamed('/edit-profile', arguments: _profileController.customer);
+        },
+        behavior: HitTestBehavior.opaque, // Ensures the empty space is clickable
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 40 * scaleFactor,
+              backgroundImage: customer?.imageUrl != null && customer!.imageUrl!.isNotEmpty
+                  ? NetworkImage(customer!.imageUrl!)
+                  : const AssetImage('assets/userprofile.webp') as ImageProvider,
+              onBackgroundImageError: (exception, stackTrace) {
+                print('Error loading profile image: $exception');
+              },
+              backgroundColor: Colors.grey[200],
             ),
-          ),
-          // Removed refresh button
-        ],
+            SizedBox(width: 16.w * scaleFactor),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    userName,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16.sp * scaleFactor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (userPhone.isNotEmpty) ...[
+                    SizedBox(height: 4.h * scaleFactor),
+                    Text(
+                      '+91 $userPhone',
+                      style: TextStyle(
+                        fontSize: 12.sp * scaleFactor,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF161616),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       );
     });
   }
 
-  // Rest of your existing methods remain the same...
   Future<void> _handleLogout() async {
     if (_isLoggingOut) return;
 
@@ -308,19 +316,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: Colors.white,
           body: Column(
             children: [
-              ChayanHeader(title: 'Profile',                       
-              onBack: () => Navigator.pop(context),
-),
+              ChayanHeader(
+                title: 'Profile',                   
+                onBack: () => Navigator.pop(context),
+              ),
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
                   children: [
                     SizedBox(height: 24.h * scaleFactor),
                     
-                    // Updated user profile section with Chayan Customer
+                    // User Profile Section
                     _buildUserProfile(scaleFactor),
                     
                     SizedBox(height: 24.h * scaleFactor),
+                    
+                    // Quick Actions Grid
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -338,9 +349,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ],
                     ),
+                    
                     SizedBox(height: 24.h * scaleFactor),
                     const Divider(color: Color(0xFFEBEBEB)),
                     
+                    // Menu Items
                     buildListItem('assets/icons/location.svg', "Manage Address", scaleFactor, onTap: () {
                       Get.to(() => const ManageAddressScreen());
                     }),
@@ -350,9 +363,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     buildListItem('assets/icons/about.svg', "About Chayan karo Services", scaleFactor, onTap: () {
                       Get.to(() => AboutChaynkaroServicesScreen());
                     }),
-                    buildListItem('assets/icons/settings.svg', "Settings", scaleFactor, onTap: () {
-                      // Pass API data to EditProfileScreen
-                      Get.to(() => EditProfileScreen(customer: _profileController.customer));
+                    buildListItem('assets/icons/edit.svg', "Edit Profile", scaleFactor, onTap: () {
+                      // Pass customer data to edit screen
+                      Get.toNamed('/edit-profile', arguments: _profileController.customer);
                     }),
                     
                     buildListItem(
@@ -363,50 +376,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     
                     SizedBox(height: 20.h * scaleFactor),
-                   GestureDetector(
-  onTap: () => Get.to(() => const ReferAndEarnScreen()),
-  child: Container(
-    padding: EdgeInsets.all(20.r * scaleFactor),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFEDE0),
-      borderRadius: BorderRadius.circular(12.r * scaleFactor),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Refer a Friend',
-                style: TextStyle(
-                  fontFamily: 'SF Pro',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18.sp * scaleFactor,
-                ),
-              ),
-              SizedBox(height: 6.h * scaleFactor),
-              Text(
-                'Share the app and let your friends discover Chayan Karo services',
-                style: TextStyle(
-                  fontFamily: 'SF Pro',
-                  fontSize: 14.sp * scaleFactor,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(width: 16.w * scaleFactor),
-        SvgPicture.asset(
-          'assets/icons/gifty.svg',
-          height: 57.h * scaleFactor,
-          width: 57.w * scaleFactor,
-        ),
-      ],
-    ),
-  ),
-),
-
+                    
+                    // Refer Banner
+                    GestureDetector(
+                      onTap: () => Get.to(() => const ReferAndEarnScreen()),
+                      child: Container(
+                        padding: EdgeInsets.all(20.r * scaleFactor),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEDE0),
+                          borderRadius: BorderRadius.circular(12.r * scaleFactor),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Refer a Friend',
+                                    style: TextStyle(
+                                      fontFamily: 'SF Pro',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 18.sp * scaleFactor,
+                                    ),
+                                  ),
+                                  SizedBox(height: 6.h * scaleFactor),
+                                  Text(
+                                    'Share the app and let your friends discover Chayan Karo services',
+                                    style: TextStyle(
+                                      fontFamily: 'SF Pro',
+                                      fontSize: 14.sp * scaleFactor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 16.w * scaleFactor),
+                            SvgPicture.asset(
+                              'assets/icons/gifty.svg',
+                              height: 57.h * scaleFactor,
+                              width: 57.w * scaleFactor,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
                     SizedBox(height: 30.h * scaleFactor),
                   ],
                 ),

@@ -10,10 +10,15 @@ CreateOrderRequest _$CreateOrderRequestFromJson(Map<String, dynamic> json) =>
     CreateOrderRequest(
       amount: (json['amount'] as num).toDouble(),
       receipt: json['receipt'] as String,
+      bookingId: json['bookingId'] as String,
     );
 
 Map<String, dynamic> _$CreateOrderRequestToJson(CreateOrderRequest instance) =>
-    <String, dynamic>{'amount': instance.amount, 'receipt': instance.receipt};
+    <String, dynamic>{
+      'amount': instance.amount,
+      'receipt': instance.receipt,
+      'bookingId': instance.bookingId,
+    };
 
 CreateOrderResponse _$CreateOrderResponseFromJson(Map<String, dynamic> json) =>
     CreateOrderResponse(

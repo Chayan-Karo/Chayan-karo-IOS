@@ -1,9 +1,10 @@
-// lib/main.dart - USING SPLASH SCREEN PROPERLY
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-
+import 'views/booking/feedback_screen.dart';
+// Screens
 import 'views/splash/splash_screen.dart';
 import 'widgets/OnboardingScreen.dart';
 import 'views/login/login_screen.dart';
@@ -13,152 +14,156 @@ import 'views/cart/cart_screen.dart';
 import 'widgets/location_popup_screen.dart';
 import 'views/profile/profile_screen.dart';
 import 'widgets/choose_location_sheet.dart';
+import 'widgets/service_area_info_screen.dart';
+import 'views/booking/PaymentSuccess.dart';
+import 'views/booking/payment_failed_screen.dart';
+import 'views/profile/EditProfileScreen.dart';
 
-// GetX dependency injection
+// Dependencies
 import 'di/app_binding.dart';
-
-// Database + repositories
 import 'data/local/database.dart';
 import 'data/repository/category_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize GetX dependencies
+  // Lock to portrait
+  await SystemChrome.setPreferredOrientations(
+    [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown],
+  );
+
   await initializeDependencies();
 
-  // ✨ ALWAYS START WITH SPLASH - Let splash screen handle routing
   runApp(const ChayanKaroApp());
 }
 
-// ==========================================================
-// INITIALIZE DEPENDENCIES
-// ==========================================================
 Future<void> initializeDependencies() async {
-  print('🚀 Initializing GetX dependencies...');
   AppBinding().dependencies();
-  print('✅ GetX dependencies initialized successfully');
 
-  // Optional quick tests
   try {
-    final database = Get.find<AppDatabase>();
-    final categoryRepo = CategoryRepository();
-    print('✅ Database & Repository check passed.');
-
-    final stats = await database.getDatabaseStats();
-    print('📊 Database stats: $stats');
+    final db = Get.find<AppDatabase>();
+    final repo = CategoryRepository();
+    print(await db.getDatabaseStats());
   } catch (e) {
-    print('⚠️ Dependency test failed: $e');
+    print("Dependency failed: $e");
   }
 }
 
-// ==========================================================
-// APP ENTRY WIDGET
-// ==========================================================
+// =======================================================
+// APP ROOT
+// =======================================================
 class ChayanKaroApp extends StatelessWidget {
   const ChayanKaroApp({super.key});
-
-  static const bool kEnableDeviceLogs = true;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (_, constraints) {
-        final mediaQuery = MediaQueryData.fromView(
-          WidgetsBinding.instance.platformDispatcher.views.first,
-        );
+        final view = WidgetsBinding.instance.platformDispatcher.views.first;
+        final mediaQuery = MediaQueryData.fromView(view);
 
         final designSize = DesignSizeHelper.getDesignSize(mediaQuery);
-
-        if (kEnableDeviceLogs) {
-          DesignSizeHelper.logDeviceInfo(mediaQuery);
-        }
 
         return ScreenUtilInit(
           designSize: designSize,
           minTextAdapt: true,
           splitScreenMode: true,
-          builder: (_, __) => GetMaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'ChayanKaro',
-            theme: ThemeData(
-              fontFamily: 'SFPro',
-              primaryColor: const Color(0xFFFF6F00),
-              scaffoldBackgroundColor: Colors.white,
-            ),
-            initialBinding: AppBinding(),
-            initialRoute: '/', // ✨ Always start with splash screen
-            getPages: [
-              GetPage(name: '/', page: () => const SplashScreen()), // ✨ Your animated splash
-              GetPage(name: '/onboarding', page: () => const OnboardingScreen()),
-              GetPage(name: '/login', page: () => const LoginScreen(), binding: AppBinding()),
-              GetPage(name: '/otp', page: () => const OtpVerificationScreen(), binding: AppBinding()),
-              GetPage(name: '/home', page: () => const HomeScreen(), binding: AppBinding()),
-              GetPage(name: '/profile', page: () => const ProfileScreen(), binding: AppBinding()),
-              GetPage(name: '/cart', page: () => CartScreen(), binding: AppBinding()),
-              GetPage(name: '/location_popup', page: () => const LocationPopupScreen(), binding: AppBinding()),
-              GetPage(name: '/choice', page: () => const ChooseLocationSheet(), binding: AppBinding()),
-            ],
-            unknownRoute: GetPage(
-              name: '/notfound',
-              page: () => Scaffold(
-                appBar: AppBar(title: const Text('Page Not Found')),
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      const Text('Page Not Found'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => Get.offAllNamed('/'),
-                        child: const Text('Go Home'),
-                      ),
-                    ],
+          builder: (_, __) {
+            return GetMaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: "ChayanKaro",
+
+              // FIX: Samsung resize & keyboard UI shift
+              builder: (context, widget) {
+                return MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    textScaleFactor: 1.0,   // Prevents UI from breaking on Samsung
+                  ),
+                  child: widget!,
+                );
+              },
+
+              theme: ThemeData(
+                useMaterial3: false,
+                fontFamily: "SFPro",
+                scaffoldBackgroundColor: Colors.white,
+              ),
+
+              initialBinding: AppBinding(),
+              initialRoute: '/',
+
+              getPages: [
+                GetPage(name: '/', page: () => const SplashScreen()),
+                GetPage(name: '/onboarding', page: () => const OnboardingScreen()),
+
+                GetPage(name: '/login', page: () => const LoginScreen()),
+                GetPage(name: '/otp', page: () => const OtpVerificationScreen()),
+
+                GetPage(name: '/home', page: () => const HomeScreen()),
+                GetPage(name: '/profile', page: () => const ProfileScreen()),
+                GetPage(name: '/cart', page: () => CartScreen()),
+
+                GetPage(name: '/location_popup', page: () => const LocationPopupScreen()),
+                GetPage(name: '/choice', page: () => const ChooseLocationSheet()),
+                GetPage(name: '/service_area_info', page: () => const ServiceAreaInfoScreen()),
+
+                GetPage(name: '/payment-success', page: () => const PaymentSuccessScreen()),
+                GetPage(name: '/payment-failed', page: () => const PaymentFailedScreen()),
+                GetPage(name: '/feedback_screen', page: () => const FeedbackScreen()),
+
+
+              GetPage(
+                  name: '/edit-profile',
+                  page: () => EditProfileScreen(customer: Get.arguments),
+                ),
+              ],
+
+              unknownRoute: GetPage(
+                name: '/notfound',
+                page: () => Scaffold(
+                  appBar: AppBar(title: const Text("Page Not Found")),
+                  body: Center(
+                    child: ElevatedButton(
+                      onPressed: () => Get.offAllNamed('/'),
+                      child: const Text("Go Home"),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
 }
 
-// ==========================================================
-// DEVICE SIZE HELPER (UNCHANGED)
-// ==========================================================
+// =======================================================
+// DEVICE SIZE HELPER — UNIVERSAL FIX
+// =======================================================
 class DesignSizeHelper {
-  static Size getDesignSize(MediaQueryData mediaQuery) {
-    final size = mediaQuery.size;
-    final diagonalDp = sqrt(pow(size.width, 2) + pow(size.height, 2));
-    final bool isTablet = diagonalDp >= 1100 || size.shortestSide >= 500;
-    final bool isLargeTablet = isTablet && max(size.width, size.height) >= 1400;
-    final bool isLandscape = size.width > size.height;
+  static Size getDesignSize(MediaQueryData mq) {
+    final size = mq.size;
+    final diagonal = sqrt(size.width * size.width + size.height * size.height);
 
-    const phoneSize = Size(390, 844);
+    final isTablet = diagonal >= 1100 || size.shortestSide >= 500;
 
-    if (!isTablet) return phoneSize;
-
-    if (isLargeTablet) {
-      return isLandscape ? const Size(1366, 1024) : const Size(1024, 1366);
-    } else {
-      return isLandscape ? const Size(960, 600) : const Size(600, 960);
+    // 📌 UNIVERSAL FIX
+    // Always use **390×844** for all phones (Samsung, Poco, old devices)
+    // Only tablets will scale differently.
+    if (!isTablet) {
+      return const Size(390, 844);
     }
-  }
 
-  static void logDeviceInfo(MediaQueryData mediaQuery) {
-    final size = mediaQuery.size;
-    final diagonalDp = sqrt(pow(size.width, 2) + pow(size.height, 2));
-    final bool isTablet = diagonalDp >= 1100 || size.shortestSide >= 500;
-    final bool isLargeTablet = isTablet && max(size.width, size.height) >= 1400;
+    // Tablet sizes
+    if (max(size.width, size.height) >= 1400) {
+      return size.width > size.height
+          ? const Size(1366, 1024)
+          : const Size(1024, 1366);
+    }
 
-    debugPrint(
-      '[Device Check] widthDp: ${size.width}, heightDp: ${size.height}, '
-      'diagonalDp: ${diagonalDp.toStringAsFixed(2)}, '
-      'isTablet: $isTablet, isLargeTablet: $isLargeTablet',
-    );
+    return size.width > size.height
+        ? const Size(960, 600)
+        : const Size(600, 960);
   }
 }

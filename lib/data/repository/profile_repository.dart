@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import '../remote/network_client.dart'; // should provide the singleton ApiService
+import '../remote/network_client.dart';
 import '../local/database.dart';
 import '../../models/customer_models.dart';
 
@@ -35,13 +36,15 @@ class ProfileRepository {
       print('📤 Fetching customer profile using ApiService...');
       print('📤 Using token: ${token.substring(0, 20)}...');
 
-      final response = await _networkClient.apiService.getCustomer('Bearer $token');
+      final response =
+          await _networkClient.apiService.getCustomer('Bearer $token');
 
       print('📥 Profile API Response Type: ${response.type}');
       print('📥 Profile API Customer: ${response.result.displayName}');
       print('📥 Customer ID: ${response.result.id}');
       print('📥 Customer Phone: ${response.result.mobileNo}');
       print('📥 Customer Email: ${response.result.emailId ?? 'Not provided'}');
+      print('📥 Customer Image: ${response.result.imageUrl ?? 'No Image URL'}');
 
       await _cacheCustomerData(response.result);
 
@@ -77,7 +80,8 @@ class ProfileRepository {
           return cachedData;
         }
 
-        throw Exception('Connection timeout. Please check your internet connection.');
+        throw Exception(
+            'Connection timeout. Please check your internet connection.');
       }
 
       if (e.type == DioExceptionType.connectionError) {
@@ -110,26 +114,33 @@ class ProfileRepository {
   }
 
   Future<void> updateCustomerProfile({
-    required String emailId,
+    String? emailId,
     required String firstName,
     String? middleName,
     required String lastName,
     required String gender,
   }) async {
     final token = await _database.getAuthToken();
-    if (token == null || token.isEmpty)
+    if (token == null || token.isEmpty) {
       throw Exception('No authentication token. Please login again.');
+    }
 
-    final body = {
-      "emailId": emailId,
+    final body = <String, dynamic>{
       "firstName": firstName,
       "middleName": middleName ?? "",
       "lastName": lastName,
       "gender": gender,
     };
 
+    // only send email if non-empty
+    final trimmedEmail = emailId?.trim();
+    if (trimmedEmail != null && trimmedEmail.isNotEmpty) {
+      body["emailId"] = trimmedEmail;
+    }
+
     try {
-      await _networkClient.apiService.updateCustomerProfile('Bearer $token', body);
+      await _networkClient.apiService
+          .updateCustomerProfile('Bearer $token', body);
       await refreshProfile();
     } on DioException catch (e) {
       print('❌ DioException on profile update: ${e.type}');
@@ -139,6 +150,51 @@ class ProfileRepository {
       throw Exception('Failed to update profile: ${e.message}');
     } catch (e) {
       throw Exception('Failed to update profile: $e');
+    }
+  }
+
+  // New method for uploading profile image
+  Future<void> uploadProfileImage(File imageFile) async {
+    final token = await _database.getAuthToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('No authentication token found. Please login again.');
+    }
+
+    try {
+      print('📤 Uploading profile image...');
+      
+      // Ensure file exists before uploading
+      if (!await imageFile.exists()) {
+         throw Exception('Image file not found on device.');
+      }
+      
+      print('📁 File path: ${imageFile.path}');
+      print('📁 File size: ${await imageFile.length()} bytes');
+
+      await _networkClient.apiService.uploadProfilePicture(
+        'Bearer $token',
+        imageFile,
+      );
+      
+      print('✅ Profile image uploaded successfully');
+      
+      // Refresh profile to get the new image URL from backend
+      await refreshProfile();
+    } on DioException catch (e) {
+      print('❌ Upload failed: ${e.response?.statusCode} - ${e.message}');
+      print('❌ Response Data: ${e.response?.data}');
+      
+      if (e.response?.statusCode == 413) {
+        throw Exception('Image is too large. Please choose a smaller image.');
+      }
+      if (e.response?.statusCode == 401) {
+        throw Exception('Session expired. Please login again.');
+      }
+      
+      throw Exception('Failed to upload image: ${e.message}');
+    } catch (e) {
+      print('❌ Generic upload error: $e');
+      throw Exception('Failed to upload image. Please try again.');
     }
   }
 
@@ -155,6 +211,7 @@ class ProfileRepository {
       print('   Email: ${customer.emailId ?? 'Not provided'}');
       print('   Status: ${customer.statusText}');
       print('   Rating: ${customer.averageRating}');
+      print('   Image: ${customer.imageUrl}');
     } catch (e) {
       print('⚠️ Failed to cache customer data: $e');
     }
@@ -185,11 +242,14 @@ class ProfileRepository {
         userData.remove('login_message');
         userData.remove('phone');
 
-        if (userData.containsKey('averageRating') && userData['averageRating'] != null) {
+        if (userData.containsKey('averageRating') &&
+            userData['averageRating'] != null) {
           if (userData['averageRating'] is String) {
-            userData['averageRating'] = double.tryParse(userData['averageRating'] as String) ?? 0.0;
+            userData['averageRating'] =
+                double.tryParse(userData['averageRating'] as String) ?? 0.0;
           } else if (userData['averageRating'] is num) {
-            userData['averageRating'] = (userData['averageRating'] as num).toDouble();
+            userData['averageRating'] =
+                (userData['averageRating'] as num).toDouble();
           }
         } else {
           userData['averageRating'] = 0.0;
@@ -197,7 +257,8 @@ class ProfileRepository {
 
         if (userData.containsKey('status') && userData['status'] != null) {
           if (userData['status'] is String) {
-            userData['status'] = int.tryParse(userData['status'] as String) ?? 1;
+            userData['status'] =
+                int.tryParse(userData['status'] as String) ?? 1;
           } else if (userData['status'] is int) {
             userData['status'] = userData['status'] as int;
           }
@@ -259,7 +320,8 @@ class ProfileRepository {
       print('🔍 Debug Auth State:');
 
       final token = await _database.getAuthToken();
-      print('   Auth Token: ${token != null ? '${token.substring(0, 20)}...' : 'null'}');
+      print(
+          '   Auth Token: ${token != null ? '${token.substring(0, 20)}...' : 'null'}');
 
       final userData = await _database.getUserData();
       print('   User Data Keys: ${userData.keys.toList()}');

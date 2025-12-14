@@ -29,6 +29,9 @@ class CartItem {
   final String? sourcePage;
   final String? sourceTitle;
 
+  // New: category id for provider search
+  final String? categoryId; // NEW
+
   // New field: date added to cart
   final DateTime dateAdded;
 
@@ -48,6 +51,7 @@ class CartItem {
     this.type = ServiceType.general,
     this.sourcePage,
     this.sourceTitle,
+    this.categoryId, // NEW
     required this.dateAdded,
     this.service,
   });
@@ -73,6 +77,7 @@ class CartItem {
     ServiceType? type,
     String? sourcePage,
     String? sourceTitle,
+    String? categoryId, // NEW
     DateTime? dateAdded,
     dynamic service,
   }) {
@@ -89,6 +94,7 @@ class CartItem {
       type: type ?? this.type,
       sourcePage: sourcePage ?? this.sourcePage,
       sourceTitle: sourceTitle ?? this.sourceTitle,
+      categoryId: categoryId ?? this.categoryId, // NEW
       dateAdded: dateAdded ?? this.dateAdded,
       service: service ?? this.service,
     );

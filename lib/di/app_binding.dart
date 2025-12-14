@@ -16,7 +16,11 @@ import '../../controllers/category_controller.dart';
 import '../../controllers/service_controller.dart';
 import '../../controllers/location_controller.dart';
 import '../../controllers/saathi_controller.dart';
-import '../../controllers/payment_controller.dart'; // NEW
+import '../../controllers/payment_controller.dart';
+
+// NEW
+import '../../controllers/booking_controller.dart';
+import '../../controllers/booking_read_controller.dart'; // if you have a list reader
 
 // Services and Data
 import '../../services/cache_service.dart';
@@ -24,6 +28,10 @@ import '../../data/repository/home_repository.dart';
 import '../../data/repository/auth_repository.dart';
 import '../../data/repository/profile_repository.dart';
 import '../../data/repository/location_repository.dart';
+
+// NEW
+import '../../data/repository/booking_repository.dart';
+
 import '../../data/local/database.dart';
 import '../../data/remote/network_client.dart';
 import '../../data/remote/api_service.dart';
@@ -88,7 +96,14 @@ class AppBinding extends Bindings {
     );
     print('✅ LocationRepository registered (lazy)');
 
-    print('✅ CategoryRepository & PaymentRepository use singleton pattern internally');
+    // NEW: BookingRepository (uses NetworkClient->ApiService internally for tokenized calls)
+    Get.lazyPut<BookingRepository>(
+      () => BookingRepository(
+        database: Get.find<AppDatabase>(),
+      ),
+      fenix: true,
+    );
+    print('✅ BookingRepository registered (lazy)');
   }
 
   void _registerControllers() {
@@ -124,13 +139,22 @@ class AppBinding extends Bindings {
     Get.lazyPut<ProfileController>(() => ProfileController(), fenix: true);
     print('✅ ProfileController registered (lazy)');
 
-    // SaathiController (repo uses singleton NetworkClient internally)
     Get.lazyPut<SaathiController>(() => SaathiController(), fenix: true);
     print('✅ SaathiController registered (lazy)');
 
-    // NEW: PaymentController (repo uses singleton NetworkClient internally)
     Get.lazyPut<PaymentController>(() => PaymentController(), fenix: true);
     print('✅ PaymentController registered (lazy)');
+
+    // NEW: Booking controllers
+    Get.lazyPut<BookingController>(
+      () => BookingController(repo: Get.find<BookingRepository>()),
+      fenix: true,
+    );
+    print('✅ BookingController registered (lazy)');
+
+    // Optional: list reader if your cancel/reschedule triggers refresh
+    Get.lazyPut<BookingReadController>(() => BookingReadController(), fenix: true);
+    print('✅ BookingReadController registered (lazy)');
   }
 
   void _debugRegisteredDependencies() {
@@ -154,7 +178,7 @@ class AppBinding extends Bindings {
       print('      - AuthRepository: ${Get.isRegistered<AuthRepository>()}');
       print('      - ProfileRepository: ${Get.isRegistered<ProfileRepository>()}');
       print('      - LocationRepository: ${Get.isRegistered<LocationRepository>()}');
-      print('      - CategoryRepository & PaymentRepository: Use singleton pattern internally');
+      print('      - BookingRepository: ${Get.isRegistered<BookingRepository>()}');
 
       print('   🎮 Controllers ready:');
       print('      - LoginController (lazy): ${Get.isRegistered<LoginController>()}');
@@ -165,13 +189,8 @@ class AppBinding extends Bindings {
       print('      - LocationController (lazy): ${Get.isRegistered<LocationController>()}');
       print('      - SaathiController (lazy): ${Get.isRegistered<SaathiController>()}');
       print('      - PaymentController (lazy): ${Get.isRegistered<PaymentController>()}');
-
-      print('   🎮 Permanent Controllers:');
-      print('      - CartController: ${Get.isRegistered<CartController>()}');
-      print('      - SalonServicesController: ${Get.isRegistered<SalonServicesController>()}');
-      print('      - FemaleSpaController: ${Get.isRegistered<FemaleSpaController>()}');
-      print('      - MaleSpaController: ${Get.isRegistered<MaleSpaController>()}');
-      print('      - MaleSalonController: ${Get.isRegistered<MaleSalonController>()}');
+      print('      - BookingController (lazy): ${Get.isRegistered<BookingController>()}');
+      print('      - BookingReadController (lazy): ${Get.isRegistered<BookingReadController>()}');
 
       print('✅ All dependencies successfully registered and accessible');
     } catch (e) {

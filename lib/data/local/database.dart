@@ -124,6 +124,7 @@ class CartItemsTable extends Table {
   TextColumn get type => text().withDefault(const Constant('general'))(); // ServiceType enum
   TextColumn get sourcePage => text().nullable()(); // Source page identifier
   TextColumn get sourceTitle => text().nullable()(); // Human-readable source title
+  TextColumn get categoryId => text().nullable()(); // ✨ NEW: Category ID column
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get dateAdded => dateTime().nullable()(); // NEW: Support for new model dateAdded
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -172,7 +173,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 7; // ✨ UPDATED: Increment for location table changes
+  int get schemaVersion => 8; // ✨ UPDATED: Increment for location table changes
 
   // Migration strategy to handle schema updates
   @override
@@ -214,6 +215,10 @@ class AppDatabase extends _$AppDatabase {
           await m.deleteTable('location_data');
           await m.createTable(locationDataTable);
         }
+        if (from < 8) {
+        // ✨ NEW: Add categoryId column to cart items
+        await m.addColumn(cartItemsTable, cartItemsTable.categoryId);
+      }
       },
     );
   }
@@ -1057,7 +1062,8 @@ class AppDatabase extends _$AppDatabase {
         duration: item.duration ?? '',
         discountPercentage: item.discountPercentage,
         sourcePage: item.sourcePage ?? 'unknown',
-        sourceTitle: item.sourceTitle ?? 'Unknown Service',
+        sourceTitle: item.sourceTitle ?? 'Unknown Service',      
+        categoryId: item.categoryId ?? '', // ✨ NEW: Map categoryId back
         dateAdded: item.dateAdded ?? item.addedAt,
       )).toList();
     } catch (e) {
@@ -1089,6 +1095,7 @@ class AppDatabase extends _$AppDatabase {
           type: Value(item.type.toString().split('.').last),
           sourcePage: Value(item.sourcePage),
           sourceTitle: Value(item.sourceTitle),
+          categoryId: Value(item.categoryId), // ✨ NEW: Persist categoryId
           discountPercentage: Value(0), // Default for legacy items
           // Keep original addedAt, only update updatedAt
           updatedAt: Value(DateTime.now()),
@@ -1111,6 +1118,7 @@ class AppDatabase extends _$AppDatabase {
           type: Value(item.type.toString().split('.').last),
           sourcePage: Value(item.sourcePage),
           sourceTitle: Value(item.sourceTitle),
+          categoryId: Value(item.categoryId), // ✨ NEW: Persist categoryId
           discountPercentage: Value(0), // Default for legacy items
           addedAt: Value(item.dateAdded),
           dateAdded: Value(item.dateAdded),
@@ -1141,6 +1149,8 @@ class AppDatabase extends _$AppDatabase {
           addedAt: Value(item.dateAdded),
           dateAdded: Value(item.dateAdded),
           updatedAt: Value(DateTime.now()),
+          categoryId: Value(item.categoryId), // ✨ NEW: Persist categoryId
+
         ),
       );
       print('💾 Cart item saved: ${item.name}');

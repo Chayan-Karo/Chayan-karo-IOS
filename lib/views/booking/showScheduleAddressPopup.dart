@@ -4,7 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../models/location_models.dart';
-// Adjust this import path to your actual manage address screen
 import '../profile/manage_address_screen.dart';
 
 Future<String?> showScheduleAddressPopup(BuildContext context) {
@@ -35,7 +34,6 @@ class _ScheduleAddressSheet extends StatefulWidget {
 class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
   bool isSelected = false;
   CustomerAddress? _selected;
-
   late final LocationController _loc;
 
   @override
@@ -50,7 +48,7 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    final sheetHeight = screenH * 0.5; // 50% height; set to 0.45 for ~45%
+    final sheetHeight = screenH * 0.5;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -74,7 +72,7 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header row (title + add)
+                  /// Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -87,7 +85,6 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
                       ),
                       TextButton.icon(
                         onPressed: () async {
-                          // Open Manage Address screen directly
                           await Get.to(() => const ManageAddressScreen());
                           await _loc.fetchCustomerAddresses();
                         },
@@ -113,15 +110,11 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
                   Divider(height: 1.h * scaleFactor),
                   SizedBox(height: 8.h * scaleFactor),
 
-                  // Address list
+                  /// List
                   Expanded(
                     child: loading
-                        ? Center(
-                            child: SizedBox(
-                              width: 24.w * scaleFactor,
-                              height: 24.w * scaleFactor,
-                              child: const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF7900)),
-                            ),
+                        ? const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF7900)),
                           )
                         : err.isNotEmpty
                             ? Center(
@@ -137,82 +130,80 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
                                       style: TextStyle(color: Colors.grey[700], fontSize: 14.sp),
                                     ),
                                   )
-                                : Scrollbar(
-                                    thumbVisibility: true,
-                                    radius: Radius.circular(8.r),
-                                    child: ListView.separated(
-                                      padding: EdgeInsets.symmetric(vertical: 6.h * scaleFactor),
-                                      itemCount: addresses.length,
-                                      separatorBuilder: (_, __) => SizedBox(height: 10.h * scaleFactor),
-                                      itemBuilder: (_, i) {
-                                        final a = addresses[i];
-                                        final selected = _selected?.id == a.id;
+                                : ListView.separated(
+                                    physics: const BouncingScrollPhysics(),
+                                    padding: EdgeInsets.symmetric(vertical: 6.h * scaleFactor),
+                                    itemCount: addresses.length,
+                                    separatorBuilder: (_, __) => SizedBox(height: 10.h * scaleFactor),
+                                    itemBuilder: (_, i) {
+                                      final a = addresses[i];
+                                      final selected = _selected?.id == a.id;
 
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              isSelected = true;
-                                              _selected = a;
-                                            });
-                                          },
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Radio<bool>(
-                                                value: true,
-                                                groupValue: selected,
-                                                activeColor: Colors.black,
-                                                onChanged: (_) {
-                                                  setState(() {
-                                                    isSelected = true;
-                                                    _selected = a;
-                                                  });
-                                                },
-                                              ),
-                                              SizedBox(width: 6.w * scaleFactor),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      children: [
-                                                        SvgPicture.asset(
-                                                          'assets/icons/homy.svg',
-                                                          width: 20.w * scaleFactor,
-                                                          height: 20.h * scaleFactor,
-                                                          color: Colors.black,
-                                                        ),
-                                                        SizedBox(width: 6.w * scaleFactor),
-                                                        Text(
-                                                          a.isDefault ? 'Home' : 'Address',
-                                                          style: TextStyle(
-                                                            fontSize: 14.sp * scaleFactor,
-                                                            fontWeight: FontWeight.w500,
-                                                            color: Colors.black,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    SizedBox(height: 6.h * scaleFactor),
-                                                    Text(
-                                                      _formatLines(a),
-                                                      style: TextStyle(
-                                                        fontSize: 13.sp * scaleFactor,
+                                      return InkWell(
+                                        splashColor: Colors.orange.withOpacity(0.1),
+                                        highlightColor: Colors.transparent,
+                                        onTap: () {
+                                          setState(() {
+                                            isSelected = true;
+                                            _selected = a;
+                                          });
+                                        },
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Radio<String>(
+                                              value: a.id,
+                                              groupValue: _selected?.id,
+                                              activeColor: const Color(0xFFFF7900),
+                                              onChanged: (_) {
+                                                setState(() {
+                                                  isSelected = true;
+                                                  _selected = a;
+                                                });
+                                              },
+                                            ),
+                                            SizedBox(width: 6.w * scaleFactor),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      SvgPicture.asset(
+                                                        'assets/icons/homy.svg',
+                                                        width: 20.w * scaleFactor,
+                                                        height: 20.h * scaleFactor,
                                                         color: Colors.black,
                                                       ),
+                                                      SizedBox(width: 6.w * scaleFactor),
+                                                      Text(
+                                                        a.isDefault ? 'Home' : 'Address',
+                                                        style: TextStyle(
+                                                          fontSize: 14.sp * scaleFactor,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  SizedBox(height: 6.h * scaleFactor),
+                                                  Text(
+                                                    _formatLines(a),
+                                                    style: TextStyle(
+                                                      fontSize: 13.sp * scaleFactor,
+                                                      color: Colors.black,
                                                     ),
-                                                  ],
-                                                ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
                                   ),
                   ),
 
-                  // Proceed
+                  /// Proceed button
                   SizedBox(height: 8.h * scaleFactor),
                   SizedBox(
                     width: double.infinity,
@@ -261,7 +252,5 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
     return parts.where((e) => e.trim().isNotEmpty).join(', ');
   }
 
-  String _formatAddressString(CustomerAddress a) {
-    return _formatLines(a);
-  }
+  String _formatAddressString(CustomerAddress a) => _formatLines(a);
 }

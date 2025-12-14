@@ -26,6 +26,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize with passed customer or fallback to controller's current value
     final c = widget.customer ?? _profileController.customer;
     _fullNameController = TextEditingController(text: c?.fullName ?? '');
     _emailController = TextEditingController(text: c?.emailId ?? '');
@@ -46,6 +47,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       builder: (context, constraints) {
         final isTablet = constraints.maxWidth > 600;
         final scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
+        
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark.copyWith(
             statusBarColor: const Color(0xFFFFEDE0),
@@ -56,49 +58,89 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             resizeToAvoidBottomInset: true,
             body: SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height,
+                ),
                 child: Column(
                   children: [
-                    ChayanHeader(
+                    const ChayanHeader(
                       title: 'Edit Profile',
-                      onBack: () => Navigator.pop(context),
                     ),
+                    
+                    // UPDATED: Profile Image Section with Upload Logic
                     Container(
                       margin: EdgeInsets.only(top: 40.h * scaleFactor),
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 100.w * scaleFactor,
-                            height: 100.w * scaleFactor,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(62 * scaleFactor),
-                              image: widget.customer?.imgLink != null
-                                  ? DecorationImage(
-                                      image: NetworkImage(widget.customer!.imgLink!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : const DecorationImage(
-                                      image: AssetImage('assets/userprofile.webp'),
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 25.w * scaleFactor,
-                              height: 25.w * scaleFactor,
+                      child: Obx(() {
+                        // Prioritize live data from controller to show updates immediately
+                        final currentCustomer = _profileController.customer ?? widget.customer;
+                        final isUploading = _profileController.isUploading;
+                        
+                        return Stack(
+                          children: [
+                            // 1. Profile Image Circle
+                            Container(
+                              width: 100.w * scaleFactor,
+                              height: 100.w * scaleFactor,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE47830),
-                                borderRadius: BorderRadius.circular(9 * scaleFactor),
+                                borderRadius: BorderRadius.circular(62 * scaleFactor),
+                                color: Colors.grey[200],
+                                image: DecorationImage(
+                                  fit: BoxFit.cover,
+                                  image: (currentCustomer?.imageUrl != null && 
+                                          currentCustomer!.imageUrl!.isNotEmpty)
+                                      ? NetworkImage(currentCustomer.imageUrl!)
+                                      : const AssetImage('assets/userprofile.webp') as ImageProvider,
+                                ),
                               ),
-                              child: const Icon(Icons.edit, color: Colors.white),
                             ),
-                          ),
-                        ],
-                      ),
+                            
+                            // 2. Edit/Upload Icon Button
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: GestureDetector(
+                                onTap: isUploading 
+                                    ? null 
+                                    : () => _profileController.pickAndUploadImage(),
+                                child: Container(
+                                  width: 32.w * scaleFactor,
+                                  height: 32.w * scaleFactor,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE47830),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: isUploading
+                                        ? SizedBox(
+                                            width: 14.w * scaleFactor,
+                                            height: 14.w * scaleFactor,
+                                            child: const CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.camera_alt, // Changed to camera icon for better context
+                                            color: Colors.white,
+                                            size: 16.sp * scaleFactor,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
                     ),
+
                     Padding(
                       padding: EdgeInsets.all(16.w * scaleFactor),
                       child: Column(
@@ -120,7 +162,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           ),
                           readOnlyProfileField(
                             label: 'Mobile Number',
-                            value: widget.customer?.mobileNo != null ? '+91 ${widget.customer!.mobileNo}' : 'Not provided',
+                            value: widget.customer?.mobileNo != null
+                                ? '+91 ${widget.customer!.mobileNo}'
+                                : 'Not provided',
                             scaleFactor: scaleFactor,
                             hasValue: widget.customer?.mobileNo != null,
                           ),
@@ -137,7 +181,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               onPressed: _saveChanges,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFE47830),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                               child: Text(
                                 'Save changes',
@@ -176,14 +222,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-              height: 1.83,
-            )),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+            height: 1.83,
+          ),
+        ),
         SizedBox(height: 4.h),
         Row(
           children: [
@@ -214,7 +262,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ],
         ),
         SizedBox(height: 12.h),
-        Container(height: 2.h, width: double.infinity, color: const Color(0xFFEBEBEB)),
+        Container(
+          height: 2.h,
+          width: double.infinity,
+          color: const Color(0xFFEBEBEB),
+        ),
         SizedBox(height: 20.h),
       ],
     );
@@ -229,31 +281,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-              height: 1.83,
-            )),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+            height: 1.83,
+          ),
+        ),
         SizedBox(height: 4.h),
         Row(
           children: [
             Expanded(
-              child: Text(value,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: hasValue ? Colors.black : Colors.black.withOpacity(0.4),
-                  )),
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: hasValue
+                      ? Colors.black
+                      : Colors.black.withOpacity(0.4),
+                ),
+              ),
             ),
             _buildStatusIcon(hasValue),
           ],
         ),
         SizedBox(height: 12.h),
-        Container(height: 2.h, width: double.infinity, color: const Color(0xFFEBEBEB)),
+        Container(
+          height: 2.h,
+          width: double.infinity,
+          color: const Color(0xFFEBEBEB),
+        ),
         SizedBox(height: 20.h),
       ],
     );
@@ -268,14 +330,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-              height: 1.83,
-            )),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+            height: 1.83,
+          ),
+        ),
         SizedBox(height: 4.h),
         Row(
           children: [
@@ -284,13 +348,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 onTap: _showGenderDialog,
                 child: Container(
                   padding: EdgeInsets.symmetric(vertical: 8.h),
-                  child: Text(controller.text.isNotEmpty ? controller.text : 'Select your gender',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: hasValue ? Colors.black : Colors.black.withOpacity(0.4),
-                      )),
+                  child: Text(
+                    controller.text.isNotEmpty
+                        ? controller.text
+                        : 'Select your gender',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: hasValue
+                          ? Colors.black
+                          : Colors.black.withOpacity(0.4),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -298,7 +368,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ],
         ),
         SizedBox(height: 12.h),
-        Container(height: 2.h, width: double.infinity, color: const Color(0xFFEBEBEB)),
+        Container(
+          height: 2.h,
+          width: double.infinity,
+          color: const Color(0xFFEBEBEB),
+        ),
         SizedBox(height: 20.h),
       ],
     );
@@ -315,8 +389,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return Container(
         width: 18.w,
         height: 18.h,
-        decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-        child: Icon(Icons.close, size: 12.sp, color: Colors.white),
+        decoration: const BoxDecoration(
+          color: Colors.red,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.close,
+          size: 12.sp,
+          color: Colors.white,
+        ),
       );
     }
   }
@@ -325,14 +406,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     showDialog(
       context: context,
       builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
         child: Padding(
           padding: EdgeInsets.all(30.w),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Select your gender', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w600)),
+              Text(
+                'Select your gender',
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               SizedBox(height: 30.h),
               Row(
                 children: [
@@ -342,7 +431,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               ),
               SizedBox(height: 15.h),
-              Center(child: SizedBox(width: 120.w, child: _genderOption('Other'))),
+              Center(
+                child: SizedBox(
+                  width: 120.w,
+                  child: _genderOption('Other'),
+                ),
+              ),
               SizedBox(height: 20.h),
             ],
           ),
@@ -369,40 +463,88 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           padding: EdgeInsets.symmetric(vertical: 15.h),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+            side: BorderSide(
+              color: Colors.grey.withOpacity(0.2),
+            ),
           ),
         ),
-        child: Text(gender, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w500)),
+        child: Text(
+          gender,
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
 
   void _saveChanges() async {
+    // Full name must NOT be empty
     if (_fullNameController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please enter your full name', snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white);
-      return;
-    }
-    if (_emailController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please enter your email address', snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white);
-      return;
-    }
-    if (!GetUtils.isEmail(_emailController.text.trim())) {
-      Get.snackbar('Error', 'Please enter a valid email address', snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar(
+        'Error',
+        'Please enter your full name',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
       return;
     }
 
-    final profileController = Get.find<ProfileController>();
-    bool success = await profileController.updateProfile(
-      emailId: _emailController.text.trim(),
+    // Gender must NOT be empty
+    if (_genderController.text.trim().isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Please select your gender',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
+      return;
+    }
+
+    // Email is OPTIONAL: only validate if not empty
+    final rawEmail = _emailController.text.trim();
+    if (rawEmail.isNotEmpty && !GetUtils.isEmail(rawEmail)) {
+      Get.snackbar(
+        'Error',
+        'Please enter a valid email address',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
+      return;
+    }
+
+    // Prepare nullable email for controller
+    final String? emailToSend = rawEmail.isEmpty ? null : rawEmail;
+
+    final success = await _profileController.updateProfile(
+      emailId: emailToSend,
       fullName: _fullNameController.text.trim(),
       gender: _genderController.text.trim(),
     );
 
     if (success) {
-      Get.snackbar('Success', 'Profile updated successfully', snackPosition: SnackPosition.TOP, backgroundColor: Colors.green, colorText: Colors.white);
-    Get.offAllNamed('/profile'); 
+      Get.snackbar(
+        'Success',
+        'Profile updated successfully',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green[100],
+        colorText: Colors.green[800],
+      );
+      // Optional: Give a slight delay before closing so user sees the message
+      await Future.delayed(const Duration(milliseconds: 500));
+      Get.offAllNamed('/profile');
     } else {
-      Get.snackbar('Error', profileController.errorMessage, snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar(
+        'Error',
+        _profileController.errorMessage,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
     }
   }
 }

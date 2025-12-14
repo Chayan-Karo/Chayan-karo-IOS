@@ -12,48 +12,38 @@ class PaymentRepository {
   PaymentRepository();
 
   ApiService get _api => NetworkClient().apiService; // use singleton
-  AppDatabase get _database => Get.find<AppDatabase>(); // Get database like ProfileRepository
+  AppDatabase get _database => Get.find<AppDatabase>(); // like ProfileRepository
 
   final _uuid = const Uuid();
   final _random = Random.secure();
 
-  /// Create order on backend
+  /// Create order on backend (server handles Razorpay order creation)
   Future<RazorpayOrderDetails> createOrder({
     required double amount,
+    required String bookingId,
   }) async {
     try {
       final receipt = _generateUniqueReceipt();
-
-      // Get token from database (same as ProfileRepository)
       final token = await _database.getAuthToken();
-      
+
       print('🔍 Payment Repository Debug:');
       print('   Token retrieved: ${token?.substring(0, 20) ?? 'null'}...');
-      print('   Token length: ${token?.length ?? 0}');
-      print('   Receipt: $receipt (${receipt.length} chars)');
+      print('   Receipt: $receipt');
+      print('   BookingId: $bookingId');
 
       if (token == null || token.isEmpty) {
         throw Exception('No authentication token found. Please login again.');
       }
 
-      print('📤 Creating order using ApiService...');
-
       final request = CreateOrderRequest(
         amount: amount,
         receipt: receipt,
+        bookingId: bookingId,
       );
 
-      // Pass token with Bearer prefix (same as ProfileRepository)
-      final response = await _api.createOrder(
-        'Bearer $token',
-        request,
-      );
+      final response = await _api.createOrder('Bearer $token', request);
 
-      print('📥 Order API Response Type: ${response.type}');
-
-      // Parse the nested result string
       final orderDetails = response.getOrderDetails();
-      
       if (orderDetails == null) {
         throw Exception('Failed to parse order details');
       }
@@ -70,17 +60,34 @@ class PaymentRepository {
     }
   }
 
+  /// Persist verified payment against booking on your backend
+  Future<dynamic> updatePayment({
+    required String bookingId,
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    final token = await _database.getAuthToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Not authenticated');
+    }
+
+    final body = {
+      'bookingId': bookingId,
+      'orderId': orderId,
+      'paymentId': paymentId,
+      'signature': signature,
+    };
+
+    print('💾 Posting payment update => $body');
+    return await _api.updatePayment('Bearer $token', body);
+  }
+
   /// Generate unique receipt ID (max 40 characters for Razorpay)
-  /// Format: RCPT_timestamp_random (exactly 30 chars)
   String _generateUniqueReceipt() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final randomSuffix = _generateRandomString(8);
-    
-    // Format: RCPT_1762265749049_a4f9e2b1
-    // Length: 5 + 13 + 1 + 8 = 27 characters (well under 40 limit)
-    final receipt = 'RCPT_${timestamp}_$randomSuffix';
-    
-    return receipt;
+    return 'RCPT_${timestamp}_$randomSuffix';
   }
 
   /// Generate random alphanumeric string

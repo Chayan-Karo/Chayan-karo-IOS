@@ -2,11 +2,13 @@ import 'package:chayankaro/views/chayan_sathi/previouschayansathiscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:flutter/services.dart';
 
 // Controllers
 import '../../controllers/home_controller.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/category_controller.dart';
+import '../../controllers/profile_controller.dart'; // <-- NEW
 
 // Widgets
 import './widgets/home_header_widget.dart';
@@ -20,7 +22,7 @@ import '../chayan_sathi/chayan_sathi_screen.dart';
 import '../booking/booking_screen.dart';
 import '../rewards/ReferAndEarnScreen.dart';
 import '../profile/profile_screen.dart';
-
+import '../../controllers/booking_read_controller.dart'; // <--- ADD THIS
 // Repositories
 import '../../data/repository/location_repository.dart';
 
@@ -46,22 +48,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Get.find<HomeController>();
       Get.find<CartController>();
       Get.find<CategoryController>();
+      Get.put(BookingReadController()); // <--- ADD THIS LINE
       print('✅ HomeScreen: Controllers initialized successfully');
     } catch (e) {
       print('❌ HomeScreen: Error initializing controllers: $e');
     }
 
-    // Address presence check: enforce server-side address before allowing Home
+    // Profile + address presence check: enforce server-side prerequisites before allowing Home
     Future.microtask(() async {
       try {
+        // 1) Load profile and verify basic info (firstName, emailId, gender)
+        final profileController = Get.put(ProfileController(), permanent: true);
+        await profileController.loadProfile();
+
+        final isBasicInfoComplete = profileController.isBasicInfoComplete;
+        print('🔍 Home: isBasicInfoComplete = $isBasicInfoComplete');
+
+        if (!isBasicInfoComplete) {
+          print('✏️ Home: Incomplete basic profile info → EditProfileScreen');
+           Get.offAllNamed(
+        '/edit-profile',            // use same route name as profile screen
+        arguments: profileController.customer,
+      );
+          return;
+        }
+
+        // 2) If basic profile is OK, check address from server (same as before)
         final repo = Get.find<LocationRepository>();
         final list = await repo.getCustomerAddresses();
         if (list.isEmpty) {
           // No address on server → require user to pick location
+          print('📍 Home: No address on server → Location popup');
           Get.offAllNamed('/location_popup');
+          return;
         }
+
+        print('✅ Home: Profile + address checks passed');
+        Get.find<BookingReadController>().checkForPendingFeedback();
       } catch (e) {
         // On API/network failure, fail-safe to Location to avoid showing Home without prerequisites
+        print('❌ Home: Error in profile/address checks: $e');
         Get.offAllNamed('/location_popup');
       }
     });
@@ -120,71 +146,83 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             (isTablet ? 90.h * scaleFactor : 70.h * scaleFactor);
 
         return Scaffold(
-          backgroundColor: const Color(0xFFFDFDFD),
-          body: SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-              onRefresh: () async {
-                final categoryController = Get.find<CategoryController>();
-                final homeController = Get.find<HomeController>();
-                final cartController = Get.find<CartController>();
+  backgroundColor: const Color(0xFFFDFDFD),
 
-                await Future.wait([
-                  categoryController.refreshCategories(),
-                  homeController.refreshData(),
-                ]);
-                cartController.refreshCart();
-              },
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(bottom: bottomPadding),
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Section - wrapped in RepaintBoundary
-                    RepaintBoundary(
-                      child: HomeHeaderWidget(
-                        scaleFactor: scaleFactor,
-                        horizontalPadding: horizontalPadding,
-                      ),
-                    ),
+  // ✅ STATUS BAR COLOR WITHOUT LAYOUT IMPACT
+  appBar: PreferredSize(
+    preferredSize: Size.fromHeight(0),
+    child: AppBar(
+      elevation: 0,
+      backgroundColor: const Color(0xFFFFEEE0), // your color
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFFFFEEE0),
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    ),
+  ),
 
-                    SizedBox(height: 16.h * scaleFactor),
+  body: RefreshIndicator(
+    onRefresh: () async {
+      final categoryController = Get.find<CategoryController>();
+      final homeController = Get.find<HomeController>();
+      final cartController = Get.find<CartController>();
 
-                    // Categories Grid - wrapped in RepaintBoundary
-                    RepaintBoundary(
-                      child: CategoriesGridWidget(
-                        scaleFactor: scaleFactor,
-                        horizontalPadding: horizontalPadding,
-                      ),
-                    ),
-
-                    SizedBox(height: 20.h * scaleFactor),
-
-                    // Banner - wrapped in RepaintBoundary
-                    RepaintBoundary(
-                      child: HomeBannerWidget(
-                        scaleFactor: scaleFactor,
-                        horizontalPadding: horizontalPadding,
-                      ),
-                    ),
-
-                    SizedBox(height: 24.h * scaleFactor),
-
-                    // Most Used Services - wrapped in RepaintBoundary
-                    RepaintBoundary(
-                      child: MostUsedServicesWidget(scaleFactor: scaleFactor),
-                    ),
-                  ],
-                ),
-              ),
+      await Future.wait([
+        categoryController.refreshCategories(),
+        homeController.refreshData(),
+      ]);
+      cartController.refreshCart();
+    },
+    child: SingleChildScrollView(
+      padding: EdgeInsets.zero,
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RepaintBoundary(
+            child: HomeHeaderWidget(
+              scaleFactor: scaleFactor,
+              horizontalPadding: horizontalPadding,
             ),
           ),
-          bottomNavigationBar: CustomBottomNavBar(
-            selectedIndex: _selectedIndex,
-            onItemTapped: _onItemTapped,
+
+          SizedBox(height: 16.h * scaleFactor),
+
+          RepaintBoundary(
+            child: CategoriesGridWidget(
+              scaleFactor: scaleFactor,
+              horizontalPadding: horizontalPadding,
+            ),
           ),
-        );
+
+          SizedBox(height: 20.h * scaleFactor),
+
+          RepaintBoundary(
+            child: HomeBannerWidget(
+              scaleFactor: scaleFactor,
+              horizontalPadding: horizontalPadding,
+            ),
+          ),
+
+          SizedBox(height: 24.h * scaleFactor),
+
+          RepaintBoundary(
+            child: MostUsedServicesWidget(scaleFactor: scaleFactor),
+          ),
+
+          //SizedBox(height: bottomPadding),
+        ],
+      ),
+    ),
+  ),
+
+  bottomNavigationBar: CustomBottomNavBar(
+    selectedIndex: _selectedIndex,
+    onItemTapped: _onItemTapped,
+  ),
+);
+
       },
     );
   }

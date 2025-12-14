@@ -73,7 +73,7 @@ class MostUsedServicesWidget extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.only(right: 16 * scaleFactor),
                     child: Text(
-                      'View all >',
+                      'View all ',
                       style: TextStyle(
                         color: homeController.mostUsedServices.isNotEmpty
                           ? const Color(0xFFFA9441)
@@ -104,7 +104,7 @@ class MostUsedServicesWidget extends StatelessWidget {
           //const SpaWomenSection(),
                       DynamicHomeSections(),
 
-          SizedBox(height: 24.h * scaleFactor),
+         // SizedBox(height: 24.h * scaleFactor),
 
           // const MaleSpaSection(),
           // SizedBox(height: 24.h * scaleFactor),

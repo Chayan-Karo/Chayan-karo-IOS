@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../widgets/chayan_header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart'; // add url_launcher [web:2]
 
 class EmergencyScreen extends StatelessWidget {
   const EmergencyScreen({super.key});
+
+  Future<void> _callSupport() async {
+    final uri = Uri(scheme: 'tel', path: '+918299217231');
+    // Opens native dialer with number filled in [web:23]
+    await launchUrl(uri, mode: LaunchMode.externalNonBrowserApplication); // [web:2]
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,37 +49,44 @@ class EmergencyScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 25.h * scaleFactor),
 
-                    // Call for support button
+                    // Call for support button (tappable)
                     Padding(
                       padding: EdgeInsets.only(left: 16.r * scaleFactor),
-                      child: Container(
-                        width: 148.w * scaleFactor,
-                        height: 33.h * scaleFactor,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black.withOpacity(0.3)),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(5 * scaleFactor),
-                          color: Colors.white,
-                        ),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 6.w * scaleFactor),
-                            SvgPicture.asset(
-                              'assets/icons/help.svg',
-                              height: 20.h * scaleFactor,
-                              width: 20.w * scaleFactor,
-                              color: Colors.black,
+                          onTap: _callSupport, // trigger dialer [web:23]
+                          child: Container(
+                            width: 148.w * scaleFactor,
+                            height: 33.h * scaleFactor,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black.withOpacity(0.3)),
+                              borderRadius: BorderRadius.circular(5 * scaleFactor),
+                              color: Colors.white,
                             ),
-                            SizedBox(width: 10.w * scaleFactor),
-                            Text(
-                              'Call For Support',
-                              style: TextStyle(
-                                fontSize: 14.sp * scaleFactor,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'SF Pro',
-                                letterSpacing: 0.14 * scaleFactor,
-                              ),
+                            child: Row(
+                              children: [
+                                SizedBox(width: 6.w * scaleFactor),
+                                SvgPicture.asset(
+                                  'assets/icons/help.svg',
+                                  height: 20.h * scaleFactor,
+                                  width: 20.w * scaleFactor,
+                                  color: Colors.black,
+                                ),
+                                SizedBox(width: 10.w * scaleFactor),
+                                Text(
+                                  'Call For Support',
+                                  style: TextStyle(
+                                    fontSize: 14.sp * scaleFactor,
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'SF Pro',
+                                    letterSpacing: 0.14 * scaleFactor,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),

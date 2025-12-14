@@ -94,7 +94,7 @@ class CategoryController extends GetxController {
         'Categories updated successfully',
         backgroundColor: Colors.green[100],
         colorText: Colors.green[800],
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         duration: Duration(seconds: 2),
       );
     } catch (e) {

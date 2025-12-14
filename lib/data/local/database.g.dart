@@ -2670,6 +2670,17 @@ class $CartItemsTableTable extends CartItemsTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _addedAtMeta = const VerificationMeta(
     'addedAt',
   );
@@ -2721,6 +2732,7 @@ class $CartItemsTableTable extends CartItemsTable
     type,
     sourcePage,
     sourceTitle,
+    categoryId,
     addedAt,
     dateAdded,
     updatedAt,
@@ -2838,6 +2850,12 @@ class $CartItemsTableTable extends CartItemsTable
         ),
       );
     }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
     if (data.containsKey('added_at')) {
       context.handle(
         _addedAtMeta,
@@ -2921,6 +2939,10 @@ class $CartItemsTableTable extends CartItemsTable
         DriftSqlType.string,
         data['${effectivePrefix}source_title'],
       ),
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
       addedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}added_at'],
@@ -2958,6 +2980,7 @@ class CartItemsTableData extends DataClass
   final String type;
   final String? sourcePage;
   final String? sourceTitle;
+  final String? categoryId;
   final DateTime addedAt;
   final DateTime? dateAdded;
   final DateTime updatedAt;
@@ -2976,6 +2999,7 @@ class CartItemsTableData extends DataClass
     required this.type,
     this.sourcePage,
     this.sourceTitle,
+    this.categoryId,
     required this.addedAt,
     this.dateAdded,
     required this.updatedAt,
@@ -3010,6 +3034,9 @@ class CartItemsTableData extends DataClass
     }
     if (!nullToAbsent || sourceTitle != null) {
       map['source_title'] = Variable<String>(sourceTitle);
+    }
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
     }
     map['added_at'] = Variable<DateTime>(addedAt);
     if (!nullToAbsent || dateAdded != null) {
@@ -3047,6 +3074,9 @@ class CartItemsTableData extends DataClass
       sourceTitle: sourceTitle == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceTitle),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
       addedAt: Value(addedAt),
       dateAdded: dateAdded == null && nullToAbsent
           ? const Value.absent()
@@ -3075,6 +3105,7 @@ class CartItemsTableData extends DataClass
       type: serializer.fromJson<String>(json['type']),
       sourcePage: serializer.fromJson<String?>(json['sourcePage']),
       sourceTitle: serializer.fromJson<String?>(json['sourceTitle']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
       dateAdded: serializer.fromJson<DateTime?>(json['dateAdded']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -3098,6 +3129,7 @@ class CartItemsTableData extends DataClass
       'type': serializer.toJson<String>(type),
       'sourcePage': serializer.toJson<String?>(sourcePage),
       'sourceTitle': serializer.toJson<String?>(sourceTitle),
+      'categoryId': serializer.toJson<String?>(categoryId),
       'addedAt': serializer.toJson<DateTime>(addedAt),
       'dateAdded': serializer.toJson<DateTime?>(dateAdded),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -3119,6 +3151,7 @@ class CartItemsTableData extends DataClass
     String? type,
     Value<String?> sourcePage = const Value.absent(),
     Value<String?> sourceTitle = const Value.absent(),
+    Value<String?> categoryId = const Value.absent(),
     DateTime? addedAt,
     Value<DateTime?> dateAdded = const Value.absent(),
     DateTime? updatedAt,
@@ -3139,6 +3172,7 @@ class CartItemsTableData extends DataClass
     type: type ?? this.type,
     sourcePage: sourcePage.present ? sourcePage.value : this.sourcePage,
     sourceTitle: sourceTitle.present ? sourceTitle.value : this.sourceTitle,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
     addedAt: addedAt ?? this.addedAt,
     dateAdded: dateAdded.present ? dateAdded.value : this.dateAdded,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -3169,6 +3203,9 @@ class CartItemsTableData extends DataClass
       sourceTitle: data.sourceTitle.present
           ? data.sourceTitle.value
           : this.sourceTitle,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
       dateAdded: data.dateAdded.present ? data.dateAdded.value : this.dateAdded,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -3192,6 +3229,7 @@ class CartItemsTableData extends DataClass
           ..write('type: $type, ')
           ..write('sourcePage: $sourcePage, ')
           ..write('sourceTitle: $sourceTitle, ')
+          ..write('categoryId: $categoryId, ')
           ..write('addedAt: $addedAt, ')
           ..write('dateAdded: $dateAdded, ')
           ..write('updatedAt: $updatedAt')
@@ -3215,6 +3253,7 @@ class CartItemsTableData extends DataClass
     type,
     sourcePage,
     sourceTitle,
+    categoryId,
     addedAt,
     dateAdded,
     updatedAt,
@@ -3237,6 +3276,7 @@ class CartItemsTableData extends DataClass
           other.type == this.type &&
           other.sourcePage == this.sourcePage &&
           other.sourceTitle == this.sourceTitle &&
+          other.categoryId == this.categoryId &&
           other.addedAt == this.addedAt &&
           other.dateAdded == this.dateAdded &&
           other.updatedAt == this.updatedAt);
@@ -3257,6 +3297,7 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
   final Value<String> type;
   final Value<String?> sourcePage;
   final Value<String?> sourceTitle;
+  final Value<String?> categoryId;
   final Value<DateTime> addedAt;
   final Value<DateTime?> dateAdded;
   final Value<DateTime> updatedAt;
@@ -3276,6 +3317,7 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     this.type = const Value.absent(),
     this.sourcePage = const Value.absent(),
     this.sourceTitle = const Value.absent(),
+    this.categoryId = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.dateAdded = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -3296,6 +3338,7 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     this.type = const Value.absent(),
     this.sourcePage = const Value.absent(),
     this.sourceTitle = const Value.absent(),
+    this.categoryId = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.dateAdded = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -3319,6 +3362,7 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     Expression<String>? type,
     Expression<String>? sourcePage,
     Expression<String>? sourceTitle,
+    Expression<String>? categoryId,
     Expression<DateTime>? addedAt,
     Expression<DateTime>? dateAdded,
     Expression<DateTime>? updatedAt,
@@ -3339,6 +3383,7 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
       if (type != null) 'type': type,
       if (sourcePage != null) 'source_page': sourcePage,
       if (sourceTitle != null) 'source_title': sourceTitle,
+      if (categoryId != null) 'category_id': categoryId,
       if (addedAt != null) 'added_at': addedAt,
       if (dateAdded != null) 'date_added': dateAdded,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -3361,6 +3406,7 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     Value<String>? type,
     Value<String?>? sourcePage,
     Value<String?>? sourceTitle,
+    Value<String?>? categoryId,
     Value<DateTime>? addedAt,
     Value<DateTime?>? dateAdded,
     Value<DateTime>? updatedAt,
@@ -3381,6 +3427,7 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
       type: type ?? this.type,
       sourcePage: sourcePage ?? this.sourcePage,
       sourceTitle: sourceTitle ?? this.sourceTitle,
+      categoryId: categoryId ?? this.categoryId,
       addedAt: addedAt ?? this.addedAt,
       dateAdded: dateAdded ?? this.dateAdded,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -3433,6 +3480,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     if (sourceTitle.present) {
       map['source_title'] = Variable<String>(sourceTitle.value);
     }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
     if (addedAt.present) {
       map['added_at'] = Variable<DateTime>(addedAt.value);
     }
@@ -3465,6 +3515,7 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
           ..write('type: $type, ')
           ..write('sourcePage: $sourcePage, ')
           ..write('sourceTitle: $sourceTitle, ')
+          ..write('categoryId: $categoryId, ')
           ..write('addedAt: $addedAt, ')
           ..write('dateAdded: $dateAdded, ')
           ..write('updatedAt: $updatedAt, ')
@@ -5239,6 +5290,7 @@ typedef $$CartItemsTableTableCreateCompanionBuilder =
       Value<String> type,
       Value<String?> sourcePage,
       Value<String?> sourceTitle,
+      Value<String?> categoryId,
       Value<DateTime> addedAt,
       Value<DateTime?> dateAdded,
       Value<DateTime> updatedAt,
@@ -5260,6 +5312,7 @@ typedef $$CartItemsTableTableUpdateCompanionBuilder =
       Value<String> type,
       Value<String?> sourcePage,
       Value<String?> sourceTitle,
+      Value<String?> categoryId,
       Value<DateTime> addedAt,
       Value<DateTime?> dateAdded,
       Value<DateTime> updatedAt,
@@ -5342,6 +5395,11 @@ class $$CartItemsTableTableFilterComposer
 
   ColumnFilters<String> get sourceTitle => $composableBuilder(
     column: $table.sourceTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5440,6 +5498,11 @@ class $$CartItemsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get addedAt => $composableBuilder(
     column: $table.addedAt,
     builder: (column) => ColumnOrderings(column),
@@ -5517,6 +5580,11 @@ class $$CartItemsTableTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get addedAt =>
       $composableBuilder(column: $table.addedAt, builder: (column) => column);
 
@@ -5578,6 +5646,7 @@ class $$CartItemsTableTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<String?> sourcePage = const Value.absent(),
                 Value<String?> sourceTitle = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
                 Value<DateTime?> dateAdded = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -5597,6 +5666,7 @@ class $$CartItemsTableTableTableManager
                 type: type,
                 sourcePage: sourcePage,
                 sourceTitle: sourceTitle,
+                categoryId: categoryId,
                 addedAt: addedAt,
                 dateAdded: dateAdded,
                 updatedAt: updatedAt,
@@ -5618,6 +5688,7 @@ class $$CartItemsTableTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<String?> sourcePage = const Value.absent(),
                 Value<String?> sourceTitle = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
                 Value<DateTime?> dateAdded = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -5637,6 +5708,7 @@ class $$CartItemsTableTableTableManager
                 type: type,
                 sourcePage: sourcePage,
                 sourceTitle: sourceTitle,
+                categoryId: categoryId,
                 addedAt: addedAt,
                 dateAdded: dateAdded,
                 updatedAt: updatedAt,

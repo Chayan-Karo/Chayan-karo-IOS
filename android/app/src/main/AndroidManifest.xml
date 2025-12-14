@@ -1,12 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.chayankaroindia.app">
 
-    <!-- ✅ INTERNET & NETWORK PERMISSIONS -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
-    <!-- ✅ LOCATION PERMISSIONS (required for map + current location) -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
@@ -27,34 +28,41 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-
-            <!-- Theme applied before Flutter UI loads -->
+            
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
-
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Flutter plugin registration -->
+        <activity
+            android:name="com.razorpay.CheckoutActivity"
+            android:exported="true"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            tools:replace="android:exported,android:theme" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- ✅ ADD YOUR GOOGLE MAPS API KEY HERE -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAJsorrGKIgn2WoWP22VDCF1Utr8-Y1eqI" />
-        <!-- Make sure this key is enabled for Maps SDK, Places API, and Geocoding API -->
 
     </application>
 
-    <!-- Query for text processing apps (used by Flutter's ProcessTextPlugin) -->
     <queries>
         <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
+
+        <package android:name="com.google.android.apps.nbu.paisa.user" /> <package android:name="com.phonepe.app" />                         <package android:name="net.one97.paytm" />                         <package android:name="in.org.npci.upiapp" />                      <package android:name="com.amazon.mShop.android.shopping" />       <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>

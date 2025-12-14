@@ -24,7 +24,7 @@ Customer _$CustomerFromJson(Map<String, dynamic> json) => Customer(
   lastName: json['lastName'] as String?,
   gender: json['gender'] as String?,
   averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
-  imgLink: json['imgLink'] as String?,
+  imageUrl: json['imageUrl'] as String?,
   status: (json['status'] as num?)?.toInt() ?? 1,
 );
 
@@ -37,6 +37,6 @@ Map<String, dynamic> _$CustomerToJson(Customer instance) => <String, dynamic>{
   'lastName': instance.lastName,
   'gender': instance.gender,
   'averageRating': instance.averageRating,
-  'imgLink': instance.imgLink,
+  'imageUrl': instance.imageUrl,
   'status': instance.status,
 };

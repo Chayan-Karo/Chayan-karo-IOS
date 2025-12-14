@@ -11,6 +11,8 @@ import '../chayan_sathi/chayan_sathi_screen.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../widgets/chayan_header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ReferAndEarnScreen extends StatefulWidget {
   const ReferAndEarnScreen({super.key});
@@ -22,22 +24,85 @@ class ReferAndEarnScreen extends StatefulWidget {
 class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
   int _selectedIndex = 3;
 
+  // Constants
+  static const String _playStoreUrl =
+      'https://play.google.com/store/apps/details?id=com.chayankaroindia.app';
+
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
     switch (index) {
       case 0:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PreviousChayanSathiScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => PreviousChayanSathiScreen()),
+        );
         break;
       case 1:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => BookingScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => BookingScreen()),
+        );
         break;
       case 2:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HomeScreen()),
+        );
         break;
       case 4:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => ProfileScreen()),
+        );
         break;
     }
+  }
+
+  // Refined share message
+  String get _referMessage =>
+      'Hi! I use the Chayan Karo app to book trusted home services '
+      ',including cleaning and female salon services at home.\n\n'
+      'You can download it from Google Play:\n$_playStoreUrl\n\n'
+      'Install the app, explore the services and book directly from your phone.';
+
+  // WhatsApp: open chat chooser with prefilled message
+  Future<void> _openWhatsApp() async {
+    final encodedText = Uri.encodeComponent(_referMessage);
+
+    // api.whatsapp.com works well on most devices
+    final uri = Uri.parse('https://api.whatsapp.com/send?text=$encodedText');
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      _showSnack('Unable to open WhatsApp');
+    }
+  }
+
+  // Instagram: use system share sheet, user picks Instagram / Instagram DM
+  Future<void> _openInstagram() async {
+    try {
+      await Share.share(
+        _referMessage,
+        subject: 'Try Chayan Karo for home services',
+      );
+      // On most Android devices user will see Instagram & Instagram DM
+    } catch (e) {
+      _showSnack('Unable to share right now');
+    }
+  }
+
+  // Copy Play Store link only
+  Future<void> _copyPlayStoreLink() async {
+    await Clipboard.setData(const ClipboardData(text: _playStoreUrl));
+    _showSnack('Link copied to clipboard');
+  }
+
+  void _showSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
   }
 
   @override
@@ -101,7 +166,8 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                                         children: [
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   'Invite your friends to try\nChayan Karo services',
@@ -144,25 +210,29 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                                       ),
                                       SizedBox(height: 12.h * scaleFactor),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceAround,
                                         children: [
                                           _socialIcon(
-                                            FontAwesomeIcons.whatsapp,
-                                            'Whatsapp',
-                                            const Color(0xFF25D366),
-                                            scaleFactor,
+                                            icon: FontAwesomeIcons.whatsapp,
+                                            label: 'WhatsApp',
+                                            color: const Color(0xFF25D366),
+                                            scaleFactor: scaleFactor,
+                                            onTap: _openWhatsApp,
                                           ),
                                           _socialIcon(
-                                            FontAwesomeIcons.facebookMessenger,
-                                            'Messenger',
-                                            const Color(0xFF0084FF),
-                                            scaleFactor,
+                                            icon: FontAwesomeIcons.instagram,
+                                            label: 'Instagram',
+                                            color: const Color(0xFFE4405F),
+                                            scaleFactor: scaleFactor,
+                                            onTap: _openInstagram,
                                           ),
                                           _socialIcon(
-                                            Icons.copy,
-                                            'Copy Link',
-                                            Colors.black87,
-                                            scaleFactor,
+                                            icon: Icons.copy,
+                                            label: 'Copy Link',
+                                            color: Colors.black87,
+                                            scaleFactor: scaleFactor,
+                                            onTap: _copyPlayStoreLink,
                                           ),
                                         ],
                                       ),
@@ -171,13 +241,15 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                                 ),
                                 SizedBox(height: 24.h * scaleFactor),
                                 Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 16.w * scaleFactor),
                                   child: Container(
                                     width: double.infinity,
                                     padding: EdgeInsets.all(16.r * scaleFactor),
                                     decoration: BoxDecoration(
                                       color: const Color(0x66FF9437),
-                                      borderRadius: BorderRadius.circular(10.r * scaleFactor),
+                                      borderRadius:
+                                          BorderRadius.circular(10.r * scaleFactor),
                                     ),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,18 +263,21 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                                         ),
                                         SizedBox(height: 16.h * scaleFactor),
                                         Text(
-                                          '1. Share your referral link with friends',
-                                          style: TextStyle(fontSize: 14.sp * scaleFactor),
+                                          '1. Tap on WhatsApp or Instagram to share your referral message.',
+                                          style: TextStyle(
+                                              fontSize: 14.sp * scaleFactor),
                                         ),
                                         SizedBox(height: 8.h * scaleFactor),
                                         Text(
-                                          '2. Your friends download and explore the app',
-                                          style: TextStyle(fontSize: 14.sp * scaleFactor),
+                                          '2. Select the friends you want to send it to and share the message.',
+                                          style: TextStyle(
+                                              fontSize: 14.sp * scaleFactor),
                                         ),
                                         SizedBox(height: 8.h * scaleFactor),
                                         Text(
-                                          '3. Enjoy helping your friends discover Chayan Karo services!',
-                                          style: TextStyle(fontSize: 14.sp * scaleFactor),
+                                          '3. Your friends download the app and start booking services.',
+                                          style: TextStyle(
+                                              fontSize: 14.sp * scaleFactor),
                                         ),
                                       ],
                                     ),
@@ -224,8 +299,9 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                                       Opacity(
                                         opacity: 0.75,
                                         child: Text(
-                                          'Spread the word and help your friends.',
-                                          style: TextStyle(fontSize: 13.sp * scaleFactor),
+                                          'Spread the word and help them discover easy home services.',
+                                          style: TextStyle(
+                                              fontSize: 13.sp * scaleFactor),
                                         ),
                                       ),
                                       SizedBox(height: 8.h * scaleFactor),
@@ -257,26 +333,39 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
     );
   }
 
-  Widget _socialIcon(IconData icon, String label, Color color, double scaleFactor) {
-    return Column(
-      children: [
-        Container(
-          width: 54.w * scaleFactor,
-          height: 54.h * scaleFactor,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
+  Widget _socialIcon({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required double scaleFactor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(27.r * scaleFactor),
+      child: Column(
+        children: [
+          Container(
+            width: 54.w * scaleFactor,
+            height: 54.h * scaleFactor,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Icon(icon, color: Colors.white, size: 24 * scaleFactor),
+            ),
           ),
-          child: Center(
-            child: Icon(icon, color: Colors.white, size: 24 * scaleFactor),
+          SizedBox(height: 8.h * scaleFactor),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.sp * scaleFactor,
+              color: Colors.black,
+            ),
           ),
-        ),
-        SizedBox(height: 8.h * scaleFactor),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.black),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

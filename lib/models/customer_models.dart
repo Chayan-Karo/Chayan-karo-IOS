@@ -31,7 +31,9 @@ class Customer {
   @JsonKey(defaultValue: 0.0)
   final double averageRating;
 
-  final String? imgLink;
+  // Renamed to match JSON key 'imageUrl'
+  @JsonKey(name: 'imageUrl') 
+  final String? imageUrl;
 
   @JsonKey(defaultValue: 1)
   final int status;
@@ -45,7 +47,7 @@ class Customer {
     this.lastName,
     this.gender,
     this.averageRating = 0.0,
-    this.imgLink,
+    this.imageUrl, 
     this.status = 1,
   });
 
@@ -96,7 +98,9 @@ class Customer {
     if (lastName != null && lastName!.isNotEmpty) completed++;
     if (emailId != null && emailId!.isNotEmpty) completed++;
     if (gender != null && gender!.isNotEmpty) completed++;
-    if (imgLink != null && imgLink!.isNotEmpty) completed++;
+    
+    // Check imageUrl instead of imgLink
+    if (imageUrl != null && imageUrl!.isNotEmpty) completed++;
 
     return '${((completed / total) * 100).round()}%';
   }

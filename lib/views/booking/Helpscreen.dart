@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../widgets/chayan_header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart'; // add url_launcher [web:2]
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
@@ -16,13 +17,11 @@ class _HelpScreenState extends State<HelpScreen> {
   final List<Map<String, String>> faqs = [
     {
       'question': 'How is chayankaro.com different?',
-      'answer':
-          'We let you choose your professional. View profiles, compare prices, read reviews.',
+      'answer': 'We let you choose your professional. View profiles, compare prices, read reviews.',
     },
     {
       'question': 'Are the professionals verified?',
-      'answer':
-          'Yes. All professionals are verified and have passed a background check',
+      'answer': 'Yes. All professionals are verified and have passed a background check',
     },
     {
       'question': 'How to book?',
@@ -30,8 +29,7 @@ class _HelpScreenState extends State<HelpScreen> {
     },
     {
       'question': 'Can I reschedule/cancel?',
-      'answer':
-          'Yes, you can easily reschedule or cancel your bookings from the booking section.',
+      'answer': 'Yes, you can easily reschedule or cancel your bookings from the booking section.',
     },
     {
       'question': 'Payment options?',
@@ -42,6 +40,12 @@ class _HelpScreenState extends State<HelpScreen> {
       'answer': 'We are currently available in major Indian cities.',
     },
   ];
+
+  Future<void> _callSupport() async {
+    final uri = Uri(scheme: 'tel', path: '+918299217231');
+    // Open native dialer with number prefilled [web:10]
+    await launchUrl(uri, mode: LaunchMode.externalNonBrowserApplication); // [web:2]
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +81,7 @@ class _HelpScreenState extends State<HelpScreen> {
                     ),
                     SizedBox(height: 12.h * scaleFactor),
 
-                    // Call for Support button
+                    // Call for Support button (tappable)
                     Container(
                       height: 33.h * scaleFactor,
                       width: 160.w * scaleFactor,
@@ -87,25 +91,32 @@ class _HelpScreenState extends State<HelpScreen> {
                         borderRadius: BorderRadius.circular(5 * scaleFactor),
                         color: Colors.white,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/icons/help.svg',
-                            height: 20.h * scaleFactor,
-                            width: 20.w * scaleFactor,
-                            color: Colors.black,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(5 * scaleFactor),
+                          onTap: _callSupport, // launch dialer [web:2]
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/icons/help.svg',
+                                height: 20.h * scaleFactor,
+                                width: 20.w * scaleFactor,
+                                color: Colors.black,
+                              ),
+                              SizedBox(width: 8.w * scaleFactor),
+                              Text(
+                                'Call For Support',
+                                style: TextStyle(
+                                  fontSize: 14.sp * scaleFactor,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'SF Pro',
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(width: 8.w * scaleFactor),
-                          Text(
-                            'Call For Support',
-                            style: TextStyle(
-                              fontSize: 14.sp * scaleFactor,
-                              fontWeight: FontWeight.w500,
-                              fontFamily: 'SF Pro',
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
 

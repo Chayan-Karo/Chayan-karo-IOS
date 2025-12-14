@@ -36,7 +36,7 @@ class OtpVerificationScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(height: 20.h * scaleFactor),
-                
+
                 // Title
                 Center(
                   child: Text(
@@ -50,9 +50,9 @@ class OtpVerificationScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 SizedBox(height: 8.h * scaleFactor),
-                
+
                 // Subtitle with phone number
                 Center(
                   child: Obx(() => Text(
@@ -65,51 +65,20 @@ class OtpVerificationScreen extends StatelessWidget {
                     ),
                   )),
                 ),
-                
+
                 SizedBox(height: 32.h * scaleFactor),
-                
+
                 // OTP Input Fields
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20.w * scaleFactor),
                   child: _buildOtpFields(controller, scaleFactor),
                 ),
-                
+
                 SizedBox(height: 16.h * scaleFactor),
-                
-                // Error Message Display
-                Obx(() => controller.errorMessage.isNotEmpty
-                    ? Container(
-                        margin: EdgeInsets.only(bottom: 16.h * scaleFactor),
-                        padding: EdgeInsets.all(12.w * scaleFactor),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8.r * scaleFactor),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                              size: 20.sp * scaleFactor,
-                            ),
-                            SizedBox(width: 8.w * scaleFactor),
-                            Expanded(
-                              child: Text(
-                                controller.errorMessage,
-                                style: TextStyle(
-                                  fontSize: 12.sp * scaleFactor,
-                                  fontFamily: 'SFProRegular',
-                                  color: Colors.red.shade700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-                ),
-                
+
+                // --- ERROR CONTAINER REMOVED HERE ---
+                // The error is now shown via Get.snackbar in the controller.
+
                 // Resend OTP / Timer
                 Obx(() => !controller.canResend
                     ? Text(
@@ -131,9 +100,9 @@ class OtpVerificationScreen extends StatelessWidget {
                           ),
                         ),
                       )),
-                
+
                 Spacer(),
-                
+
                 // Verify Button
                 Obx(() => ElevatedButton(
                   onPressed: controller.isButtonEnabled && !controller.isLoading
@@ -162,13 +131,13 @@ class OtpVerificationScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 16.sp * scaleFactor,
                             fontFamily: 'SFProSemibold',
-                            color: controller.isButtonEnabled && !controller.isLoading 
-                                ? Colors.white 
+                            color: controller.isButtonEnabled && !controller.isLoading
+                                ? Colors.white
                                 : Colors.grey[600],
                           ),
                         ),
                 )),
-                
+
                 SizedBox(height: 24.h * scaleFactor),
               ],
             ),
@@ -178,9 +147,9 @@ class OtpVerificationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOtpFields(OtpController controller, double scaleFactor) {
+ Widget _buildOtpFields(OtpController controller, double scaleFactor) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(4, (index) {
         return SizedBox(
           width: 55.w * scaleFactor,
@@ -190,14 +159,21 @@ class OtpVerificationScreen extends StatelessWidget {
             focusNode: controller.focusNodes[index],
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
-            maxLength: 1,
+            
+            // 1. CHANGE THIS TO 4: Allows the full "1234" string to enter temporarily
+            maxLength: 4, 
+            
+            // 2. ENSURE THIS IS TRUE: Allows long-press to show "Paste"
+            enableInteractiveSelection: true, 
+            
+            showCursor: true,
             style: TextStyle(
               fontSize: 22.sp * scaleFactor,
               fontFamily: 'SFProSemibold',
               color: Colors.black,
             ),
             decoration: InputDecoration(
-              counterText: '',
+              counterText: '', // Hides the character counter 0/4
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r * scaleFactor),
                 borderSide: BorderSide(color: Colors.grey[300]!),
@@ -216,7 +192,17 @@ class OtpVerificationScreen extends StatelessWidget {
               filled: true,
               fillColor: Colors.grey[50],
             ),
+            
             onChanged: (value) => controller.onOtpChanged(value, index),
+            
+            onTap: () {
+              // Keeps cursor at the end
+              if (controller.otpControllers[index].text.isNotEmpty) {
+                 controller.otpControllers[index].selection = TextSelection.fromPosition(
+                    TextPosition(offset: controller.otpControllers[index].text.length)
+                 );
+              }
+            },
           ),
         );
       }),

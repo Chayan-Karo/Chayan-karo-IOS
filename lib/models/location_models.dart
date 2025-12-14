@@ -1,18 +1,27 @@
-// lib/models/location_models.dart
 import 'package:json_annotation/json_annotation.dart';
 part 'location_models.g.dart';
 
 @JsonSerializable()
 class AddAddressRequest {
-  @JsonKey(name: 'addressLine1') final String addressLine1;
-  @JsonKey(name: 'addressLine2') final String addressLine2;
-  @JsonKey(name: 'city') final String city;
-  @JsonKey(name: 'state') final String state;
-  @JsonKey(name: 'postCode') final String postCode;
-  @JsonKey(name: 'lat') final double lat;
-  @JsonKey(name: 'long') final double long;
+  @JsonKey(name: 'locationId')
+  final String locationId;
+  @JsonKey(name: 'addressLine1')
+  final String addressLine1;
+  @JsonKey(name: 'addressLine2')
+  final String addressLine2;
+  @JsonKey(name: 'city')
+  final String city;
+  @JsonKey(name: 'state')
+  final String state;
+  @JsonKey(name: 'postCode')
+  final String postCode;
+  @JsonKey(name: 'lat')
+  final double lat;
+  @JsonKey(name: 'long')
+  final double long;
 
   AddAddressRequest({
+    required this.locationId,
     required this.addressLine1,
     required this.addressLine2,
     required this.city,
@@ -32,14 +41,38 @@ class AddAddressResponse {
   final bool success;
   final String message;
   final String? addressId;
-  AddAddressResponse({required this.success, required this.message, this.addressId});
+  @JsonKey(name: 'locationId')
+  final String? locationId;
 
-  factory AddAddressResponse.fromJson(Map<String, dynamic> json) =>
-      _$AddAddressResponseFromJson(json);
+  AddAddressResponse({
+    required this.success,
+    required this.message,
+    this.addressId,
+    this.locationId,
+  });
+
+  /// Custom factory to handle APIs that don't send `success` explicitly
+  factory AddAddressResponse.fromJson(Map<String, dynamic> json) {
+    final rawSuccess = json['success'] as bool?;
+    final rawMessage = json['message'] as String?;
+    final rawResult = json['result'] as String?;
+    final type = json['type'] as String?;
+
+    final inferredSuccess = rawSuccess ?? (type == 'Add address');
+    final inferredMessage =
+        rawMessage ?? rawResult ?? 'Address added successfully.';
+
+    return AddAddressResponse(
+      success: inferredSuccess,
+      message: inferredMessage,
+      addressId: json['addressId'] as String?,
+      locationId: json['locationId'] as String?,
+    );
+  }
+
   Map<String, dynamic> toJson() => _$AddAddressResponseToJson(this);
 }
 
-// UPDATED: extra optional fields + copyWith to help local default + header sync
 @JsonSerializable()
 class CustomerAddress {
   final String id;
@@ -49,9 +82,11 @@ class CustomerAddress {
   final String state;
   final String postCode;
   final bool isDefault;
-  final String? label;      // optional
-  final String? latitude;   // optional (string if API returns as string)
-  final String? longitude;  // optional
+  final String? label;
+  final String? latitude;
+  final String? longitude;
+  @JsonKey(name: 'locationId')
+  final String? locationId;
 
   CustomerAddress({
     required this.id,
@@ -64,6 +99,7 @@ class CustomerAddress {
     this.label,
     this.latitude,
     this.longitude,
+    this.locationId,
   });
 
   CustomerAddress copyWith({
@@ -77,6 +113,7 @@ class CustomerAddress {
     String? label,
     String? latitude,
     String? longitude,
+    String? locationId,
   }) {
     return CustomerAddress(
       id: id ?? this.id,
@@ -89,6 +126,7 @@ class CustomerAddress {
       label: label ?? this.label,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      locationId: locationId ?? this.locationId,
     );
   }
 
@@ -101,11 +139,16 @@ class CustomerAddress {
 class GetCustomerAddressesResponse {
   final String type;
   final List<CustomerAddress> result;
-  GetCustomerAddressesResponse({required this.type, required this.result});
+
+  GetCustomerAddressesResponse({
+    required this.type,
+    required this.result,
+  });
 
   factory GetCustomerAddressesResponse.fromJson(Map<String, dynamic> json) =>
       _$GetCustomerAddressesResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$GetCustomerAddressesResponseToJson(this);
+  Map<String, dynamic> toJson() =>
+      _$GetCustomerAddressesResponseToJson(this);
 }
 
 @JsonSerializable()
@@ -137,4 +180,75 @@ class CachedLocationData {
   factory CachedLocationData.fromJson(Map<String, dynamic> json) =>
       _$CachedLocationDataFromJson(json);
   Map<String, dynamic> toJson() => _$CachedLocationDataToJson(this);
+}
+
+// NEW: Serviceable locations from /user/getLocation
+@JsonSerializable()
+class ServiceLocation {
+  final String id; // send this as locationId on add-address
+  final String? areaId;
+  final String? areaName;
+  final String? postCode;
+
+  ServiceLocation({
+    required this.id,
+    this.areaId,
+    this.areaName,
+    this.postCode,
+  });
+
+  factory ServiceLocation.fromJson(Map<String, dynamic> json) =>
+      _$ServiceLocationFromJson(json);
+  Map<String, dynamic> toJson() => _$ServiceLocationToJson(this);
+}
+
+@JsonSerializable()
+class ServiceLocationsResponse {
+  final String type;
+  final List<ServiceLocation> result;
+
+  ServiceLocationsResponse({
+    required this.type,
+    required this.result,
+  });
+
+  factory ServiceLocationsResponse.fromJson(Map<String, dynamic> json) =>
+      _$ServiceLocationsResponseFromJson(json);
+  Map<String, dynamic> toJson() =>
+      _$ServiceLocationsResponseToJson(this);
+}
+@JsonSerializable()
+class BaseResponse {
+  final bool success;
+  final String? message;
+
+  BaseResponse({
+    required this.success,
+    this.message,
+  });
+
+  factory BaseResponse.fromJson(Map<String, dynamic> json) {
+    final rawSuccess = json['success'] as bool?;
+    final result = json['result'] as String?;
+    final type = json['type'] as String?;
+
+    // FIX: Infer success if we see "successfully" in the result string
+    // or if the type indicates a delete action.
+    bool inferredSuccess = rawSuccess ?? false;
+    
+    if (rawSuccess == null) {
+      if (result != null && result.toLowerCase().contains('successfully')) {
+        inferredSuccess = true;
+      } else if (type != null && type.contains('Delete')) {
+        inferredSuccess = true;
+      }
+    }
+
+    return BaseResponse(
+      success: inferredSuccess,
+      message: json['message'] as String? ?? result,
+    );
+  }
+
+  Map<String, dynamic> toJson() => _$BaseResponseToJson(this);
 }

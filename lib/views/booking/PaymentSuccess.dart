@@ -1,19 +1,39 @@
 import './booking_successful_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class PaymentSuccessScreen extends StatelessWidget {
   const PaymentSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // 1. Extract arguments
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+    
+    final String paymentMode = (args['method'] ?? 'Online Payment').toString();
+    final double totalAmount = (args['amount'] ?? 0.0) * 1.0;
+    final String orderId = (args['orderId'] ?? '').toString();
+    final String paymentId = (args['paymentId'] ?? '').toString();
+    
+    // --- NEW: Extract Booking Reference Number ---
+    // Matches the key "bookingReferenceNumber" seen in your API logs
+    final String bookingRef = (args['bookingReferenceNumber'] ?? '').toString(); 
+
+    // 2. Extract Booking Card Details specifically
+    final Map<String, dynamic> bookingCard = 
+        (args['bookingCard'] as Map<String, dynamic>?) ?? {};
+
+    final String dateStr = DateFormat('MMM dd, yyyy').format(DateTime.now());
+    final String timeStr = DateFormat('hh:mm a').format(DateTime.now());
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isTabletDevice = constraints.maxWidth > 600;
         final double scaleFactor = isTabletDevice ? constraints.maxWidth / 411 : 1.0;
 
         if (!isTabletDevice) {
-          // Phone UI remains unchanged
+          // --- PHONE UI ---
           return Scaffold(
             backgroundColor: Colors.white,
             body: SafeArea(
@@ -35,7 +55,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: Color(0xFFE47830),
                       ),
-                      child: Icon(Icons.check, color: Colors.white, size: 40),
+                      child: const Icon(Icons.check, color: Colors.white, size: 40),
                     ),
                   ),
 
@@ -63,7 +83,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                   // Payment Info Card
                   Container(
                     margin: EdgeInsets.symmetric(horizontal: 24.w),
-                    padding: EdgeInsets.symmetric(horizontal: 24.h, vertical: 32.h),
+                    padding: EdgeInsets.symmetric(horizontal: 24.h, vertical: 24.h),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -77,15 +97,29 @@ class PaymentSuccessScreen extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        _infoRow('Payment Mode', 'UPI'),
+                        // --- NEW: Booking Reference Row (Shown at Top of Card) ---
+                        if (bookingRef.isNotEmpty) ...[
+                          _infoRow('Booking Ref', bookingRef),
+                          SizedBox(height: 16.h),
+                        ],
+
+                        //_infoRow('Payment Mode', paymentMode),
+                        //SizedBox(height: 16.h),
+                        _infoRow('Total Amount', '₹${totalAmount.toStringAsFixed(2)}'),
                         SizedBox(height: 16.h),
-                        _infoRow('Total Amount', '₹749'),
+                        _infoRow('Pay Date', dateStr),
                         SizedBox(height: 16.h),
-                        _infoRow('Pay Date', 'Apr 10, 2022'),
-                        SizedBox(height: 16.h),
-                        _infoRow('Pay Time', '10:45 am'),
+                        _infoRow('Pay Time', timeStr),
+                        if (orderId.isNotEmpty) ...[
+                          SizedBox(height: 16.h),
+                          _infoRow('Order ID', orderId),
+                        ],
+                        if (paymentId.isNotEmpty) ...[
+                          SizedBox(height: 16.h),
+                          _infoRow('Payment ID', paymentId),
+                        ],
                         SizedBox(height: 24.h),
-                        Divider(thickness: 2, color: const Color(0xFFF3F3F3)),
+                        const Divider(thickness: 2, color: Color(0xFFF3F3F3)),
                         SizedBox(height: 16.h),
                         Text(
                           'Total Pay',
@@ -97,7 +131,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 4.h),
                         Text(
-                          '₹749',
+                          '₹${totalAmount.toStringAsFixed(2)}',
                           style: TextStyle(
                             color: const Color(0xFFE47830),
                             fontSize: 20.sp,
@@ -118,10 +152,18 @@ class PaymentSuccessScreen extends StatelessWidget {
                       height: 47.h,
                       child: ElevatedButton(
                         onPressed: () {
+                          // 3. PASS DATA TO NEXT SCREEN
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => BookingSuccessfulScreen(),
+                              builder: (context) => BookingSuccessfulScreen(
+                                bookingId: bookingCard['bookingId']?.toString(),
+                                bookingDate: bookingCard['bookingDate']?.toString(),
+                                serviceTitle: bookingCard['serviceTitle']?.toString(),
+                                // Passing integer minutes if available
+                                durationInMinutes: bookingCard['totalDuration'] as int?,
+                                imageUrl: bookingCard['imageUrl']?.toString(),
+                              ),
                             ),
                           );
                         },
@@ -149,20 +191,18 @@ class PaymentSuccessScreen extends StatelessWidget {
             ),
           );
         } else {
-          // Tablet UI with fixed button at bottom
+          // --- TABLET UI ---
           return Scaffold(
             backgroundColor: Colors.white,
             body: SafeArea(
               child: Column(
                 children: [
-                  // Scrollable content area
                   Expanded(
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
                           SizedBox(height: 60.h * scaleFactor),
 
-                          // Orange check circle
                           Container(
                             padding: EdgeInsets.all(10.r * scaleFactor),
                             decoration: const BoxDecoration(
@@ -205,12 +245,11 @@ class PaymentSuccessScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 32.h * scaleFactor),
 
-                          // Payment Info Card
                           Container(
                             margin: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
                             padding: EdgeInsets.symmetric(
                               horizontal: 24.h * scaleFactor,
-                              vertical: 32.h * scaleFactor,
+                              vertical: 24.h * scaleFactor,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -225,13 +264,27 @@ class PaymentSuccessScreen extends StatelessWidget {
                             ),
                             child: Column(
                               children: [
-                                _infoRow('Payment Mode', 'UPI', scaleFactor),
+                                // --- NEW: Booking Reference Row (Tablet) ---
+                                if (bookingRef.isNotEmpty) ...[
+                                  _infoRow('Booking Ref', bookingRef, scaleFactor),
+                                  SizedBox(height: 16.h * scaleFactor),
+                                ],
+
+                                _infoRow('Payment Mode', paymentMode, scaleFactor),
                                 SizedBox(height: 16.h * scaleFactor),
-                                _infoRow('Total Amount', '₹749', scaleFactor),
+                                _infoRow('Total Amount', '₹${totalAmount.toStringAsFixed(2)}', scaleFactor),
                                 SizedBox(height: 16.h * scaleFactor),
-                                _infoRow('Pay Date', 'Apr 10, 2022', scaleFactor),
+                                _infoRow('Pay Date', dateStr, scaleFactor),
                                 SizedBox(height: 16.h * scaleFactor),
-                                _infoRow('Pay Time', '10:45 am', scaleFactor),
+                                _infoRow('Pay Time', timeStr, scaleFactor),
+                                if (orderId.isNotEmpty) ...[
+                                  SizedBox(height: 16.h * scaleFactor),
+                                  _infoRow('Order ID', orderId, scaleFactor),
+                                ],
+                                if (paymentId.isNotEmpty) ...[
+                                  SizedBox(height: 16.h * scaleFactor),
+                                  _infoRow('Payment ID', paymentId, scaleFactor),
+                                ],
                                 SizedBox(height: 24.h * scaleFactor),
                                 Divider(
                                   thickness: 2 * scaleFactor,
@@ -248,7 +301,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                                 ),
                                 SizedBox(height: 4.h * scaleFactor),
                                 Text(
-                                  '₹749',
+                                  '₹${totalAmount.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     color: const Color(0xFFE47830),
                                     fontSize: 20.sp * scaleFactor,
@@ -258,15 +311,13 @@ class PaymentSuccessScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-
-                          // Extra space to ensure content doesn't feel cramped
                           SizedBox(height: 60.h * scaleFactor),
                         ],
                       ),
                     ),
                   ),
 
-                  // Fixed Done Button at bottom - always visible
+                  // Fixed Done Button at bottom
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: 16.h * scaleFactor,
@@ -277,10 +328,17 @@ class PaymentSuccessScreen extends StatelessWidget {
                       height: 47.h * scaleFactor,
                       child: ElevatedButton(
                         onPressed: () {
+                          // 4. PASS DATA TO NEXT SCREEN (Tablet)
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => BookingSuccessfulScreen(),
+                              builder: (context) => BookingSuccessfulScreen(
+                                bookingId: bookingCard['bookingId']?.toString(),
+                                bookingDate: bookingCard['bookingDate']?.toString(),
+                                serviceTitle: bookingCard['serviceTitle']?.toString(),
+                                durationInMinutes: bookingCard['totalDuration'] as int?,
+                                imageUrl: bookingCard['imageUrl']?.toString(),
+                              ),
                             ),
                           );
                         },
@@ -316,22 +374,29 @@ class PaymentSuccessScreen extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: const Color(0xFF757575),
-            fontSize: 14.sp * scaleFactor,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: const Color(0xFF757575),
+              fontSize: 14.sp * scaleFactor,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            color: const Color(0xFF161616),
-            fontSize: 14.sp * scaleFactor,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
+        SizedBox(width: 12.w * scaleFactor),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: const Color(0xFF161616),
+              fontSize: 14.sp * scaleFactor,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],

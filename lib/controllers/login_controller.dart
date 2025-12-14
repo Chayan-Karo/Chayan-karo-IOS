@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../data/local/database.dart';
-import '../data/repository/auth_repository.dart'; // Fixed import path
+import '../data/repository/auth_repository.dart';
 
 class LoginController extends GetxController {
   AppDatabase get _database => Get.find<AppDatabase>();
@@ -29,6 +29,8 @@ class LoginController extends GetxController {
     phoneController.addListener(() {
       _phoneNumber.value = phoneController.text;
       _isButtonEnabled.value = phoneController.text.length == 10;
+      
+      // Clear error immediately when user starts typing again
       if (_errorMessage.value.isNotEmpty) {
         _errorMessage.value = '';
       }
@@ -44,8 +46,18 @@ class LoginController extends GetxController {
   }
 
   Future<void> sendOTP() async {
-    if (_phoneNumber.value.length != 10) {
+    String phone = _phoneNumber.value;
+
+    // 1. Check Length
+    if (phone.length != 10) {
       _errorMessage.value = 'Please enter a valid 10-digit phone number';
+      return;
+    }
+
+    // 2. Check Valid Indian Mobile Start Digit (6, 7, 8, 9)
+    // This blocks numbers starting with 0, 1, 2, 3, 4, 5
+    if (!RegExp(r'^[6-9]').hasMatch(phone)) {
+      _errorMessage.value = 'Please enter a valid phone number';
       return;
     }
 
@@ -53,16 +65,15 @@ class LoginController extends GetxController {
     _errorMessage.value = '';
     
     try {
-      final response = await _authRepository.sendOtp(_phoneNumber.value);
+      final response = await _authRepository.sendOtp(phone);
       
       if (response.success) {
-        print('✅ OTP sent successfully to: +91${_phoneNumber.value}');
+        print('✅ OTP sent successfully to: +91$phone');
         print('📥 Response: type=${response.type}, message=${response.message}');
         
-        // Navigate to OTP screen with just phone number (no otpId from this API)
         Get.toNamed('/otp', arguments: {
-          'phone': _phoneNumber.value,
-          'message': response.message, // Pass the success message if needed
+          'phone': phone,
+          'message': response.message, 
         });
       } else {
         _errorMessage.value = response.message;

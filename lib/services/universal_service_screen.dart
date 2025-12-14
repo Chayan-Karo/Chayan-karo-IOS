@@ -11,6 +11,7 @@ import '../models/service_models.dart';
 import '../views/cart/cart_screen.dart';
 import '../views/booking/Summaryscreen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'snakeanimation.dart';
 
 
 class CategoryServiceScreen extends StatefulWidget {
@@ -38,6 +39,7 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
   final RxMap<String, List<Service>> _servicesByCategory = <String, List<Service>>{}.obs;
   final RxMap<String, bool> _loadingByCategory = <String, bool>{}.obs;
   final RxMap<String, bool> _errorByCategory = <String, bool>{}.obs;
+  final RxSet<String> _loadingServiceIds = <String>{}.obs;
 
   @override
   void initState() {
@@ -96,35 +98,83 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
   }
 
 void _addToCart(Service service) {
-  final catId = widget.category.categoryId;
-  final item = CartItem.fromService(
-    service,
-    sourcePage: 'category_service_${catId}',
-    sourceTitle: widget.category.categoryName,
-  ).copyWith(categoryId: catId);
+    // 1. STRICT DEBOUNCE: If animation is running, do NOTHING.
+    if (_loadingServiceIds.contains(service.id)) return;
 
-  print('[AddToCart] svc=${item.id} cat=${item.categoryId}');
-  Get.find<CartController>().addItem(item);
+    // 2. Start Animation State
+    _loadingServiceIds.add(service.id);
 
-  _currentPageInteractedServices.add(service.id);
-  if (!_currentPageSelectedServices.contains(service.id)) {
-    _currentPageSelectedServices.add(service.id);
+    // 3. Update Cart Logic
+    final catId = widget.category.categoryId;
+    final item = CartItem.fromService(
+      service,
+      sourcePage: 'category_service_${catId}',
+      sourceTitle: widget.category.categoryName,
+    ).copyWith(categoryId: catId);
+
+    Get.find<CartController>().addItem(item);
+
+    _currentPageInteractedServices.add(service.id);
+    if (!_currentPageSelectedServices.contains(service.id)) {
+      _currentPageSelectedServices.add(service.id);
+    }
+
+    // 4. Disable button for 1.5 seconds (Length of animation)
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        _loadingServiceIds.remove(service.id);
+      }
+    });
   }
-}
 
   void _incrementCart(String serviceId) {
+    // 1. STRICT DEBOUNCE: If animating, ignore click
+    if (_loadingServiceIds.contains(serviceId)) return;
+
+    // 2. Check Max Limit
+    final currentQty = cartController.getQuantity(serviceId);
+    if (currentQty >= 3) {
+      HapticFeedback.mediumImpact();
+      return;
+    }
+
+    // 3. Update Logic
     cartController.incrementQuantity(serviceId);
     if (!_currentPageSelectedServices.contains(serviceId)) {
       _currentPageSelectedServices.add(serviceId);
     }
+
+    // 4. Start Animation & Disable for 1 second
+    _loadingServiceIds.add(serviceId);
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        _loadingServiceIds.remove(serviceId);
+      }
+    });
   }
 
   void _decrementCart(String serviceId) {
+    // 1. STRICT DEBOUNCE: If animating, ignore click
+    if (_loadingServiceIds.contains(serviceId)) return;
+
+    // 2. Update Logic
     cartController.decrementQuantity(serviceId);
+
+    // 3. Cleanup if 0
     if (cartController.getQuantity(serviceId) == 0) {
       _currentPageSelectedServices.remove(serviceId);
       _currentPageInteractedServices.remove(serviceId);
+      // If we are removing the counter, we don't need to block interaction anymore
+      // or we can let the animation finish on the Add button.
     }
+
+    // 4. Start Animation & Disable for 1 second
+    _loadingServiceIds.add(serviceId);
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        _loadingServiceIds.remove(serviceId);
+      }
+    });
   }
 
   bool get _hasCurrentPageSelections {
@@ -359,14 +409,15 @@ Widget _buildCategoryIcon(
                           SizedBox(height: 16.h * scaleFactor),
                           _buildDiscountCards(scaleFactor),
                           SizedBox(height: 16.h * scaleFactor),
-                          _buildCustomPackageSection(scaleFactor),
-                          SizedBox(height: 16.h * scaleFactor),
+                         // _buildCustomPackageSection(scaleFactor),
+                          //SizedBox(height: 16.h * scaleFactor),
                           _buildServiceCategoryGrid(scaleFactor),
                           SizedBox(height: 16.h * scaleFactor),
                           _buildServiceCategorySections(scaleFactor),
-                          Obx(() => _hasCurrentPageSelections
-                              ? SizedBox(height: 100.h * scaleFactor)
-                              : SizedBox(height: 16.h * scaleFactor)),
+                          // AFTER - Use cart count instead:
+Obx(() => cartController.cartItemCount > 0
+    ? SizedBox(height: 100.h * scaleFactor)
+    : SizedBox(height: 16.h * scaleFactor)),
                         ],
                       ),
                     ),
@@ -383,101 +434,120 @@ Widget _buildCategoryIcon(
                   child: _buildHeader(context, scaleFactor),
                 ),
               ),
-              Obx(() => _hasCurrentPageSelections ? _buildBottomBar(scaleFactor) : SizedBox()),
-            ],
+// AFTER - Always show when cart has items:
+Obx(() => cartController.cartItemCount > 0 ? _buildBottomBar(scaleFactor) : SizedBox()),            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildHeader(BuildContext context, double scaleFactor) {
-    return Container(
-      width: double.infinity,
-      height: 48.h * scaleFactor,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFEEE0),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0x26000000),
-            blurRadius: 4 * scaleFactor,
-            offset: Offset(0, 2 * scaleFactor),
-            spreadRadius: 0,
+Widget _buildHeader(BuildContext context, double scaleFactor) {
+  return Container(
+    width: double.infinity,
+    height: 48.h * scaleFactor,
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFEEE0),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0x26000000),
+          blurRadius: 4 * scaleFactor,
+          offset: Offset(0, 2 * scaleFactor),
+          spreadRadius: 0,
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 1. Back Icon
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Icon(Icons.arrow_back_ios_new, size: 20 * scaleFactor),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Icon(Icons.arrow_back_ios_new, size: 20 * scaleFactor),
-            ),
-            SizedBox(width: 8.w * scaleFactor),
-            Expanded(
-              child: Text(
-                widget.category.categoryName,
-                style: TextStyle(
-                  fontSize: 16.sp * scaleFactor,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                  color: Colors.black,
+          
+          SizedBox(width: 8.w * scaleFactor),
+          
+          // 2. Title Category Name (The Fixed Part)
+          Expanded(
+            // KEY FIX: Use Align to stop GestureDetector from stretching
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                // Container with transparent color ensures clicks register on the text body
+                child: Container(
+                  color: Colors.transparent, 
+                  child: Text(
+                    widget.category.categoryName,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 16.sp * scaleFactor,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                      color: Colors.black,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ),
-            SizedBox(width: 8.w * scaleFactor),
-            Obx(() => GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => CartScreen()),
-                    );
-                  },
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/icons/cart.svg',
-                        width: 40.w * scaleFactor,
-                        height: 40.h * scaleFactor,
-                        color: Colors.black,
-                      ),
-                      if (cartController.cartItemCount > 0)
-                        Positioned(
-                          right: -2 * scaleFactor,
-                          top: -2 * scaleFactor,
-                          child: Container(
-                            padding: EdgeInsets.all(4 * scaleFactor),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(10 * scaleFactor),
+          ),
+          
+          SizedBox(width: 8.w * scaleFactor),
+          
+          // 3. Cart Icon
+          Obx(() => GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CartScreen()),
+                  );
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/icons/cart.svg',
+                      width: 40.w * scaleFactor,
+                      height: 40.h * scaleFactor,
+                      color: Colors.black,
+                    ),
+                    if (cartController.cartItemCount > 0)
+                      Positioned(
+                        right: -2 * scaleFactor,
+                        top: -2 * scaleFactor,
+                        child: Container(
+                          padding: EdgeInsets.all(4 * scaleFactor),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10 * scaleFactor),
+                          ),
+                          constraints: BoxConstraints(
+                            minWidth: 18 * scaleFactor,
+                            minHeight: 18 * scaleFactor,
+                          ),
+                          child: Text(
+                            '${cartController.cartItemCount}',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.sp * scaleFactor,
+                              fontWeight: FontWeight.bold,
                             ),
-                            constraints: BoxConstraints(
-                              minWidth: 18 * scaleFactor,
-                              minHeight: 18 * scaleFactor,
-                            ),
-                            child: Text(
-                              '${cartController.cartItemCount}',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.sp * scaleFactor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                    ],
-                  ),
-                )),
-          ],
-        ),
+                      ),
+                  ],
+                ),
+              )),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
 Widget _buildTopBanner(double scaleFactor) {
   return Padding(
@@ -486,7 +556,7 @@ Widget _buildTopBanner(double scaleFactor) {
       borderRadius: BorderRadius.circular(12 * scaleFactor),
       child: Stack(
         children: [
-          _buildBannerImage(scaleFactor),
+          buildBannerImage(scaleFactor),
           Container(
             width: double.infinity,
             height: 160.h * scaleFactor,
@@ -501,7 +571,7 @@ Widget _buildTopBanner(double scaleFactor) {
               ),
             ),
           ),
-          Positioned(
+        /*  Positioned(
             bottom: 12.r * scaleFactor,
             left: 12.r * scaleFactor,
             child: Container(
@@ -522,31 +592,43 @@ Widget _buildTopBanner(double scaleFactor) {
                 ),
               ),
             ),
-          ),
+          ), */
         ],
       ),
     ),
   );
 }
 
-Widget _buildBannerImage(double scaleFactor) {
+String _bannerForCategory(String name) {
+  final n = name.trim().toLowerCase();
+  if (n.contains('female') && n.contains('hair') && n.contains('makeup')) {
+    return 'assets/female_hair_and_makeup.png'; // female hair & makeup
+  }
+  if (n.contains('female') && n.contains('spa')) {
+    return 'assets/female_spa.png'; // female spa
+  }
+  if (n.contains('female') && (n.contains('salon') || n.contains('saloon'))) {
+    return 'assets/femalesalon.png'; // female salon/saloon
+  }
+  if (n.contains('clean')) {
+    return 'assets/cleaning.png'; // cleaning
+  }
+  return 'assets/ms9.webp'; // fallback
+}
+
+Widget buildBannerImage(double scaleFactor) {
+  final asset = _bannerForCategory(widget.category.categoryName);
   return Image.asset(
-    'assets/ms9.webp',
+    asset,
     width: double.infinity,
     height: 160.h * scaleFactor,
     fit: BoxFit.cover,
-    errorBuilder: (context, error, stackTrace) {
-      return Container(
-        width: double.infinity,
-        height: 160.h * scaleFactor,
-        color: Colors.grey[200],
-        child: Icon(
-          Icons.category,
-          size: 48 * scaleFactor,
-          color: const Color(0xFFFF6F00),
-        ),
-      );
-    },
+    errorBuilder: (context, error, stack) => Container(
+      width: double.infinity,
+      height: 160.h * scaleFactor,
+      color: Colors.grey[200],
+      child: Icon(Icons.category, size: 48 * scaleFactor, color: const Color(0xFFFF6F00)),
+    ),
   );
 }
 
@@ -709,7 +791,7 @@ Widget _buildCategoryInfoBlock(double scaleFactor) {
     );
   }
 
-  Widget _buildCustomPackageSection(double scaleFactor) {
+ /* Widget _buildCustomPackageSection(double scaleFactor) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
       child: Container(
@@ -787,7 +869,7 @@ Widget _buildCategoryInfoBlock(double scaleFactor) {
         ),
       ),
     );
-  }
+  } */
 
 Widget _buildServiceCategoryGrid(double scaleFactor) {
   return Padding(
@@ -803,8 +885,11 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
             color: Colors.black,
           ),
         ),
-        SizedBox(height: 12.h * scaleFactor),
+        // UPDATED: Reduced from 12.h to 4.h to minimize gap below "Categories"
+        SizedBox(height: 12.h * scaleFactor), 
         GridView.builder(
+          // UPDATED: Added zero padding to remove any default system spacing
+          padding: EdgeInsets.zero, 
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: widget.category.serviceCategory.length,
@@ -812,7 +897,7 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
             crossAxisCount: 3,
             mainAxisSpacing: 18 * scaleFactor,
             crossAxisSpacing: 14 * scaleFactor,
-            childAspectRatio: 0.82,
+            childAspectRatio: 0.82, 
           ),
           itemBuilder: (context, index) {
             final serviceCategory = widget.category.serviceCategory[index];
@@ -838,10 +923,10 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: 6.w * scaleFactor,
-                    vertical: 10.h * scaleFactor,
+                    vertical: 4.h * scaleFactor, 
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center, 
                     children: [
                       Container(
                         width: 65.w * scaleFactor,
@@ -858,7 +943,7 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
                           scaleFactor,
                         ),
                       ),
-                      SizedBox(height: 6.h * scaleFactor),
+                      SizedBox(height: 4.h * scaleFactor), 
                       Flexible(
                         child: Text(
                           serviceCategory.serviceCategoryName,
@@ -1292,190 +1377,226 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
     );
   }
 
-  Widget _buildQuantitySelector(Service service, double scaleFactor) {
+Widget _buildQuantitySelector(Service service, double scaleFactor) {
     return Obx(() {
       final quantity = cartController.getQuantity(service.id);
-      final hasInteractedOnThisPage = _currentPageInteractedServices.contains(service.id);
+      final hasInteractedOnThisPage =
+          _currentPageInteractedServices.contains(service.id);
 
-      if (quantity == 0 || !hasInteractedOnThisPage) {
-        return GestureDetector(
-          onTap: () => _addToCart(service),
-          child: Container(
-            width: 75.w * scaleFactor,
-            height: 29.h * scaleFactor,
-            decoration: ShapeDecoration(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8 * scaleFactor),
-              ),
-              shadows: [
-                BoxShadow(
-                  color: const Color(0x33000000),
-                  blurRadius: 4 * scaleFactor,
-                  offset: Offset(0, 1 * scaleFactor),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.add,
-                  size: 12 * scaleFactor,
-                  color: Color(0xFFE47830),
-                ),
-                SizedBox(width: 4.w * scaleFactor),
-                Text(
-                  'Add',
-                  style: TextStyle(
-                    color: Color(0xFFE47830),
-                    fontSize: 14.sp * scaleFactor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      } else {
-        return Container(
-          width: 85.w * scaleFactor,
-          height: 29.h * scaleFactor,
-          decoration: ShapeDecoration(
-            color: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8 * scaleFactor),
-            ),
-            shadows: [
-              BoxShadow(
-                color: const Color(0x33000000),
-                blurRadius: 4 * scaleFactor,
-                offset: Offset(0, 1 * scaleFactor),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              GestureDetector(
-                onTap: () => _decrementCart(service.id),
-                child: Icon(
-                  Icons.remove,
-                  size: 14 * scaleFactor,
-                  color: Color(0xFFE47830),
-                ),
-              ),
-              Text(
-                '$quantity',
-                style: TextStyle(
-                  color: Color(0xFFE47830),
-                  fontSize: 14.sp * scaleFactor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _incrementCart(service.id),
-                child: Icon(
-                  Icons.add,
-                  size: 14 * scaleFactor,
-                  color: Color(0xFFE47830),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-    });
-  }
+      // Is the animation "active"?
+      final isAnimating = _loadingServiceIds.contains(service.id);
+      final isMaxLimitReached = quantity >= 3;
 
-Widget _buildBottomBar(double scaleFactor) {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Obx(() {
-        return Container(
-          padding: EdgeInsets.fromLTRB(
-            16.w * scaleFactor,
-            16.h * scaleFactor,
-            16.w * scaleFactor,
-            MediaQuery.of(context).viewPadding.bottom + 16.h * scaleFactor,
+      // Decoration for the Counter
+      final counterDecoration = BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8 * scaleFactor),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x33000000),
+            blurRadius: 4 * scaleFactor,
+            offset: Offset(0, 1 * scaleFactor),
           ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                offset: Offset(0, -2 * scaleFactor),
-                blurRadius: 8 * scaleFactor,
-                spreadRadius: 0,
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "$_currentPageItemCount items",
-                    style: TextStyle(
-                      fontSize: 12.sp * scaleFactor,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  SizedBox(height: 4.h * scaleFactor),
-                  Text(
-                    "₹${_currentPageTotal.toInt()}",
-                    style: TextStyle(
-                      fontSize: 16.sp * scaleFactor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              GestureDetector(
+        ],
+      );
+
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return ScaleTransition(scale: animation, child: child);
+        },
+        child: (quantity == 0 || !hasInteractedOnThisPage)
+            // STATE 1: ADD BUTTON
+            ? AnimatedAddButton(
+                key: ValueKey('add_${service.id}'),
+                isLoading: isAnimating, // Internal widget handles disabling
+                scaleFactor: scaleFactor,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SummaryScreen(
-                        currentPageSelectedServices: _currentPageSelectedServices.toList(),
-                        initialAddress: 'Static address 123, City XYZ',
-                        initialTimeSlot: 'Select time slot',
-                        initialSaathi: null,
+                  HapticFeedback.lightImpact();
+                  _addToCart(service);
+                },
+              )
+            // STATE 2: COUNTER
+            : AnimatedBorderWrapper(
+                key: ValueKey('counter_${service.id}'),
+                isAnimating: isAnimating,
+                scaleFactor: scaleFactor,
+                child: Container(
+                  width: 85.w * scaleFactor,
+                  height: 29.h * scaleFactor,
+                  decoration: counterDecoration,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8 * scaleFactor),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Row(
+                        children: [
+                          // --- MINUS BUTTON ---
+                          Expanded(
+                            child: InkWell(
+                              // DISABLE CLICK IF ANIMATING
+                              onTap: isAnimating
+                                  ? null
+                                  : () {
+                                      HapticFeedback.lightImpact();
+                                      _decrementCart(service.id);
+                                    },
+                              child: Center(
+                                child: Icon(
+                                  Icons.remove,
+                                  size: 16 * scaleFactor,
+                                  // Grey out if disabled
+                                  color: isAnimating
+                                      ? Colors.grey.shade400
+                                      : const Color(0xFFE47830),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // --- QUANTITY TEXT ---
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 4.w * scaleFactor),
+                            child: Text(
+                              '$quantity',
+                              style: TextStyle(
+                                color: const Color(0xFFE47830),
+                                fontSize: 14.sp * scaleFactor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+
+                          // --- PLUS BUTTON ---
+                          Expanded(
+                            child: InkWell(
+                              // DISABLE CLICK IF ANIMATING OR MAX LIMIT
+                              onTap: (isMaxLimitReached || isAnimating)
+                                  ? null
+                                  : () {
+                                      HapticFeedback.lightImpact();
+                                      _incrementCart(service.id);
+                                    },
+                              child: Center(
+                                child: Icon(
+                                  Icons.add,
+                                  size: 16 * scaleFactor,
+                                  // Grey out if disabled (limit or animation)
+                                  color: (isMaxLimitReached || isAnimating)
+                                      ? Colors.grey.shade400
+                                      : const Color(0xFFE47830),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 24.w * scaleFactor,
-                    vertical: 12.h * scaleFactor,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFE47830),
-                    borderRadius: BorderRadius.circular(30 * scaleFactor),
-                  ),
-                  child: Text(
-                    "Buy Now",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14.sp * scaleFactor,
-                    ),
                   ),
                 ),
               ),
-            ],
-          ),
-        );
-      }),
-    );
+      );
+    });
   }
-
+Widget _buildBottomBar(double scaleFactor) {
+  return Positioned(
+    bottom: 0,
+    left: 0,
+    right: 0,
+    child: Obx(() {
+      // Show total cart summary instead of just current page
+      final totalItems = cartController.cartItemCount;
+      final totalAmount = cartController.totalPrice;
+      
+      return Container(
+        padding: EdgeInsets.fromLTRB(
+          16.w * scaleFactor,
+          16.h * scaleFactor,
+          16.w * scaleFactor,
+          MediaQuery.of(context).viewPadding.bottom + 16.h * scaleFactor,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              offset: Offset(0, -2 * scaleFactor),
+              blurRadius: 8 * scaleFactor,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "$totalItems ${totalItems == 1 ? 'item' : 'items'}",
+                  style: TextStyle(
+                    fontSize: 12.sp * scaleFactor,
+                    color: Colors.grey,
+                  ),
+                ),
+                SizedBox(height: 4.h * scaleFactor),
+                Text(
+                  "₹${totalAmount.toInt()}",
+                  style: TextStyle(
+                    fontSize: 16.sp * scaleFactor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            GestureDetector(
+              onTap: () {
+                // ✨ CHANGED: Navigate to CartScreen instead of SummaryScreen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>  CartScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 24.w * scaleFactor,
+                  vertical: 12.h * scaleFactor,
+                ),
+                decoration: BoxDecoration(
+                  color: Color(0xFFE47830),
+                  borderRadius: BorderRadius.circular(30 * scaleFactor),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "View Cart",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp * scaleFactor,
+                      ),
+                    ),
+                  /*  SizedBox(width: 6.w * scaleFactor),
+                    Icon(
+                      Icons.arrow_forward,
+                      color: Colors.white,
+                      size: 18 * scaleFactor,
+                    ), */
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }),
+  );
+}
   @override
   void dispose() {
     _scrollController.dispose();

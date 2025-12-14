@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/cart_controller.dart';
@@ -24,13 +23,12 @@ class HomeHeaderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Status bar
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Color(0xFFFFEEE0),
       statusBarIconBrightness: Brightness.dark,
     ));
 
-    final lc = Get.find<LocationController>(); // observe location
+    final lc = Get.find<LocationController>();
 
     return Container(
       color: const Color(0xFFFFEEE0),
@@ -38,7 +36,7 @@ class HomeHeaderWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Location + Cart
+          // Location + Cart Row
           Padding(
             padding: EdgeInsets.symmetric(
               horizontal: horizontalPadding,
@@ -47,131 +45,113 @@ class HomeHeaderWidget extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Location Section
+                // === LOCATION SECTION ===
                 Expanded(
-                  child: Row(
-                    children: [
-                      SvgPicture.asset(
-                        'assets/icons/homy.svg',
-                        width: 40.w * scaleFactor,
-                        height: 40.h * scaleFactor,
-                        colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
-                        placeholderBuilder: (_) => Icon(
-                          Icons.home,
-                          size: 40.w * scaleFactor,
-                          color: Colors.black,
-                        ),
-                      ),
-                      SizedBox(width: 8.w * scaleFactor),
-                      Expanded(
-                        child: Obx(() {
-                          final homeController = Get.find<HomeController>();
+                  // 1. Align prevents the click area from stretching to the right
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent, // Ensures the gap between icon/text is clickable
+                      onTap: () async {
+                        final selected = await Get.toNamed('/choice', arguments: 'home_header');
+                        if (selected != null) {
+                          try {
+                            Get.find<HomeController>().update();
+                          } catch (_) {}
+                        }
+                      },
+                      child: Row(
+                        // 2. MainAxisSize.min ensures the Row only takes the width of the content
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SvgPicture.asset(
+                            'assets/icons/homy.svg',
+                            width: 40.w * scaleFactor,
+                            height: 40.h * scaleFactor,
+                            colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                            placeholderBuilder: (_) => Icon(
+                              Icons.home,
+                              size: 40.w * scaleFactor,
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(width: 8.w * scaleFactor),
+                          
+                          // 3. Flexible allows truncation but doesn't force full width like Expanded
+                          Flexible(
+                            fit: FlexFit.loose,
+                            child: Obx(() {
+                              final cached = lc.cachedLocation.value;
 
-                          if (homeController.isLoading) {
-                            return Shimmer.fromColors(
-                              baseColor: Colors.grey[300]!,
-                              highlightColor: Colors.grey[100]!,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 60.w * scaleFactor,
-                                    height: 12.h * scaleFactor,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  SizedBox(height: 4.h * scaleFactor),
-                                  Container(
-                                    width: 100.w * scaleFactor,
-                                    height: 10.h * scaleFactor,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
+                              String displayLabel;
+                              String displayAddress;
 
-                          // Prefer LocationController.cachedLocation when set,
-                          // else fall back to HomeController existing fields.
-                          final cached = lc.cachedLocation.value;
-                          final label = cached?.label ?? homeController.locationLabel;
-                          final fullAddress = cached?.address ?? homeController.address;
-
-                          String cityOnly = '';
-                          if (fullAddress.contains(',')) {
-                            cityOnly = fullAddress.split(',').last.trim();
-                          } else {
-                            cityOnly = fullAddress.trim();
-                          }
-
-                          return GestureDetector(
-                            onTap: () async {
-                              // Open the new Zepto-like selector and wait for result
-                              final selected = await Get.toNamed('/choice', arguments: 'home_header');
-                              // No manual set needed; ChooseLocationSheet already
-                              // sets default and updates lc.cachedLocation.
-                              // Trigger a rebuild of any HomeController text if you mirror it:
-                              if (selected != null) {
-                                // Optional: update HomeController fields for legacy code paths
-                               // homeController.locationLabel = cached?.label ?? homeController.locationLabel;
-                               // homeController.address = cached?.address ?? homeController.address;
-                                homeController.update(); // if using GetBuilder in some places
+                              if (cached == null || cached.address.isEmpty) {
+                                displayLabel = "Select Location";
+                                displayAddress = "Tap here to choose address";
+                              } else {
+                                displayLabel = cached.label; 
+                                displayAddress = cached.address;
                               }
-                            },
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                              String formattedCity = '';
+                              if (displayAddress.contains(',')) {
+                                final parts = displayAddress.split(',');
+                                formattedCity = parts.last.trim();
+                                if (formattedCity.length < 3) {
+                                   formattedCity = displayAddress; 
+                                }
+                              } else {
+                                formattedCity = displayAddress.trim();
+                              }
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min, // Keep label compact
                                     children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            label,
-                                            style: TextStyle(
-                                              fontSize: 12.sp * scaleFactor,
-                                              fontWeight: FontWeight.w600,
-                                              color: const Color(0xFFFF6F00),
-                                            ),
-                                          ),
-                                          SizedBox(width: 4.w * scaleFactor),
-                                          Icon(
-                                            Icons.keyboard_arrow_down,
-                                            size: 16.sp * scaleFactor,
-                                            color: const Color(0xFFFF6F00),
-                                          ),
-                                        ],
-                                      ),
                                       Text(
-                                        cityOnly,
+                                        displayLabel.toUpperCase(),
                                         style: TextStyle(
-                                          fontSize: 11.sp * scaleFactor,
-                                          fontWeight: FontWeight.w400,
-                                          color: Colors.black87,
+                                          fontSize: 12.sp * scaleFactor,
+                                          fontWeight: FontWeight.w700, 
+                                          color: const Color(0xFFFF6F00),
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(width: 4.w * scaleFactor),
+                                      Icon(
+                                        Icons.keyboard_arrow_down,
+                                        size: 16.sp * scaleFactor,
+                                        color: const Color(0xFFFF6F00),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
+                                  SizedBox(height: 2.h * scaleFactor),
+                                  Text(
+                                    formattedCity,
+                                    style: TextStyle(
+                                      fontSize: 11.sp * scaleFactor,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.black87,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              );
+                            }),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
 
                 SizedBox(width: 12.w * scaleFactor),
 
-                // Cart
+                // === CART SECTION ===
                 Obx(() {
                   final cartController = Get.find<CartController>();
                   return GestureDetector(
@@ -232,7 +212,7 @@ class HomeHeaderWidget extends StatelessWidget {
             ),
           ),
 
-          // Search bar
+          // === SEARCH BAR ===
           GestureDetector(
             onTap: () => Get.to(() => SearchScreen()),
             child: AbsorbPointer(

@@ -20,13 +20,17 @@ class CustomBottomNavBar extends StatelessWidget {
       builder: (context, constraints) {
         // Tablet detection
         final bool isTablet = constraints.maxWidth > 600;
-        // Limit max scale factor to prevent overflow on huge tablets
         final double scaleFactor = isTablet
-            ? (constraints.maxWidth / 411).clamp(1.0, 1.5) // max 1.5x scale
+            ? (constraints.maxWidth / 411).clamp(1.0, 1.5)
             : 1.0;
 
+        // Calculate the effective padding we need at the bottom
+        final double effectivePadding = bottomPadding > 0 ? bottomPadding : 8.h * scaleFactor;
+        // The total height is the content height (70) + the safe area padding
+        final double totalHeight = 70.h * scaleFactor + effectivePadding;
+
         return Container(
-          padding: EdgeInsets.only(bottom: bottomPadding > 0 ? bottomPadding : 8.h * scaleFactor),
+          // Removed padding here so the click area can extend to the edge
           decoration: BoxDecoration(
             color: const Color(0xFFFFFEFD),
             border: Border(
@@ -44,15 +48,16 @@ class CustomBottomNavBar extends StatelessWidget {
             ],
           ),
           child: SizedBox(
-            height: 70.h * scaleFactor,
+            height: totalHeight,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.stretch, // Ensures items fill vertical height
               children: [
-                _buildNavItem('assets/icons/chayansathi.svg', 'Chayan Sathi', 0, scaleFactor),
-                _buildNavItem('assets/icons/bookings.svg', 'Bookings', 1, scaleFactor),
-                _buildCenterNavItem('assets/icons/chayankaro.jpg', 'Chayan Karo', 2, scaleFactor),
-                _buildNavItem('assets/icons/refer.svg', 'Referral', 3, scaleFactor),
-                _buildNavItem('assets/icons/profile.svg', 'Profile', 4, scaleFactor),
+                _buildNavItem('assets/icons/chayansathi.svg', 'Chayan Sathi', 0, scaleFactor, effectivePadding),
+                _buildNavItem('assets/icons/bookings.svg', 'Bookings', 1, scaleFactor, effectivePadding),
+                _buildCenterNavItem('assets/icons/chayankaro.jpg', 'Chayan Karo', 2, scaleFactor, effectivePadding),
+                _buildNavItem('assets/icons/refer.svg', 'Referral', 3, scaleFactor, effectivePadding),
+                _buildNavItem('assets/icons/profile.svg', 'Profile', 4, scaleFactor, effectivePadding),
               ],
             ),
           ),
@@ -61,86 +66,100 @@ class CustomBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(String iconPath, String label, int index, double scaleFactor) {
+  Widget _buildNavItem(String iconPath, String label, int index, double scaleFactor, double bottomPadding) {
     final bool isActive = selectedIndex == index;
 
-    return GestureDetector(
-      onTap: () => onItemTapped(index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ColorFiltered(
-            colorFilter: isActive
-                ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
-                : const ColorFilter.mode(Colors.black, BlendMode.srcIn),
-            child: iconPath.endsWith('.svg')
-                ? SvgPicture.asset(
-                    iconPath,
-                    width: 40.w * scaleFactor,
-                    height: 40.h * scaleFactor,
-                    color: isActive ? null : Colors.black,
-                  )
-                : Image.asset(
-                    iconPath,
-                    width: 40.w * scaleFactor,
-                    height: 40.h * scaleFactor,
-                    fit: BoxFit.cover,
-                  ),
+    return Expanded( // Expanded ensures horizontal click area is maximized
+      child: GestureDetector(
+        onTap: () => onItemTapped(index),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          // Color must be transparent (not null) to capture clicks in empty space
+          color: Colors.transparent, 
+          // Apply the padding INSIDE the click area
+          padding: EdgeInsets.only(bottom: bottomPadding),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ColorFiltered(
+                colorFilter: isActive
+                    ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
+                    : const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                child: iconPath.endsWith('.svg')
+                    ? SvgPicture.asset(
+                        iconPath,
+                        width: 36.w * scaleFactor,
+                        height: 36.h * scaleFactor,
+                        color: isActive ? null : Colors.black,
+                      )
+                    : Image.asset(
+                        iconPath,
+                        width: 36.w * scaleFactor,
+                        height: 36.h * scaleFactor,
+                        fit: BoxFit.cover,
+                      ),
+              ),
+              SizedBox(height: 2.h * scaleFactor),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 8.sp * scaleFactor,
+                  fontFamily: 'SF Pro',
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          SizedBox(height: 2.h * scaleFactor),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 8.sp * scaleFactor,
-              height: 2.h * scaleFactor,
-              fontFamily: 'SF Pro',
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildCenterNavItem(String iconPath, String label, int index, double scaleFactor) {
-    final bool isActive = selectedIndex == index;
-
-    return GestureDetector(
-      onTap: () => onItemTapped(index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            height: 40.h * scaleFactor,
-            child: Center(
-              child: Container(
-                width: 24.45.w * scaleFactor,
-                height: 23.8.h * scaleFactor,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(2 * scaleFactor),
-                  image: DecorationImage(
-                    image: AssetImage(iconPath),
-                    fit: BoxFit.cover,
+  Widget _buildCenterNavItem(String iconPath, String label, int index, double scaleFactor, double bottomPadding) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onItemTapped(index),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          color: Colors.transparent,
+          padding: EdgeInsets.only(bottom: bottomPadding),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 34.h * scaleFactor,
+                child: Center(
+                  child: Container(
+                    width: 20.8.w * scaleFactor,
+                    height: 20.2.h * scaleFactor,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(2 * scaleFactor),
+                      image: DecorationImage(
+                        image: AssetImage(iconPath),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              SizedBox(height: 2.h * scaleFactor),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 8.sp * scaleFactor,
+                  fontFamily: 'SF Pro',
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          SizedBox(height: 2.h * scaleFactor),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 8.sp * scaleFactor,
-              height: 2.h * scaleFactor,
-              fontFamily: 'SF Pro',
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }

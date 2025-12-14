@@ -21,6 +21,7 @@ CartItem _$CartItemFromJson(Map<String, dynamic> json) => CartItem(
       ServiceType.general,
   sourcePage: json['sourcePage'] as String?,
   sourceTitle: json['sourceTitle'] as String?,
+  categoryId: json['categoryId'] as String?,
   dateAdded: DateTime.parse(json['dateAdded'] as String),
 );
 
@@ -37,6 +38,7 @@ Map<String, dynamic> _$CartItemToJson(CartItem instance) => <String, dynamic>{
   'type': _$ServiceTypeEnumMap[instance.type]!,
   'sourcePage': instance.sourcePage,
   'sourceTitle': instance.sourceTitle,
+  'categoryId': instance.categoryId,
   'dateAdded': instance.dateAdded.toIso8601String(),
 };
 

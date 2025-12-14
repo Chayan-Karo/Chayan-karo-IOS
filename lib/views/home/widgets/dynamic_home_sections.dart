@@ -18,7 +18,6 @@ class DynamicHomeSections extends StatelessWidget {
       final categories = categoryController.filteredCategories;
 
       if (categoryController.isLoading && categories.isEmpty) {
-        // Use old shimmer method, unchanged
         return _buildShimmerState();
       }
 
@@ -42,21 +41,15 @@ class DynamicHomeSections extends StatelessWidget {
   }
 
   Widget _buildShimmerState() {
-    // (left unchanged)
-    // ...your shimmer code here...
-    return SizedBox.shrink();
+    return const SizedBox.shrink();
   }
 
   Widget _buildErrorState(CategoryController controller) {
-    // (left unchanged)
-    // ...your error code here...
-    return SizedBox.shrink();
+    return const SizedBox.shrink();
   }
 
   Widget _buildEmptyState() {
-    // (left unchanged)
-    // ...your empty code here...
-    return SizedBox.shrink();
+    return const SizedBox.shrink();
   }
 
   Widget _buildCategorySection(Category category) {
@@ -69,6 +62,8 @@ class DynamicHomeSections extends StatelessWidget {
 
         return Container(
           margin: EdgeInsets.only(bottom: 24.h),
+          // UPDATED: Removed left padding here.
+          // It now relies on the parent (MostUsedServicesWidget) for left alignment.
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -83,24 +78,26 @@ class DynamicHomeSections extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(Category category, double scaleFactor) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            category.categoryName,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'SF Pro',
-              color: Colors.black,
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Title starts at 0 relative to parent (which is 12 relative to screen)
+        Text(
+          category.categoryName,
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'SF Pro',
+            color: Colors.black,
           ),
-          GestureDetector(
-            onTap: () => _navigateToViewAll(category),
+        ),
+        GestureDetector(
+          onTap: () => _navigateToViewAll(category),
+          // Right padding matches the "View all" in MostUsedServicesWidget
+          child: Padding(
+            padding: EdgeInsets.only(right: 16.0 * scaleFactor),
             child: Text(
-              'View all >',
+              'View all ',
               style: TextStyle(
                 fontSize: 14.sp,
                 color: const Color(0xFFFA9441),
@@ -109,8 +106,8 @@ class DynamicHomeSections extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -123,7 +120,8 @@ class DynamicHomeSections extends StatelessWidget {
       height: cardHeight + (22.h * scaleFactor),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        // Zero padding allows list to start exactly where the title starts
+        padding: EdgeInsets.zero,
         itemCount: category.serviceCategory.length,
         separatorBuilder: (_, __) => SizedBox(width: spacing),
         itemBuilder: (context, index) {
@@ -194,7 +192,6 @@ class _DynamicServiceCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // ---- Optimized Service Image (SVG or raster) ----
               _buildServiceImage(),
               _buildServiceLabel(),
             ],
@@ -213,27 +210,22 @@ class _DynamicServiceCard extends StatelessWidget {
     );
   }
 
-  // ------ SVG: Use a Stack for flicker-free, instant placeholder -------
   Widget _buildSvgImage() {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ---- Light grey placeholder ----
         Container(
           color: Colors.grey.shade200,
         ),
-        // ---- SVG loads above, placeholder is not removed until SVG loaded ----
         SvgPicture.network(
           serviceCategory.imgLink,
           fit: BoxFit.cover,
-          // No spinner/shimmer, just instant background fallback
           placeholderBuilder: (context) => const SizedBox.shrink(),
         ),
       ],
     );
   }
 
-  // ------ Raster: CachedNetworkImage with fade-in and light grey placeholder -------
   Widget _buildCachedImage() {
     return CachedNetworkImage(
       imageUrl: serviceCategory.imgLink,
@@ -242,7 +234,6 @@ class _DynamicServiceCard extends StatelessWidget {
       height: height,
       fadeInDuration: const Duration(milliseconds: 200),
       fadeOutDuration: const Duration(milliseconds: 75),
-      // ---- Grey filler while loading ----
       placeholder: (context, url) => Container(
         color: Colors.grey.shade200,
       ),
@@ -261,7 +252,6 @@ class _DynamicServiceCard extends StatelessWidget {
     );
   }
 
-  // ------ Service label (unchanged logic/UI) ------
   Widget _buildServiceLabel() {
     return Positioned(
       bottom: 0,
@@ -318,7 +308,6 @@ class _DynamicServiceCard extends StatelessWidget {
   }
 
   void _navigateToService() {
-    // Navigates to the correct service category in the screen (unmodified logic)
     Get.to(() => CategoryServiceScreen(
           category: parentCategory,
           scrollToServiceCategoryId: serviceCategory.serviceCategoryId,

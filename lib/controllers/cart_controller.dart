@@ -7,33 +7,36 @@ import '../models/service_models.dart';
 class CartController extends GetxController {
   final AppDatabase _database = Get.find();
 
-  // Observable map to store cart items
-  var _items = <String, CartItem>{}.obs;
+  /// Use a list to preserve insertion order.
+  /// Key is still id, but order comes from this list.
+  final RxList<CartItem> _itemsList = <CartItem>[].obs;
 
   @override
   void onInit() {
     super.onInit();
     _loadFromDb();
-    ever(_items, (_) => _saveToDb());
+    ever<List<CartItem>>(_itemsList, (_) => _saveToDb());
   }
 
   Future<void> _loadFromDb() async {
     try {
-      final items = await _database.getAllNewCartItems();
-      _items.value = {for (var item in items) item.id: item};
-      print('✅ Loaded ${_items.length} items from database');
+      final items = await _database.getAllNewCartItems(); // returns List<CartItem>
+      _itemsList.assignAll(items);
+      print('✅ Loaded ${_itemsList.length} items from database');
     } catch (e) {
       print('❌ Error loading cart from database: $e');
       try {
         final legacyItems = await _database.getAllCartItems();
-        final convertedItems = <String, CartItem>{};
+        final convertedItems = <CartItem>[];
 
         for (var legacyItem in legacyItems) {
           final cartItem = CartItem(
             id: legacyItem.id,
             name: legacyItem.title,
             price: legacyItem.price,
-            originalPrice: double.tryParse(legacyItem.originalPrice ?? '0') ?? legacyItem.price,
+            originalPrice:
+                double.tryParse(legacyItem.originalPrice ?? '0') ??
+                    legacyItem.price,
             image: legacyItem.image,
             duration: legacyItem.duration ?? '',
             rating: legacyItem.rating ?? '0.0',
@@ -44,10 +47,10 @@ class CartController extends GetxController {
             quantity: legacyItem.quantity,
             dateAdded: legacyItem.dateAdded,
           );
-          convertedItems[cartItem.id] = cartItem;
+          convertedItems.add(cartItem);
         }
 
-        _items.value = convertedItems;
+        _itemsList.assignAll(convertedItems);
         print('✅ Converted ${convertedItems.length} legacy items');
       } catch (legacyError) {
         print('❌ Error loading legacy cart items: $legacyError');
@@ -57,7 +60,7 @@ class CartController extends GetxController {
 
   Future<void> _saveToDb() async {
     try {
-      for (final item in _items.values) {
+      for (final item in _itemsList) {
         await _database.insertOrUpdateCartItem(item);
       }
     } catch (e) {
@@ -65,107 +68,129 @@ class CartController extends GetxController {
     }
   }
 
-  // Core getters
-  List<CartItem> get cartItems {
-    final items = _items.values.toList();
-    items.sort((a, b) => b.quantity.compareTo(a.quantity));
-    return items;
-  }
+  // ============ CORE HELPERS ============
 
-  bool get isCartEmpty => _items.isEmpty;
-  int get cartItemCount => _items.values.fold(0, (sum, item) => sum + item.quantity);
-  double get totalPrice => _items.values.fold(0.0, (sum, item) => sum + item.totalPrice);
-  int getQuantity(String id) => _items[id]?.quantity ?? 0;
-  bool isInCart(String id) => _items.containsKey(id);
+  /// Always returns list in stable insertion order.
+  List<CartItem> get cartItems => List.unmodifiable(_itemsList);
 
-  // Add a ready CartItem
+  bool get isCartEmpty => _itemsList.isEmpty;
+
+  int get cartItemCount =>
+      _itemsList.fold(0, (sum, item) => sum + item.quantity);
+
+  double get totalPrice =>
+      _itemsList.fold(0.0, (sum, item) => sum + item.totalPrice);
+
+  int getQuantity(String id) =>
+      _itemsList.firstWhereOrNull((i) => i.id == id)?.quantity ?? 0;
+
+  bool isInCart(String id) =>
+      _itemsList.any((element) => element.id == id);
+
+  int _indexOfId(String id) =>
+      _itemsList.indexWhere((element) => element.id == id);
+
+  // ============ ADD / UPDATE ITEMS ============
+
   void addItem(CartItem item) {
-    final id = item.id;
-    if (_items.containsKey(id)) {
-      _items[id] = _items[id]!.copyWith(quantity: _items[id]!.quantity + item.quantity);
+    final index = _indexOfId(item.id);
+    if (index != -1) {
+      final existing = _itemsList[index];
+      _itemsList[index] =
+          existing.copyWith(quantity: existing.quantity + item.quantity);
     } else {
-      _items[id] = item;
+      _itemsList.add(item); // keeps insertion order
     }
-    _showItemAddedFeedback(item);
+    _showItemAddedFeedback(
+        _itemsList[_indexOfId(item.id)]); // updated instance
   }
 
-  // Add service to cart
   void addServiceToCart(
     Service service, {
     String? sourcePage,
     String? sourceTitle,
     String? categoryId,
   }) {
-    if (_items.containsKey(service.id)) {
+    final index = _indexOfId(service.id);
+
+    if (index != -1) {
+      // increment existing; index stays same, so position doesn't move
       incrementQuantity(service.id);
-    } else {
-      var cartItem = service.toCartItem(
-        sourcePage: sourcePage ?? 'category_service',
-        sourceTitle: sourceTitle ?? 'Services',
-      );
-
-      final enforcedCategoryId = (categoryId != null && categoryId.isNotEmpty)
-          ? categoryId
-          : cartItem.categoryId;
-
-      if (enforcedCategoryId.isNotEmpty && enforcedCategoryId != cartItem.categoryId) {
-        cartItem = cartItem.copyWith(categoryId: enforcedCategoryId);
-      }
-
-      _items[service.id] = cartItem;
+      _showItemAddedFeedback(_itemsList[_indexOfId(service.id)]);
+      return;
     }
-    _showItemAddedFeedback(_items[service.id]!);
+
+    var cartItem = service.toCartItem(
+      sourcePage: sourcePage ?? 'category_service',
+      sourceTitle: sourceTitle ?? 'Services',
+    );
+
+    final enforcedCategoryId = (categoryId != null && categoryId.isNotEmpty)
+        ? categoryId
+        : cartItem.categoryId;
+
+    if (enforcedCategoryId.isNotEmpty &&
+        enforcedCategoryId != cartItem.categoryId) {
+      cartItem = cartItem.copyWith(categoryId: enforcedCategoryId);
+    }
+
+    _itemsList.add(cartItem); // new item goes to end, stable
+    _showItemAddedFeedback(cartItem);
   }
 
   void incrementQuantity(String id) {
-    if (_items.containsKey(id)) {
-      _items[id] = _items[id]!.copyWith(quantity: _items[id]!.quantity + 1);
-    }
+    final index = _indexOfId(id);
+    if (index == -1) return;
+    final item = _itemsList[index];
+    _itemsList[index] = item.copyWith(quantity: item.quantity + 1);
   }
 
   Future<void> decrementQuantity(String id) async {
-    if (_items.containsKey(id)) {
-      final currentQty = _items[id]!.quantity;
-      if (currentQty > 1) {
-        _items[id] = _items[id]!.copyWith(quantity: currentQty - 1);
-      } else {
-        await removeService(id);
-      }
+    final index = _indexOfId(id);
+    if (index == -1) return;
+    final item = _itemsList[index];
+    if (item.quantity > 1) {
+      _itemsList[index] =
+          item.copyWith(quantity: item.quantity - 1);
+    } else {
+      await removeService(id);
     }
   }
 
   Future<void> updateQuantity(String id, int quantity) async {
     if (quantity <= 0) {
       await removeService(id);
-    } else if (_items.containsKey(id)) {
-      _items[id] = _items[id]!.copyWith(quantity: quantity);
+      return;
     }
+    final index = _indexOfId(id);
+    if (index == -1) return;
+    final item = _itemsList[index];
+    _itemsList[index] = item.copyWith(quantity: quantity);
   }
 
   Future<void> removeService(String id) async {
-    final service = _items[id];
-    if (service != null) {
-      _items.remove(id);
-      await _database.removeCartItem(id);
-      _showRemoveFeedback(service.name);
-      refreshCart();
-    }
+    final index = _indexOfId(id);
+    if (index == -1) return;
+    final service = _itemsList[index];
+    _itemsList.removeAt(index);
+    await _database.removeCartItem(id);
+    _showRemoveFeedback(service.name);
   }
 
   Future<void> clearCart() async {
-    _items.clear();
+    _itemsList.clear();
     await _database.clearAllCartItems();
-    //_showSimpleFeedback('Cart cleared');
-    refreshCart();
   }
 
   void refreshCart() {
-    _items.refresh();
+    _itemsList.refresh();
   }
 
-  CartItem? getCartItem(String id) => _items[id];
+  CartItem? getCartItem(String id) =>
+      _itemsList.firstWhereOrNull((i) => i.id == id);
 
   String get formattedTotalPrice => '₹${totalPrice.toInt()}';
+
   String get formattedItemCount {
     final count = cartItemCount;
     return count == 1 ? '$count item' : '$count items';
@@ -181,17 +206,15 @@ class CartController extends GetxController {
     };
   }
 
+  // ============ GROUPING (ORDER PRESERVED) ============
+
   Map<String, List<CartItem>> getItemsGroupedBySource() {
-    Map<String, List<CartItem>> grouped = {};
-
-    for (var item in cartItems) {
-      String sourceKey = item.sourceTitle;
-      if (!grouped.containsKey(sourceKey)) {
-        grouped[sourceKey] = [];
-      }
-      grouped[sourceKey]!.add(item);
+    final Map<String, List<CartItem>> grouped = {};
+    for (var item in _itemsList) {
+      final key = item.sourceTitle;
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(item); // adds in list order, no sort
     }
-
     return grouped;
   }
 
@@ -199,13 +222,15 @@ class CartController extends GetxController {
     return getItemsGroupedBySource();
   }
 
+  // ============ VALIDATION & CHECKOUT ============
+
   Future<bool> validateCartForCheckout() async {
     if (isCartEmpty) {
       _showSimpleFeedback('Cart is empty');
       return false;
     }
 
-    for (var item in _items.values) {
+    for (var item in _itemsList) {
       if (item.price <= 0) {
         _showSimpleFeedback('Invalid item price found');
         return false;
@@ -223,14 +248,14 @@ class CartController extends GetxController {
     if (await validateCartForCheckout()) {
       Get.snackbar(
         'Processing Order',
-        'Processing ${cartItemCount} items worth ${formattedTotalPrice}',
+        'Processing $cartItemCount items worth $formattedTotalPrice',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Color(0xFFE47830),
+        backgroundColor: const Color(0xFFE47830),
         colorText: Colors.white,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       );
 
-      await Future.delayed(Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 2));
       await clearCart();
 
       Get.snackbar(
@@ -239,22 +264,20 @@ class CartController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
         colorText: Colors.white,
-        duration: Duration(seconds: 3),
+        duration: const Duration(seconds: 3),
       );
     }
   }
 
-  // ============================================
-  // IMPROVED: Sleek "Item Added" notification
-  // ============================================
-  
+  // ============ FEEDBACK (SNACKBARS) ============
+
   void _showItemAddedFeedback(CartItem item) {
     Get.snackbar(
-      '', // No title
       '',
-      titleText: SizedBox.shrink(), // Hide title
+      '',
+      titleText: const SizedBox.shrink(),
       messageText: Container(
-        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -262,27 +285,25 @@ class CartController extends GetxController {
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 8,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           children: [
-            // Success icon
             Container(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Color(0xFFE47830).withOpacity(0.1),
+                color: const Color(0xFFE47830).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.check_circle,
                 color: Color(0xFFE47830),
                 size: 24,
               ),
             ),
-            SizedBox(width: 12),
-            // Item details
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,10 +317,10 @@ class CartController extends GetxController {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     item.name,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
                       fontWeight: FontWeight.w600,
@@ -310,10 +331,9 @@ class CartController extends GetxController {
                 ],
               ),
             ),
-            // Price
             Text(
               '₹${item.price.toInt()}',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 color: Color(0xFFE47830),
                 fontWeight: FontWeight.w700,
@@ -324,11 +344,11 @@ class CartController extends GetxController {
       ),
       snackPosition: SnackPosition.TOP,
       backgroundColor: Colors.transparent,
-      margin: EdgeInsets.only(top: 16, left: 16, right: 16),
+      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
       padding: EdgeInsets.zero,
       borderRadius: 12,
-      duration: Duration(milliseconds: 1500), // Very brief - 1.5 seconds
-      animationDuration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 1500),
+      animationDuration: const Duration(milliseconds: 300),
       boxShadows: [],
       isDismissible: true,
       dismissDirection: DismissDirection.up,
@@ -339,9 +359,9 @@ class CartController extends GetxController {
     Get.snackbar(
       '',
       '',
-      titleText: SizedBox.shrink(),
+      titleText: const SizedBox.shrink(),
       messageText: Container(
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -350,18 +370,19 @@ class CartController extends GetxController {
             BoxShadow(
               color: Colors.black.withOpacity(0.08),
               blurRadius: 8,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           children: [
-            Icon(Icons.remove_circle_outline, color: Colors.red, size: 24),
-            SizedBox(width: 12),
+            const Icon(Icons.remove_circle_outline,
+                color: Colors.red, size: 24),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 '$itemName removed',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black87,
                   fontWeight: FontWeight.w600,
@@ -375,10 +396,10 @@ class CartController extends GetxController {
       ),
       snackPosition: SnackPosition.TOP,
       backgroundColor: Colors.transparent,
-      margin: EdgeInsets.only(top: 16, left: 16, right: 16),
+      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
       padding: EdgeInsets.zero,
-      duration: Duration(milliseconds: 1200),
-      animationDuration: Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 1200),
+      animationDuration: const Duration(milliseconds: 250),
       boxShadows: [],
     );
   }
@@ -388,13 +409,19 @@ class CartController extends GetxController {
       '',
       message,
       snackPosition: SnackPosition.BOTTOM,
-      duration: Duration(milliseconds: 1500),
-      backgroundColor: Color(0xFFE47830),
+      duration: const Duration(milliseconds: 1500),
+      backgroundColor: const Color(0xFFE47830),
       colorText: Colors.white,
-      margin: EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
       borderRadius: 8,
     );
   }
+Future<void> clearCartOnBookingSuccess() async {
+  // optional: log
+  debugPrint('🧺 Clearing cart after booking success');
+  await clearCart();
+}
+  // ============ EXTRA STATS / HELPERS ============
 
   Future<void> forceRefreshFromDb() async {
     await _loadFromDb();
@@ -405,32 +432,50 @@ class CartController extends GetxController {
     final groupedItems = getItemsGroupedBySource();
     return {
       'totalItems': cartItemCount,
-      'uniqueItems': _items.length,
+      'uniqueItems': _itemsList.length,
       'totalPrice': totalPrice,
-      'averageItemPrice': _items.isEmpty ? 0.0 : totalPrice / cartItemCount,
+      'averageItemPrice':
+          _itemsList.isEmpty ? 0.0 : totalPrice / cartItemCount,
       'categories': groupedItems.keys.toList(),
       'categoryCount': groupedItems.length,
-      'mostExpensiveItem': _items.isEmpty ? null : _items.values.reduce((a, b) => a.price > b.price ? a : b),
-      'cheapestItem': _items.isEmpty ? null : _items.values.reduce((a, b) => a.price < b.price ? a : b),
-      'hasDiscounts': _items.values.any((item) => item.hasDiscount),
-      'totalSavings': _items.values.fold(0.0, (sum, item) => sum + item.totalSavings),
+      'mostExpensiveItem': _itemsList.isEmpty
+          ? null
+          : _itemsList
+              .reduce((a, b) => a.price > b.price ? a : b),
+      'cheapestItem': _itemsList.isEmpty
+          ? null
+          : _itemsList
+              .reduce((a, b) => a.price < b.price ? a : b),
+      'hasDiscounts':
+          _itemsList.any((item) => item.hasDiscount),
+      'totalSavings': _itemsList.fold(
+          0.0, (sum, item) => sum + item.totalSavings),
     };
   }
 
   List<CartItem> getCartItemsBySource(String sourcePage) {
-    return _items.values.where((item) => item.sourcePage == sourcePage).toList();
+    return _itemsList
+        .where((item) => item.sourcePage == sourcePage)
+        .toList();
   }
 
   int getSourceItemCount(String sourcePage) {
-    return _items.values.where((item) => item.sourcePage == sourcePage).fold(0, (sum, item) => sum + item.quantity);
+    return _itemsList
+        .where((item) => item.sourcePage == sourcePage)
+        .fold(0, (sum, item) => sum + item.quantity);
   }
 
   double getSourceTotalPrice(String sourcePage) {
-    return _items.values.where((item) => item.sourcePage == sourcePage).fold(0.0, (sum, item) => sum + item.totalPrice);
+    return _itemsList
+        .where((item) => item.sourcePage == sourcePage)
+        .fold(0.0, (sum, item) => sum + item.totalPrice);
   }
 
-  bool hasService(String serviceId) => _items.containsKey(serviceId);
-  CartItem? getCartItemByServiceId(String serviceId) => getCartItem(serviceId);
+  bool hasService(String serviceId) =>
+      _itemsList.any((item) => item.id == serviceId);
+
+  CartItem? getCartItemByServiceId(String serviceId) =>
+      getCartItem(serviceId);
 
   String getCartDisplaySummary() {
     if (isCartEmpty) return 'Cart is empty';
@@ -438,30 +483,33 @@ class CartController extends GetxController {
     final stats = getCartStats();
     final sources = stats['categoryCount'] as int;
 
-    return '$formattedItemCount from $sources ${sources == 1 ? 'source' : 'sources'} • $formattedTotalPrice';
+    return '$formattedItemCount from $sources '
+        '${sources == 1 ? 'source' : 'sources'} • $formattedTotalPrice';
   }
 
-  bool get hasMultipleSources => getItemsGroupedBySource().length > 1;
-  double get totalSavings => _items.values.fold(0.0, (sum, item) => sum + item.totalSavings);
+  bool get hasMultipleSources =>
+      getItemsGroupedBySource().length > 1;
+
+  double get totalSavings => _itemsList.fold(
+      0.0, (sum, item) => sum + item.totalSavings);
+
   String get formattedTotalSavings {
     final savings = totalSavings;
     return savings > 0 ? '₹${savings.toInt()}' : '';
   }
 
-  bool get hasDiscountedItems => _items.values.any((item) => item.hasDiscount);
+  bool get hasDiscountedItems =>
+      _itemsList.any((item) => item.hasDiscount);
 
   CartItem? get mostExpensiveItem {
-    if (_items.isEmpty) return null;
-    return _items.values.reduce((a, b) => a.price > b.price ? a : b);
+    if (_itemsList.isEmpty) return null;
+    return _itemsList
+        .reduce((a, b) => a.price > b.price ? a : b);
   }
 
   CartItem? get cheapestItem {
-    if (_items.isEmpty) return null;
-    return _items.values.reduce((a, b) => a.price < b.price ? a : b);
-  }
-
-  @override
-  void onClose() {
-    super.onClose();
+    if (_itemsList.isEmpty) return null;
+    return _itemsList
+        .reduce((a, b) => a.price < b.price ? a : b);
   }
 }

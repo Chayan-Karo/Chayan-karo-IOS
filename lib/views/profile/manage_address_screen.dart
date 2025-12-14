@@ -15,14 +15,42 @@ class ManageAddressScreen extends StatefulWidget {
 
 class _ManageAddressScreenState extends State<ManageAddressScreen> {
   final LocationController locationController = Get.find<LocationController>();
+  String? selectedDefaultId;
 
   @override
   void initState() {
     super.initState();
-    // Fetch addresses from API when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      locationController.fetchCustomerAddresses();
+    // Fetch after first frame; then align local selection based on data
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await locationController.fetchCustomerAddresses();
+      _alignSelectedDefaultFromData();
     });
+  }
+
+  void _alignSelectedDefaultFromData() {
+    final list = locationController.addresses;
+    if (list.isEmpty) return;
+    final defId = list.firstWhereOrNull((a) => a.isDefault)?.id ?? selectedDefaultId ?? list.first.id;
+    if (defId != selectedDefaultId && mounted) {
+      // schedule to avoid setState during Obx build phases
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => selectedDefaultId = defId);
+      });
+    }
+  }
+
+  Future<void> _navigateAddOrEditAddress() async {
+    final res = await Get.toNamed('/location_popup', arguments: 'manage_address');
+    if (res == true) {
+      await locationController.fetchCustomerAddresses();
+      _alignSelectedDefaultFromData();
+    }
+  }
+
+  Future<void> _setAsDefault(CustomerAddress address) async {
+    await locationController.setDefaultAddressLocal(address.id);
+    if (mounted) setState(() => selectedDefaultId = address.id);
+    await locationController.fetchCustomerAddresses(silent: true);
   }
 
   @override
@@ -49,15 +77,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       GestureDetector(
-                        onTap: () async {
-                          // Navigate to location screen
-await Get.toNamed(
-      '/location_popup',
-      arguments: 'manage_address', // Pass source screen identifier
-    );                          
-                          // Refresh address list when coming back
-                          locationController.fetchCustomerAddresses();
-                        },
+                        onTap: _navigateAddOrEditAddress,
                         child: Row(
                           children: [
                             Icon(Icons.add, color: const Color(0xFFE47830), size: 20 * scaleFactor),
@@ -74,31 +94,21 @@ await Get.toNamed(
                           ],
                         ),
                       ),
-                     // SizedBox(height: 5.h * scaleFactor),
 
-                      // Address List with GetX Observable
                       Expanded(
                         child: Obx(() {
-                          // Show loading indicator
                           if (locationController.isLoadingAddresses.value) {
                             return const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFFE47830),
-                              ),
+                              child: CircularProgressIndicator(color: Color(0xFFE47830)),
                             );
                           }
 
-                          // Show error message
                           if (locationController.error.value.isNotEmpty) {
                             return Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    size: 48 * scaleFactor,
-                                    color: Colors.grey,
-                                  ),
+                                  Icon(Icons.error_outline, size: 48 * scaleFactor, color: Colors.grey),
                                   SizedBox(height: 16.h * scaleFactor),
                                   Text(
                                     'Failed to load addresses',
@@ -110,7 +120,10 @@ await Get.toNamed(
                                   ),
                                   SizedBox(height: 8.h * scaleFactor),
                                   TextButton(
-                                    onPressed: () => locationController.fetchCustomerAddresses(),
+                                    onPressed: () async {
+                                      await locationController.fetchCustomerAddresses();
+                                      _alignSelectedDefaultFromData();
+                                    },
                                     child: Text(
                                       'Retry',
                                       style: TextStyle(
@@ -125,17 +138,24 @@ await Get.toNamed(
                             );
                           }
 
-                          // Show empty state
-                          if (locationController.addresses.isEmpty) {
+                          final list = locationController.addresses;
+
+                          // Keep local selection aligned once data is ready
+                          if (list.isNotEmpty) {
+                            final defId = list.firstWhereOrNull((a) => a.isDefault)?.id ?? selectedDefaultId ?? list.first.id;
+                            if (defId != selectedDefaultId) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) setState(() => selectedDefaultId = defId);
+                              });
+                            }
+                          }
+
+                          if (list.isEmpty) {
                             return Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.location_off_outlined,
-                                    size: 48 * scaleFactor,
-                                    color: Colors.grey,
-                                  ),
+                                  Icon(Icons.location_off_outlined, size: 48 * scaleFactor, color: Colors.grey),
                                   SizedBox(height: 16.h * scaleFactor),
                                   Text(
                                     'No addresses found',
@@ -150,13 +170,14 @@ await Get.toNamed(
                             );
                           }
 
-                          // Show address list
                           return ListView.builder(
-                            itemCount: locationController.addresses.length,
+                            itemCount: list.length,
                             itemBuilder: (context, index) {
-                              final address = locationController.addresses[index];
+                              final address = list[index];
+                              final isSelectedDefault = address.id == selectedDefaultId;
 
-                              return Container(
+                              return Container
+                              (
                                 margin: EdgeInsets.only(bottom: 12.h * scaleFactor),
                                 padding: EdgeInsets.all(16.r * scaleFactor),
                                 decoration: const BoxDecoration(
@@ -186,8 +207,8 @@ await Get.toNamed(
                                           ),
                                         ),
                                         SizedBox(width: 8.w * scaleFactor),
-                                        // Show default badge
-                                        if (address.isDefault)
+                                        // Badge driven by local selection to guarantee a single visual default
+                                        if (isSelectedDefault)
                                           Container(
                                             padding: EdgeInsets.symmetric(
                                               horizontal: 8.w * scaleFactor,
@@ -210,11 +231,13 @@ await Get.toNamed(
                                           ),
                                         const Spacer(),
                                         PopupMenuButton<String>(
-                                          onSelected: (value) {
+                                          onSelected: (value) async {
                                             if (value == 'edit') {
                                               _showUpdateAddressBottomSheet(scaleFactor, address);
                                             } else if (value == 'delete') {
                                               _confirmDelete(scaleFactor, address.id);
+                                            } else if (value == 'make_default') {
+                                              await _setAsDefault(address);
                                             }
                                           },
                                           itemBuilder: (context) => [
@@ -222,6 +245,17 @@ await Get.toNamed(
                                               value: 'edit',
                                               child: Text(
                                                 'Edit',
+                                                style: TextStyle(
+                                                  fontSize: 14.sp * scaleFactor,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'make_default',
+                                              enabled: !isSelectedDefault,
+                                              child: Text(
+                                                'Set as Default',
                                                 style: TextStyle(
                                                   fontSize: 14.sp * scaleFactor,
                                                   color: Colors.black,
@@ -277,238 +311,189 @@ await Get.toNamed(
     );
   }
 
-  void _showUpdateAddressBottomSheet(double scaleFactor, CustomerAddress address) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.8,
-          maxChildSize: 0.95,
-          minChildSize: 0.5,
-          builder: (_, controller) {
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20.h * scaleFactor)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  children: [
-                    SizedBox(height: 8.h * scaleFactor),
-                    Container(
-                      width: 40.w * scaleFactor,
-                      height: 4.h * scaleFactor,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2.r * scaleFactor),
-                      ),
-                    ),
-                    SizedBox(height: 16.h * scaleFactor),
+ void _showUpdateAddressBottomSheet(double scaleFactor, CustomerAddress address) {
+  // Build a neat, trimmed header subtitle from your existing fields
+  final addressLine1 = address.addressLine1.trim();
+  final addressLine2 = address.addressLine2.trim();
+  final cityStatePin = '${address.city}, ${address.state} - ${address.postCode}'.trim();
 
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: controller,
-                        padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
+  final subtitle = <String>[
+    if (addressLine1.isNotEmpty) addressLine1,
+    if (addressLine2.isNotEmpty) addressLine2,
+    cityStatePin,
+  ].join(', ').trim();
+
+  // Prefill House/Flat with real address parts; landmark empty for now
+  final houseCtrl    = TextEditingController(
+    text: [addressLine1, addressLine2].where((s) => s.isNotEmpty).join(', ').trim(),
+  );
+  final landmarkCtrl = TextEditingController(text: '');
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        maxChildSize: 0.75,
+        minChildSize: 0.45,
+        builder: (_, controller) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20.h * scaleFactor)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  SizedBox(height: 8.h * scaleFactor),
+                  Container(
+                    width: 40.w * scaleFactor,
+                    height: 4.h * scaleFactor,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2.r * scaleFactor),
+                    ),
+                  ),
+                  SizedBox(height: 16.h * scaleFactor),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: controller,
+                      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${address.city}, ${address.state}',
+                                  style: TextStyle(
+                                    fontSize: 16.sp * scaleFactor,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
+                              if (address.id != selectedDefaultId)
+                                TextButton(
+                                  onPressed: () async {
+                                    await _setAsDefault(address);
+                                    if (context.mounted) Navigator.pop(context);
+                                  },
+                                  style: TextButton.styleFrom(
+                                    side: const BorderSide(color: Color(0xFFE47830)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6.r * scaleFactor),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8.h * scaleFactor,
+                                      vertical: 4.h * scaleFactor,
+                                    ),
+                                  ),
                                   child: Text(
-                                    '${address.city}, ${address.state}',
+                                    'Set as Default',
                                     style: TextStyle(
-                                      fontSize: 16.sp * scaleFactor,
-                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFFE47830),
+                                      fontSize: 12.sp * scaleFactor,
+                                      fontWeight: FontWeight.w500,
                                       fontFamily: 'Inter',
                                     ),
                                   ),
                                 ),
-                                if (!address.isDefault)
-                                  TextButton(
-                                    onPressed: () {
-                                      // TODO: Implement set as default API call
-                                    },
-                                    style: TextButton.styleFrom(
-                                      side: const BorderSide(color: Color(0xFFE47830)),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(6.r * scaleFactor),
-                                      ),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8.h * scaleFactor,
-                                        vertical: 4.h * scaleFactor,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Set as Default',
-                                      style: TextStyle(
-                                        color: const Color(0xFFE47830),
-                                        fontSize: 12.sp * scaleFactor,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            SizedBox(height: 4.h * scaleFactor),
-                            Text(
-                              '${address.addressLine1}, ${address.addressLine2}\n${address.city}, ${address.state} - ${address.postCode}',
-                              style: TextStyle(
-                                fontSize: 13.sp * scaleFactor,
-                                color: const Color(0xFF757575),
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            SizedBox(height: 24.h * scaleFactor),
-
-                            Text(
-                              'House/Flat Number *',
-                              style: TextStyle(
-                                fontSize: 10.sp * scaleFactor,
-                                color: const Color(0xFFABABAB),
-                                fontFamily: 'SF Pro Display',
-                              ),
-                            ),
-                            SizedBox(height: 4.h * scaleFactor),
-                            TextFormField(
-                              initialValue: address.addressLine1,
-                              style: TextStyle(
-                                fontSize: 14.sp * scaleFactor,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'Inter',
-                              ),
-                              decoration: InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12 * scaleFactor,
-                                    vertical: 14 * scaleFactor),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10.r * scaleFactor),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 16.h * scaleFactor),
-
-                            TextFormField(
-                              initialValue: address.addressLine2,
-                              decoration: InputDecoration(
-                                labelText: 'Landmark (Optional)',
-                                labelStyle: TextStyle(
-                                  fontSize: 14.sp * scaleFactor,
-                                  color: const Color(0xFFABABAB),
-                                  fontFamily: 'SF Pro Display',
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10.r * scaleFactor),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 20.h * scaleFactor),
-
-                            Text(
-                              'Save as',
-                              style: TextStyle(
-                                fontSize: 14.sp * scaleFactor,
-                                fontFamily: 'SF Pro Display',
-                                color: const Color(0xFF757575),
-                              ),
-                            ),
-                            SizedBox(height: 10.h * scaleFactor),
-
-                            Row(
-                              children: [
-                                ChoiceChip(
-                                  label: const Text('Home'),
-                                  selected: true,
-                                  selectedColor: const Color(0xFFE6EAFF),
-                                  labelStyle: const TextStyle(
-                                    color: Color(0xFFE47830),
-                                    fontWeight: FontWeight.w500,
-                                    fontFamily: 'Inter',
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    side: const BorderSide(color: Color(0xFFE47830)),
-                                    borderRadius: BorderRadius.circular(10.r * scaleFactor),
-                                  ),
-                                  onSelected: (_) {},
-                                ),
-                                SizedBox(width: 10.w * scaleFactor),
-                                ChoiceChip(
-                                  label: const Text('Other'),
-                                  selected: false,
-                                  labelStyle: const TextStyle(
-                                    color: Color(0xFFABABAB),
-                                    fontFamily: 'SF Pro Display',
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    side: const BorderSide(color: Color(0xFFE3E3E3)),
-                                    borderRadius: BorderRadius.circular(10.r * scaleFactor),
-                                  ),
-                                  onSelected: (_) {},
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16.h * scaleFactor),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    SafeArea(
-                      top: false,
-                      minimum: EdgeInsets.only(
-                        left: 16.w * scaleFactor,
-                        right: 16.w * scaleFactor,
-                        top: 8.h * scaleFactor,
-                        bottom: MediaQuery.of(context).viewPadding.bottom > 0
-                            ? MediaQuery.of(context).viewPadding.bottom
-                            : 8.h * scaleFactor,
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 47.h * scaleFactor,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE47830),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10.r * scaleFactor),
-                            ),
+                            ],
                           ),
-                          onPressed: () {
-                            // TODO: Implement update address API call
-                            Navigator.pop(context);
-                          },
-                          child: Text(
-                            'Update address',
+                          SizedBox(height: 4.h * scaleFactor),
+                          Text(
+                            subtitle,
                             style: TextStyle(
-                              fontFamily: 'SF Pro Display',
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16.sp * scaleFactor,
-                              letterSpacing: 0.3,
-                              color: Colors.white,
+                              fontSize: 13.sp * scaleFactor,
+                              color: const Color(0xFF757575),
+                              fontFamily: 'Inter',
+                              height: 1.4,
                             ),
+                          ),
+                          SizedBox(height: 24.h * scaleFactor),
+
+                          // House/Flat Number (prefilled from address lines)
+                          _OutlinedIconField(
+                            scaleFactor: scaleFactor,
+                            controller: houseCtrl,
+                            hintText: 'House/Flat Number *',
+                            icon: Icons.home_outlined,
+                          ),
+                          SizedBox(height: 16.h * scaleFactor),
+
+                          // Landmark (Optional) – starts blank
+                          _OutlinedIconField(
+                            scaleFactor: scaleFactor,
+                            controller: landmarkCtrl,
+                            hintText: 'Landmark (Optional)',
+                            icon: Icons.location_on_outlined,
+                          ),
+
+                          SizedBox(height: 16.h * scaleFactor),
+                          // Phone field removed
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  SafeArea(
+                    top: false,
+                    minimum: EdgeInsets.only(
+                      left: 16.w * scaleFactor,
+                      right: 16.w * scaleFactor,
+                      top: 8.h * scaleFactor,
+                      bottom: MediaQuery.of(context).viewPadding.bottom > 0
+                          ? MediaQuery.of(context).viewPadding.bottom
+                          : 8.h * scaleFactor,
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 47.h * scaleFactor,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE47830),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.r * scaleFactor),
+                          ),
+                        ),
+                        onPressed: () {
+                          // Keep as-is for now; no API call here.
+                          Navigator.pop(context);
+                        },
+                        child: Text(
+                          'Update address',
+                          style: TextStyle(
+                            fontFamily: 'SF Pro Display',
+                            fontWeight: FontWeight.w500,
+                            fontSize: 16.sp * scaleFactor,
+                            letterSpacing: 0.3,
+                            color: Colors.white,
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          },
-        );
-      },
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
   void _confirmDelete(double scaleFactor, String addressId) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         title: Text(
           'Delete Address',
@@ -529,7 +514,7 @@ await Get.toNamed(
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Cancel',
               style: TextStyle(
@@ -540,9 +525,41 @@ await Get.toNamed(
             ),
           ),
           TextButton(
-            onPressed: () {
-              // TODO: Implement delete API call with addressId
-              Navigator.pop(context);
+            onPressed: () async {
+              // 1. Close the dialog
+              Navigator.pop(dialogContext);
+
+              // 2. Call delete API
+              final success = await locationController.deleteAddress(addressId);
+
+              // 3. Show specific GetX Snackbar
+              if (mounted) {
+                if (success) {
+                  Get.snackbar(
+                    'Success',
+                    'Address deleted successfully',
+                    snackPosition: SnackPosition.TOP,
+                    backgroundColor: Colors.green[100],
+                    colorText: Colors.green[800],
+                    margin: EdgeInsets.all(16.w * scaleFactor),
+                    borderRadius: 8,
+                    duration: const Duration(seconds: 2),
+                  );
+                  _alignSelectedDefaultFromData();
+                } else {
+                  Get.snackbar(
+                    'Error',
+                    locationController.error.value.isNotEmpty
+                        ? locationController.error.value
+                        : "Failed to delete address",
+                    snackPosition: SnackPosition.TOP,
+                    backgroundColor: Colors.red[100],
+                    colorText: Colors.red[800],
+                    margin: EdgeInsets.all(16.w * scaleFactor),
+                    borderRadius: 8,
+                  );
+                }
+              }
             },
             style: TextButton.styleFrom(
               backgroundColor: Colors.red,
@@ -558,6 +575,55 @@ await Get.toNamed(
                 fontSize: 14.sp * scaleFactor,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+class _OutlinedIconField extends StatelessWidget {
+  final double scaleFactor;
+  final TextEditingController controller;
+  final String hintText;
+  final IconData icon;
+  final TextInputType? keyboardType;
+
+  const _OutlinedIconField({
+    required this.scaleFactor,
+    required this.controller,
+    required this.hintText,
+    required this.icon,
+    this.keyboardType,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F6F4),
+        borderRadius: BorderRadius.circular(14 * scaleFactor),
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 12 * scaleFactor, vertical: 2 * scaleFactor),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFFE47830)),
+          SizedBox(width: 8 * scaleFactor),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              decoration: const InputDecoration(
+                hintText: '',
+                border: InputBorder.none,
+              ).copyWith(
+                hintText: hintText,
+                hintStyle: TextStyle(
+                  color: const Color(0xFFB9B6B3),
+                  fontSize: 15 * scaleFactor,
+                ),
               ),
             ),
           ),

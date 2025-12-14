@@ -8,6 +8,7 @@ part of 'location_models.dart';
 
 AddAddressRequest _$AddAddressRequestFromJson(Map<String, dynamic> json) =>
     AddAddressRequest(
+      locationId: json['locationId'] as String,
       addressLine1: json['addressLine1'] as String,
       addressLine2: json['addressLine2'] as String,
       city: json['city'] as String,
@@ -19,6 +20,7 @@ AddAddressRequest _$AddAddressRequestFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$AddAddressRequestToJson(AddAddressRequest instance) =>
     <String, dynamic>{
+      'locationId': instance.locationId,
       'addressLine1': instance.addressLine1,
       'addressLine2': instance.addressLine2,
       'city': instance.city,
@@ -33,6 +35,7 @@ AddAddressResponse _$AddAddressResponseFromJson(Map<String, dynamic> json) =>
       success: json['success'] as bool,
       message: json['message'] as String,
       addressId: json['addressId'] as String?,
+      locationId: json['locationId'] as String?,
     );
 
 Map<String, dynamic> _$AddAddressResponseToJson(AddAddressResponse instance) =>
@@ -40,6 +43,7 @@ Map<String, dynamic> _$AddAddressResponseToJson(AddAddressResponse instance) =>
       'success': instance.success,
       'message': instance.message,
       'addressId': instance.addressId,
+      'locationId': instance.locationId,
     };
 
 CustomerAddress _$CustomerAddressFromJson(Map<String, dynamic> json) =>
@@ -54,6 +58,7 @@ CustomerAddress _$CustomerAddressFromJson(Map<String, dynamic> json) =>
       label: json['label'] as String?,
       latitude: json['latitude'] as String?,
       longitude: json['longitude'] as String?,
+      locationId: json['locationId'] as String?,
     );
 
 Map<String, dynamic> _$CustomerAddressToJson(CustomerAddress instance) =>
@@ -68,6 +73,7 @@ Map<String, dynamic> _$CustomerAddressToJson(CustomerAddress instance) =>
       'label': instance.label,
       'latitude': instance.latitude,
       'longitude': instance.longitude,
+      'locationId': instance.locationId,
     };
 
 GetCustomerAddressesResponse _$GetCustomerAddressesResponseFromJson(
@@ -110,3 +116,40 @@ Map<String, dynamic> _$CachedLocationDataToJson(CachedLocationData instance) =>
       'postCode': instance.postCode,
       'savedAt': instance.savedAt.toIso8601String(),
     };
+
+ServiceLocation _$ServiceLocationFromJson(Map<String, dynamic> json) =>
+    ServiceLocation(
+      id: json['id'] as String,
+      areaId: json['areaId'] as String?,
+      areaName: json['areaName'] as String?,
+      postCode: json['postCode'] as String?,
+    );
+
+Map<String, dynamic> _$ServiceLocationToJson(ServiceLocation instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'areaId': instance.areaId,
+      'areaName': instance.areaName,
+      'postCode': instance.postCode,
+    };
+
+ServiceLocationsResponse _$ServiceLocationsResponseFromJson(
+  Map<String, dynamic> json,
+) => ServiceLocationsResponse(
+  type: json['type'] as String,
+  result: (json['result'] as List<dynamic>)
+      .map((e) => ServiceLocation.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
+
+Map<String, dynamic> _$ServiceLocationsResponseToJson(
+  ServiceLocationsResponse instance,
+) => <String, dynamic>{'type': instance.type, 'result': instance.result};
+
+BaseResponse _$BaseResponseFromJson(Map<String, dynamic> json) => BaseResponse(
+  success: json['success'] as bool,
+  message: json['message'] as String?,
+);
+
+Map<String, dynamic> _$BaseResponseToJson(BaseResponse instance) =>
+    <String, dynamic>{'success': instance.success, 'message': instance.message};
