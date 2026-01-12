@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-
+import '../../../utils/test_extensions.dart';
 import '../../../controllers/category_controller.dart';
 import '../../../models/category_models.dart';
 import '../../../services/universal_service_screen.dart';
@@ -109,7 +109,7 @@ class CategoriesGridWidget extends StatelessWidget {
               color: Color(0xFFFF6F00),
             ),
           ),
-        );
+        ).withId('categories_grid_loading');
       }
 
       // Show error state
@@ -144,7 +144,7 @@ class CategoriesGridWidget extends StatelessWidget {
                     'Retry',
                     style: TextStyle(color: Colors.white),
                   ),
-                ),
+                ).withId('categories_grid_retry_btn'),
               ],
             ),
           ),
@@ -165,7 +165,7 @@ class CategoriesGridWidget extends StatelessWidget {
               ),
             ),
           ),
-        );
+        ).withId('categories_grid_empty_msg');
       }
 
       // Display categories grid
@@ -232,7 +232,7 @@ class CategoriesGridWidget extends StatelessWidget {
                   ),
                 ),
               ),
-            );
+            ).withId('category_item_$index');
           },
         ),
       );

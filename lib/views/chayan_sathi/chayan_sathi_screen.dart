@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart'; 
-
+import '../../utils/test_extensions.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
 import '../booking/booking_screen.dart';
@@ -243,7 +243,7 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
                                   ),
                               ],
                             ),
-                          ),
+                          ).withId('provider_card_$index'),
                         );
                       },
                     ),
@@ -470,7 +470,7 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
                   ),
                 ),
               ),
-            ),
+            ).withId('chayan_sathi_empty_explore_btn'),
           ],
         ),
       ),

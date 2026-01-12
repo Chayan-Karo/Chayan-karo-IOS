@@ -111,6 +111,7 @@ CustomerBooking _$CustomerBookingFromJson(Map<String, dynamic> json) =>
       bookingPin: (json['bookingPin'] as num).toInt(),
       paymentMode: json['paymentMode'] as String?,
       paymentStatus: json['paymentStatus'] as String?,
+      feedbackSubmitted: json['feedbackSubmitted'] as bool? ?? false,
       bookingService: (json['bookingService'] as List<dynamic>)
           .map((e) => BookingServiceRead.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -140,6 +141,7 @@ Map<String, dynamic> _$CustomerBookingToJson(CustomerBooking instance) =>
       'bookingPin': instance.bookingPin,
       'paymentMode': instance.paymentMode,
       'paymentStatus': instance.paymentStatus,
+      'feedbackSubmitted': instance.feedbackSubmitted,
       'bookingService': instance.bookingService,
       'customerDetails': instance.customerDetails,
       'customerAddress': instance.customerAddress,

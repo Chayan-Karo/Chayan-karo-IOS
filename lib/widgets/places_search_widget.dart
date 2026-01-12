@@ -1,9 +1,10 @@
-// lib/views/location/widgets/places_search_widget.dart
+import 'dart:async';
+import 'dart:convert';
+import '../../utils/test_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:async';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class PlacesSearchWidget extends StatefulWidget {
   final TextEditingController controller;
@@ -14,6 +15,9 @@ class PlacesSearchWidget extends StatefulWidget {
   final VoidCallback? onClearPressed;
   final bool showResultsOnly;
 
+  /// 🔥 Optional: map center for better accuracy
+  final LatLng? locationBias;
+
   const PlacesSearchWidget({
     Key? key,
     required this.controller,
@@ -23,6 +27,7 @@ class PlacesSearchWidget extends StatefulWidget {
     this.onBackPressed,
     this.onClearPressed,
     this.showResultsOnly = false,
+    this.locationBias,
   }) : super(key: key);
 
   @override
@@ -30,314 +35,303 @@ class PlacesSearchWidget extends StatefulWidget {
 }
 
 class _PlacesSearchWidgetState extends State<PlacesSearchWidget> {
-  List<Map<String, dynamic>> predictions = [];
-  bool isLoading = false;
+  final List<Map<String, dynamic>> _predictions = [];
   Timer? _debounce;
-  String? sessionToken;
+  String _sessionToken = '';
+  bool _isLoading = false;
+
+  static const int _radiusMeters = 30000; // 30km
 
   @override
   void initState() {
     super.initState();
-    sessionToken = _generateSessionToken();
-    widget.controller.addListener(_onSearchChanged);
+    _sessionToken = _newSessionToken();
+    widget.controller.addListener(_onQueryChanged);
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    widget.controller.removeListener(_onSearchChanged);
+    widget.controller.removeListener(_onQueryChanged);
     super.dispose();
   }
 
-  String _generateSessionToken() {
-    return DateTime.now().millisecondsSinceEpoch.toString();
-  }
+  String _newSessionToken() =>
+      DateTime.now().millisecondsSinceEpoch.toString();
 
-  void _onSearchChanged() {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      if (widget.controller.text.trim().isNotEmpty) {
-        _fetchPlaces(widget.controller.text.trim());
+  void _onQueryChanged() {
+    _debounce?.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      final query = widget.controller.text.trim();
+      if (query.length >= 2) {
+        _fetchPredictions(query);
       } else {
-        setState(() {
-          predictions = [];
-        });
+        setState(() => _predictions.clear());
       }
     });
   }
 
-  Future<void> _fetchPlaces(String input) async {
-    if (input.length < 2) return;
-
-    setState(() {
-      isLoading = true;
-    });
+  // ---------------------------------------------------------
+  // 🔍 AUTOCOMPLETE (LOCATION-BIASED & PROFESSIONAL)
+  // ---------------------------------------------------------
+  Future<void> _fetchPredictions(String input) async {
+    setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse(
+      final bias = widget.locationBias;
+      final locationParams = bias != null
+          ? '&location=${bias.latitude},${bias.longitude}&radius=$_radiusMeters'
+          : '';
+
+      final uri = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/autocomplete/json'
         '?input=${Uri.encodeComponent(input)}'
         '&key=${widget.googleApiKey}'
-        '&sessiontoken=$sessionToken'
+        '&sessiontoken=$_sessionToken'
         '&components=country:in'
-        '&language=en'
+        '&types=geocode|establishment'
+        '$locationParams'
+        '&language=en',
       );
 
-      print('🔍 Fetching places: $url');
+      final res = await http.get(uri);
+      final body = json.decode(res.body);
 
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        if (data['status'] == 'OK') {
-          final List<dynamic> results = data['predictions'] ?? [];
-          
-          setState(() {
-            predictions = results.map((p) => {
-              'place_id': p['place_id'],
-              'description': p['description'],
-              'structured_formatting': p['structured_formatting'],
-              'types': p['types'] ?? [],
-            }).toList();
-            isLoading = false;
-          });
-
-          print('✅ Found ${predictions.length} places');
-        } else {
-          print('⚠️ API Status: ${data['status']}');
-          setState(() {
-            predictions = [];
-            isLoading = false;
-          });
-        }
-      } else {
-        print('❌ HTTP Error: ${response.statusCode}');
+      if (body['status'] != 'OK') {
         setState(() {
-          predictions = [];
-          isLoading = false;
+          _predictions.clear();
+          _isLoading = false;
         });
+        return;
       }
-    } catch (e) {
-      print('❌ Error fetching places: $e');
+
+      final List list = body['predictions'];
+
       setState(() {
-        predictions = [];
-        isLoading = false;
+        _predictions
+          ..clear()
+          ..addAll(list.map((p) => {
+                'placeId': p['place_id'],
+                'main': p['structured_formatting']['main_text'],
+                'secondary':
+                    p['structured_formatting']['secondary_text'] ?? '',
+                'types': p['types'] ?? [],
+              }));
+        _isLoading = false;
+      });
+    } catch (_) {
+      setState(() {
+        _predictions.clear();
+        _isLoading = false;
       });
     }
   }
 
-  Future<void> _getPlaceDetails(String placeId) async {
+  // ---------------------------------------------------------
+  // 📍 PLACE DETAILS (FINAL SELECTION)
+  // ---------------------------------------------------------
+  Future<void> _selectPlace(String placeId) async {
     try {
-      setState(() {
-        isLoading = true;
-      });
+      setState(() => _isLoading = true);
 
-      final url = Uri.parse(
+      final uri = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/details/json'
         '?place_id=$placeId'
         '&key=${widget.googleApiKey}'
-        '&sessiontoken=$sessionToken'
-        '&fields=geometry,formatted_address,name,address_components'
+        '&sessiontoken=$_sessionToken'
+        '&fields=geometry,formatted_address,name,address_components',
       );
 
-      final response = await http.get(url);
+      final res = await http.get(uri);
+      final body = json.decode(res.body);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        if (data['status'] == 'OK') {
-          final result = data['result'];
-          
-          widget.onPlaceSelected({
-            'lat': result['geometry']['location']['lat'],
-            'lng': result['geometry']['location']['lng'],
-            'address': result['formatted_address'],
-            'name': result['name'],
-          });
-
-          sessionToken = _generateSessionToken();
-        }
+      if (body['status'] != 'OK') {
+        setState(() => _isLoading = false);
+        return;
       }
 
-      setState(() {
-        isLoading = false;
+      final result = body['result'];
+      final loc = result['geometry']['location'];
+
+      widget.onPlaceSelected({
+        'lat': loc['lat'],
+        'lng': loc['lng'],
+        'address': result['formatted_address'],
+        'name': result['name'],
+        'components': result['address_components'],
       });
-    } catch (e) {
-      print('❌ Error getting place details: $e');
-      setState(() {
-        isLoading = false;
-      });
+
+      // New session after selection (Google best practice)
+      _sessionToken = _newSessionToken();
+
+      setState(() => _isLoading = false);
+    } catch (_) {
+      setState(() => _isLoading = false);
     }
   }
 
-  String _getLocationCategory(List<dynamic> types) {
-    if (types.isEmpty) return '';
-    
-    const typeMap = {
+  // ---------------------------------------------------------
+  // 🏷️ CATEGORY TAG (SMART PRIORITY)
+  // ---------------------------------------------------------
+  String _categoryFromTypes(List types) {
+    const priority = [
+      'locality',
+      'sublocality_level_1',
+      'neighborhood',
+      'route',
+      'premise',
+      'shopping_mall',
+      'hospital',
+      'school',
+      'university',
+      'restaurant',
+      'establishment',
+      'point_of_interest',
+    ];
+
+    const labels = {
       'locality': 'City',
-      'sublocality': 'Locality',
       'sublocality_level_1': 'Area',
-      'sublocality_level_2': 'Area',
+      'neighborhood': 'Neighborhood',
       'route': 'Street',
       'premise': 'Building',
+      'shopping_mall': 'Mall',
+      'hospital': 'Hospital',
+      'school': 'School',
+      'university': 'University',
+      'restaurant': 'Restaurant',
       'establishment': 'Place',
       'point_of_interest': 'Landmark',
-      'university': 'University',
-      'school': 'School',
-      'hospital': 'Hospital',
-      'shopping_mall': 'Mall',
-      'restaurant': 'Restaurant',
     };
-    
-    for (var type in types) {
-      if (typeMap.containsKey(type)) {
-        return typeMap[type]!;
-      }
+
+    for (final key in priority) {
+      if (types.contains(key)) return labels[key] ?? '';
     }
-    
     return '';
   }
 
+  // ---------------------------------------------------------
+  // 🧱 UI
+  // ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    // ✨ Results-only mode (used inside Expanded)
-    if (widget.showResultsOnly) {
-      return Column(
-        children: [
-          // Loading indicator
-          if (isLoading)
-            Container(
-              padding: EdgeInsets.all(16.h),
-              child: const CircularProgressIndicator(
-                color: Color(0xFFE47830),
-                strokeWidth: 2,
+    if (!widget.showResultsOnly) return const SizedBox();
+
+    return Column(
+      children: [
+        if (_isLoading)
+          Padding(
+            padding: EdgeInsets.all(16.h),
+            child: const CircularProgressIndicator(
+              color: Color(0xFFE47830),
+              strokeWidth: 2,
+            ),
+          ).withId('places_search_loading'),
+
+        if (!_isLoading && _predictions.isEmpty &&
+            widget.controller.text.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.all(24.h),
+            child: Text(
+              'No nearby locations found',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.grey[500],
               ),
             ),
+          ).withId('places_search_empty'),
 
-          // Results list
-          if (!isLoading && predictions.isNotEmpty)
-            Expanded(
-              child: ListView.builder(
-                itemCount: predictions.length,
-                itemBuilder: (context, index) {
-                  final prediction = predictions[index];
-                  final structuredFormatting = prediction['structured_formatting'];
-                  
-                  final mainText = structuredFormatting['main_text'] ?? '';
-                  final secondaryText = structuredFormatting['secondary_text'] ?? '';
-                  final category = _getLocationCategory(prediction['types']);
+        if (_predictions.isNotEmpty)
+          Expanded(
+            child: ListView.builder(
+              itemCount: _predictions.length,
+              itemBuilder: (_, i) {
+                final p = _predictions[i];
+                final category = _categoryFromTypes(p['types']);
 
-                  return InkWell(
-                    onTap: () {
-                      _getPlaceDetails(prediction['place_id']);
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20.w,
-                        vertical: 16.h,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey[200]!,
-                            width: 0.5,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(10.w),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE47830).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.location_on,
-                              color: Color(0xFFE47830),
-                              size: 20,
-                            ),
-                          ),
-                          SizedBox(width: 16.w),
-                          
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  mainText,
-                                  style: TextStyle(
-                                    fontSize: 15.sp,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.4,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                
-                                if (secondaryText.isNotEmpty) ...[
-                                  SizedBox(height: 4.h),
-                                  Text(
-                                    secondaryText,
-                                    style: TextStyle(
-                                      fontSize: 13.sp,
-                                      color: Colors.grey[600],
-                                      height: 1.3,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                                
-                                if (category.isNotEmpty) ...[
-                                  SizedBox(height: 6.h),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 8.w,
-                                      vertical: 3.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFF8C42).withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      category,
-                                      style: TextStyle(
-                                        fontSize: 10.sp,
-                                        color: const Color(0xFFFF8C42),
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          
-                          SizedBox(width: 8.w),
-                          
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 14,
-                            color: Colors.grey[400],
-                          ),
-                        ],
+                return InkWell(
+                  onTap: () => _selectPlace(p['placeId']),
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom:
+                            BorderSide(color: Colors.grey[200]!, width: 0.5),
                       ),
                     ),
-                  );
-                },
-              ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.w),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFE47830).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.location_on,
+                              color: Color(0xFFE47830), size: 20),
+                        ),
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                p['main'],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              if (p['secondary'].isNotEmpty) ...[
+                                SizedBox(height: 4.h),
+                                Text(
+                                  p['secondary'],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                              if (category.isNotEmpty) ...[
+                                SizedBox(height: 6.h),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 8.w, vertical: 3.h),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF8C42)
+                                        .withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    category,
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFFFF8C42),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios,
+                            size: 14, color: Colors.grey[400]),
+                      ],
+                    ),
+                  ),
+                ).withId('place_prediction_$i');
+              },
             ),
-        ],
-      );
-    }
-
-    // Normal mode (not used in your case now)
-    return const SizedBox();
+          ),
+      ],
+    );
   }
 }

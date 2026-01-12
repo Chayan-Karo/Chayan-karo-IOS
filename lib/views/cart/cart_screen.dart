@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-
+import '../../utils/test_extensions.dart';
 import '../../controllers/cart_controller.dart';
 import '../../models/service_models.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
@@ -17,6 +17,7 @@ import '../profile/profile_screen.dart';
 import '../rewards/ReferAndEarnScreen.dart';
 import '../chayan_sathi/chayan_sathi_screen.dart';
 import '../booking/Summaryscreen.dart';
+import './widgets/read_more_text.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -29,6 +30,8 @@ class _CartScreenState extends State<CartScreen> {
   final CartController cartController = Get.find<CartController>();
   final int _selectedIndex = -2;
   bool _isLoading = false;
+  String? _expandedServiceId;
+
 
   void _onItemTapped(BuildContext context, int index) {
     if (index == _selectedIndex) return;
@@ -243,7 +246,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
               ),
-            ),
+            ).withId('cart_empty_explore_btn'),
           ],
         ),
       ),
@@ -305,7 +308,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildCartItemCard(
+Widget _buildCartItemCard(
       BuildContext context, CartItem cartItem, double scaleFactor) {
     
     // Determine if max limit is reached
@@ -326,207 +329,216 @@ class _CartScreenState extends State<CartScreen> {
           ),
         ],
       ),
-      child: Row(
+      // CHANGE 1: Main layout is now a Column to allow full-width description
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8 * scaleFactor),
-            child: Image.network(
-              cartItem.image,
-              width: 70.w * scaleFactor,
-              height: 70.h * scaleFactor,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 70.w * scaleFactor,
-                height: 70.h * scaleFactor,
-                color: Colors.grey[300],
-                child: Icon(
-                  Icons.image_not_supported,
-                  color: Colors.grey[500],
-                  size: 30 * scaleFactor,
-                ),
-              ),
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(
+          // Top Section: Image, Details, Quantity
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+                child: Image.network(
+                  cartItem.image,
                   width: 70.w * scaleFactor,
                   height: 70.h * scaleFactor,
-                  color: Colors.grey[200],
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFFE47830),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 70.w * scaleFactor,
+                    height: 70.h * scaleFactor,
+                    color: Colors.grey[300],
+                    child: Icon(
+                      Icons.image_not_supported,
+                      color: Colors.grey[500],
+                      size: 30 * scaleFactor,
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-          SizedBox(width: 16.w * scaleFactor),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  cartItem.name,
-                  style: TextStyle(
-                    fontSize: 16.sp * scaleFactor,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'SF Pro',
-                    color: Colors.black,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 6.h * scaleFactor),
-                if (cartItem.rating.isNotEmpty && cartItem.duration.isNotEmpty)
-                  Row(
-                    children: [
-                      SvgPicture.asset('assets/icons/star.svg',
-                          width: 18.w * scaleFactor,
-                          height: 18.h * scaleFactor,
-                          color: Colors.black),
-                      SizedBox(width: 4.w * scaleFactor),
-                      Text(
-                        '${cartItem.rating} | ${cartItem.duration}',
-                        style: TextStyle(
-                          fontSize: 13.sp * scaleFactor,
-                          color: Colors.grey[600],
-                          fontFamily: 'SF Pro',
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 70.w * scaleFactor,
+                      height: 70.h * scaleFactor,
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFE47830),
                         ),
                       ),
-                    ],
-                  ),
-                SizedBox(height: 8.h * scaleFactor),
-                Row(
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 16.w * scaleFactor),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      cartItem.formattedPrice,
+                      cartItem.name,
                       style: TextStyle(
-                        fontSize: 18.sp * scaleFactor,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 16.sp * scaleFactor,
+                        fontWeight: FontWeight.w600,
                         fontFamily: 'SF Pro',
-                        color: const Color(0xFFE47830),
+                        color: Colors.black,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (cartItem.hasDiscount) ...[
-                      SizedBox(width: 8.w * scaleFactor),
-                      Text(
-                        '₹${cartItem.originalPrice.toInt()}',
-                        style: TextStyle(
-                          fontSize: 14.sp * scaleFactor,
-                          decoration: TextDecoration.lineThrough,
-                          color: Colors.grey,
-                          fontFamily: 'SF Pro',
-                        ),
+                    SizedBox(height: 6.h * scaleFactor),
+                    if (cartItem.rating.isNotEmpty &&
+                        cartItem.duration.isNotEmpty)
+                      Row(
+                        children: [
+                          SvgPicture.asset('assets/icons/star.svg',
+                              width: 18.w * scaleFactor,
+                              height: 18.h * scaleFactor,
+                              color: Colors.black),
+                          SizedBox(width: 4.w * scaleFactor),
+                          Text(
+                            '${cartItem.rating} | ${cartItem.duration}',
+                            style: TextStyle(
+                              fontSize: 13.sp * scaleFactor,
+                              color: Colors.grey[600],
+                              fontFamily: 'SF Pro',
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    SizedBox(height: 8.h * scaleFactor),
+                    Row(
+                      children: [
+                        Text(
+                          cartItem.formattedPrice,
+                          style: TextStyle(
+                            fontSize: 18.sp * scaleFactor,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'SF Pro',
+                            color: const Color(0xFFE47830),
+                          ),
+                        ),
+                        if (cartItem.hasDiscount) ...[
+                          SizedBox(width: 8.w * scaleFactor),
+                          Text(
+                            '₹${cartItem.originalPrice.toInt()}',
+                            style: TextStyle(
+                              fontSize: 14.sp * scaleFactor,
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey,
+                              fontFamily: 'SF Pro',
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    // CHANGE 2: Removed Description from here
                   ],
                 ),
-                if (cartItem.description.isNotEmpty) ...[
-                  SizedBox(height: 6.h * scaleFactor),
-                  Text(
-                    cartItem.description,
-                    style: TextStyle(
-                      fontSize: 12.sp * scaleFactor,
-                      color: Colors.grey[600],
-                      fontFamily: 'SF Pro',
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.grey[300]!,
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(8 * scaleFactor),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () =>
+                              _handleQuantityUpdate(cartItem.id, false),
+                          child: Container(
+                            width: 32.w * scaleFactor,
+                            height: 32.h * scaleFactor,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(6 * scaleFactor),
+                                bottomLeft: Radius.circular(6 * scaleFactor),
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.remove,
+                              size: 18 * scaleFactor,
+                              color: const Color(0xFFE47830),
+                            ),
+                          ),
+                        ).withId('cart_minus_${cartItem.id}'),
+                        Container(
+                          width: 40.w * scaleFactor,
+                          height: 32.h * scaleFactor,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.symmetric(
+                              vertical: BorderSide(
+                                color: Colors.grey[300]!,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            '${cartItem.quantity}',
+                            style: TextStyle(
+                              fontSize: 14.sp * scaleFactor,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFE47830),
+                              fontFamily: 'SF Pro',
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: isMaxLimit
+                              ? null
+                              : () => _handleQuantityUpdate(cartItem.id, true),
+                          child: Container(
+                            width: 32.w * scaleFactor,
+                            height: 32.h * scaleFactor,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.only(
+                                topRight: Radius.circular(6 * scaleFactor),
+                                bottomRight: Radius.circular(6 * scaleFactor),
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.add,
+                              size: 18 * scaleFactor,
+                              color: isMaxLimit
+                                  ? Colors.grey
+                                  : const Color(0xFFE47830),
+                            ),
+                          ),
+                        ).withId('cart_plus_${cartItem.id}'),
+                      ],
+                    ),
                   ),
                 ],
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Colors.grey[300]!,
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(8 * scaleFactor),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      // Update logic: decrement
-                      onTap: () => _handleQuantityUpdate(cartItem.id, false),
-                      child: Container(
-                        width: 32.w * scaleFactor,
-                        height: 32.h * scaleFactor,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(6 * scaleFactor),
-                            bottomLeft: Radius.circular(6 * scaleFactor),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.remove,
-                          size: 18 * scaleFactor,
-                          color: const Color(0xFFE47830),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      width: 40.w * scaleFactor,
-                      height: 32.h * scaleFactor,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.symmetric(
-                          vertical: BorderSide(
-                            color: Colors.grey[300]!,
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        '${cartItem.quantity}',
-                        style: TextStyle(
-                          fontSize: 14.sp * scaleFactor,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFE47830),
-                          fontFamily: 'SF Pro',
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      // Update logic: increment
-                      // If max limit reached, onTap is null (disabled)
-                      onTap: isMaxLimit 
-                          ? null 
-                          : () => _handleQuantityUpdate(cartItem.id, true),
-                      child: Container(
-                        width: 32.w * scaleFactor,
-                        height: 32.h * scaleFactor,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(6 * scaleFactor),
-                            bottomRight: Radius.circular(6 * scaleFactor),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.add,
-                          size: 18 * scaleFactor,
-                          // If max limit reached, color is grey
-                          color: isMaxLimit 
-                              ? Colors.grey 
-                              : const Color(0xFFE47830),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
+          
+          // CHANGE 3: Description added here (Full Width)
+          if (cartItem.description.isNotEmpty) ...[
+            SizedBox(height: 12.h * scaleFactor), // Slightly more spacing
+            ReadMoreText(
+              text: cartItem.description,
+              trimLines: 2, // It will show 2 full-width lines before "Read more"
+              isExpanded: _expandedServiceId == cartItem.id,
+              onToggle: () {
+                setState(() {
+                  _expandedServiceId =
+                      _expandedServiceId == cartItem.id ? null : cartItem.id;
+                });
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -624,7 +636,7 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                   ),
-                ),
+                ).withId('cart_clear_btn'),
               ),
               SizedBox(width: 16.w * scaleFactor),
               Expanded(
@@ -655,7 +667,7 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                   ),
-                ),
+                ).withId('cart_checkout_btn'),
               ),
             ],
           ),
@@ -737,7 +749,7 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                           ),
                         ),
-                      ),
+                      ).withId('cart_dialog_cancel_btn'),
                     ),
                     SizedBox(width: 12),
                     Expanded(
@@ -773,7 +785,7 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                           ),
                         ),
-                      ),
+                      ).withId('cart_dialog_confirm_btn'),
                     ),
                   ],
                 ),

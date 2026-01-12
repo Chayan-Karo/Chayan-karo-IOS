@@ -5,6 +5,7 @@ import '../../widgets/chayan_header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../controllers/location_controller.dart';
 import '../../models/location_models.dart';
+import '../../utils/test_extensions.dart';
 
 class ManageAddressScreen extends StatefulWidget {
   const ManageAddressScreen({super.key});
@@ -39,14 +40,17 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
     }
   }
 
-  Future<void> _navigateAddOrEditAddress() async {
-    final res = await Get.toNamed('/location_popup', arguments: 'manage_address');
-    if (res == true) {
-      await locationController.fetchCustomerAddresses();
-      _alignSelectedDefaultFromData();
-    }
-  }
+ Future<void> _navigateAddOrEditAddress() async {
+    // 1. Wait for the location popup to close
+    await Get.toNamed('/location_popup', arguments: 'manage_address');
 
+    // 2. ALWAYS Refresh (Fixes BUG-036)
+    // We fetch addresses even if 'res' is null/false. 
+    // This clears any "Non-Serviceable" error states that might have been set 
+    // in the controller while the user was on the map screen.
+    await locationController.fetchCustomerAddresses();
+    _alignSelectedDefaultFromData();
+  }
   Future<void> _setAsDefault(CustomerAddress address) async {
     await locationController.setDefaultAddressLocal(address.id);
     if (mounted) setState(() => selectedDefaultId = address.id);
@@ -93,7 +97,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                             ),
                           ],
                         ),
-                      ),
+                      ).withId('manage_addr_add_btn'),
 
                       Expanded(
                         child: Obx(() {
@@ -176,8 +180,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                               final address = list[index];
                               final isSelectedDefault = address.id == selectedDefaultId;
 
-                              return Container
-                              (
+                              return Container(
                                 margin: EdgeInsets.only(bottom: 12.h * scaleFactor),
                                 padding: EdgeInsets.all(16.r * scaleFactor),
                                 decoration: const BoxDecoration(
@@ -260,18 +263,21 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                                                   fontSize: 14.sp * scaleFactor,
                                                   color: Colors.black,
                                                 ),
-                                              ),
+                                              ).withId('address_set_default_btn_$index'),
                                             ),
-                                            PopupMenuItem(
-                                              value: 'delete',
-                                              child: Text(
-                                                'Delete',
-                                                style: TextStyle(
-                                                  fontSize: 14.sp * scaleFactor,
-                                                  color: Colors.black,
-                                                ),
+                                            // --- CHANGE START: Only show delete if NOT default ---
+                                            if (!isSelectedDefault)
+                                              PopupMenuItem(
+                                                value: 'delete',
+                                                child: Text(
+                                                  'Delete',
+                                                  style: TextStyle(
+                                                    fontSize: 14.sp * scaleFactor,
+                                                    color: Colors.black,
+                                                  ),
+                                                ).withId('address_menu_btn_$index'),
                                               ),
-                                            ),
+                                            // --- CHANGE END ---
                                           ],
                                           color: Colors.white,
                                           icon: Icon(
@@ -311,275 +317,316 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
     );
   }
 
- void _showUpdateAddressBottomSheet(double scaleFactor, CustomerAddress address) {
-  // Build a neat, trimmed header subtitle from your existing fields
-  final addressLine1 = address.addressLine1.trim();
-  final addressLine2 = address.addressLine2.trim();
-  final cityStatePin = '${address.city}, ${address.state} - ${address.postCode}'.trim();
+  void _showUpdateAddressBottomSheet(double scaleFactor, CustomerAddress address) {
+    // Build a neat, trimmed header subtitle from your existing fields
+    final addressLine1 = address.addressLine1.trim();
+    final addressLine2 = address.addressLine2.trim();
+    final cityStatePin = '${address.city}, ${address.state} - ${address.postCode}'.trim();
 
-  final subtitle = <String>[
-    if (addressLine1.isNotEmpty) addressLine1,
-    if (addressLine2.isNotEmpty) addressLine2,
-    cityStatePin,
-  ].join(', ').trim();
+    final subtitle = <String>[
+      if (addressLine1.isNotEmpty) addressLine1,
+      if (addressLine2.isNotEmpty) addressLine2,
+      cityStatePin,
+    ].join(', ').trim();
 
-  // Prefill House/Flat with real address parts; landmark empty for now
-  final houseCtrl    = TextEditingController(
-    text: [addressLine1, addressLine2].where((s) => s.isNotEmpty).join(', ').trim(),
-  );
-  final landmarkCtrl = TextEditingController(text: '');
+    // Prefill House/Flat with real address parts; landmark empty for now
+    final houseCtrl = TextEditingController(
+      text: [addressLine1, addressLine2].where((s) => s.isNotEmpty).join(', ').trim(),
+    );
+    final landmarkCtrl = TextEditingController(text: '');
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.75,
-        minChildSize: 0.45,
-        builder: (_, controller) {
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20.h * scaleFactor)),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  SizedBox(height: 8.h * scaleFactor),
-                  Container(
-                    width: 40.w * scaleFactor,
-                    height: 4.h * scaleFactor,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2.r * scaleFactor),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.55,
+          maxChildSize: 0.75,
+          minChildSize: 0.45,
+          builder: (_, controller) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.h * scaleFactor)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+                    SizedBox(height: 8.h * scaleFactor),
+                    Container(
+                      width: 40.w * scaleFactor,
+                      height: 4.h * scaleFactor,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.r * scaleFactor),
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 16.h * scaleFactor),
+                    SizedBox(height: 16.h * scaleFactor),
 
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: controller,
-                      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${address.city}, ${address.state}',
-                                  style: TextStyle(
-                                    fontSize: 16.sp * scaleFactor,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Inter',
-                                  ),
-                                ),
-                              ),
-                              if (address.id != selectedDefaultId)
-                                TextButton(
-                                  onPressed: () async {
-                                    await _setAsDefault(address);
-                                    if (context.mounted) Navigator.pop(context);
-                                  },
-                                  style: TextButton.styleFrom(
-                                    side: const BorderSide(color: Color(0xFFE47830)),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6.r * scaleFactor),
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 8.h * scaleFactor,
-                                      vertical: 4.h * scaleFactor,
-                                    ),
-                                  ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: controller,
+                        padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
                                   child: Text(
-                                    'Set as Default',
+                                    '${address.city}, ${address.state}',
                                     style: TextStyle(
-                                      color: const Color(0xFFE47830),
-                                      fontSize: 12.sp * scaleFactor,
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 16.sp * scaleFactor,
+                                      fontWeight: FontWeight.w600,
                                       fontFamily: 'Inter',
                                     ),
                                   ),
                                 ),
-                            ],
-                          ),
-                          SizedBox(height: 4.h * scaleFactor),
-                          Text(
-                            subtitle,
-                            style: TextStyle(
-                              fontSize: 13.sp * scaleFactor,
-                              color: const Color(0xFF757575),
-                              fontFamily: 'Inter',
-                              height: 1.4,
+                                if (address.id != selectedDefaultId)
+                                  TextButton(
+                                    onPressed: () async {
+                                      await _setAsDefault(address);
+                                      if (context.mounted) Navigator.pop(context);
+                                    },
+                                    style: TextButton.styleFrom(
+                                      side: const BorderSide(color: Color(0xFFE47830)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(6.r * scaleFactor),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8.h * scaleFactor,
+                                        vertical: 4.h * scaleFactor,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Set as Default',
+                                      style: TextStyle(
+                                        color: const Color(0xFFE47830),
+                                        fontSize: 12.sp * scaleFactor,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            SizedBox(height: 4.h * scaleFactor),
+                            Text(
+                              subtitle,
+                              style: TextStyle(
+                                fontSize: 13.sp * scaleFactor,
+                                color: const Color(0xFF757575),
+                                fontFamily: 'Inter',
+                                height: 1.4,
+                              ),
+                            ),
+                            SizedBox(height: 24.h * scaleFactor),
+
+                            // House/Flat Number (prefilled from address lines)
+                            _OutlinedIconField(
+                              scaleFactor: scaleFactor,
+                              controller: houseCtrl,
+                              hintText: 'House/Flat Number *',
+                              testId: 'update_addr_house_input', // <--- Added ID
+                              icon: Icons.home_outlined,
+                            ),
+                            SizedBox(height: 16.h * scaleFactor),
+
+                            // Landmark (Optional) – starts blank
+                            _OutlinedIconField(
+                              scaleFactor: scaleFactor,
+                              controller: landmarkCtrl,
+                              hintText: 'Landmark (Optional)',
+                              testId: 'update_addr_landmark_input', // <--- Added ID
+                              icon: Icons.location_on_outlined,
+                            ),
+
+                            SizedBox(height: 16.h * scaleFactor),
+                            // Phone field removed
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    SafeArea(
+                      top: false,
+                      minimum: EdgeInsets.only(
+                        left: 16.w * scaleFactor,
+                        right: 16.w * scaleFactor,
+                        top: 8.h * scaleFactor,
+                        bottom: MediaQuery.of(context).viewPadding.bottom > 0
+                            ? MediaQuery.of(context).viewPadding.bottom
+                            : 8.h * scaleFactor,
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 47.h * scaleFactor,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE47830),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.r * scaleFactor),
                             ),
                           ),
-                          SizedBox(height: 24.h * scaleFactor),
-
-                          // House/Flat Number (prefilled from address lines)
-                          _OutlinedIconField(
-                            scaleFactor: scaleFactor,
-                            controller: houseCtrl,
-                            hintText: 'House/Flat Number *',
-                            icon: Icons.home_outlined,
+                          onPressed: () {
+                            // Keep as-is for now; no API call here.
+                            Navigator.pop(context);
+                          },
+                          child: Text(
+                            'Update address',
+                            style: TextStyle(
+                              fontFamily: 'SF Pro Display',
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16.sp * scaleFactor,
+                              letterSpacing: 0.3,
+                              color: Colors.white,
+                            ),
                           ),
-                          SizedBox(height: 16.h * scaleFactor),
-
-                          // Landmark (Optional) – starts blank
-                          _OutlinedIconField(
-                            scaleFactor: scaleFactor,
-                            controller: landmarkCtrl,
-                            hintText: 'Landmark (Optional)',
-                            icon: Icons.location_on_outlined,
-                          ),
-
-                          SizedBox(height: 16.h * scaleFactor),
-                          // Phone field removed
-                        ],
+                        ).withId('update_addr_save_btn'),
                       ),
                     ),
-                  ),
-
-                  SafeArea(
-                    top: false,
-                    minimum: EdgeInsets.only(
-                      left: 16.w * scaleFactor,
-                      right: 16.w * scaleFactor,
-                      top: 8.h * scaleFactor,
-                      bottom: MediaQuery.of(context).viewPadding.bottom > 0
-                          ? MediaQuery.of(context).viewPadding.bottom
-                          : 8.h * scaleFactor,
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 47.h * scaleFactor,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE47830),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.r * scaleFactor),
-                          ),
-                        ),
-                        onPressed: () {
-                          // Keep as-is for now; no API call here.
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          'Update address',
-                          style: TextStyle(
-                            fontFamily: 'SF Pro Display',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16.sp * scaleFactor,
-                            letterSpacing: 0.3,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
 
-  void _confirmDelete(double scaleFactor, String addressId) {
+ void _confirmDelete(double scaleFactor, String addressId) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Delete Address',
-          style: TextStyle(
-            fontSize: 18.sp * scaleFactor,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-            fontFamily: 'Inter',
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to delete this address?',
-          style: TextStyle(
-            fontSize: 14.sp * scaleFactor,
-            fontFamily: 'Inter',
-            color: Colors.black87,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: 14.sp * scaleFactor,
-                color: Colors.grey[600],
-                fontFamily: 'Inter',
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              // 1. Close the dialog
-              Navigator.pop(dialogContext);
+      barrierDismissible: false, // Prevent closing while deleting
+      builder: (dialogContext) {
+        // Local state for the loading spinner inside the dialog
+        bool isDeleting = false;
 
-              // 2. Call delete API
-              final success = await locationController.deleteAddress(addressId);
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text(
+                'Delete Address',
+                style: TextStyle(
+                  fontSize: 18.sp * scaleFactor,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              content: Text(
+                'Are you sure you want to delete this address?',
+                style: TextStyle(
+                  fontSize: 14.sp * scaleFactor,
+                  fontFamily: 'Inter',
+                  color: Colors.black87,
+                ),
+              ),
+              actions: [
+                // Cancel Button
+                TextButton(
+                  onPressed: isDeleting ? null : () => Navigator.pop(dialogContext),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontSize: 14.sp * scaleFactor,
+                      color: isDeleting ? Colors.grey[400] : Colors.grey[600],
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ).withId('delete_dialog_cancel'),
 
-              // 3. Show specific GetX Snackbar
-              if (mounted) {
-                if (success) {
-                  Get.snackbar(
-                    'Success',
-                    'Address deleted successfully',
-                    snackPosition: SnackPosition.TOP,
-                    backgroundColor: Colors.green[100],
-                    colorText: Colors.green[800],
-                    margin: EdgeInsets.all(16.w * scaleFactor),
-                    borderRadius: 8,
-                    duration: const Duration(seconds: 2),
-                  );
-                  _alignSelectedDefaultFromData();
-                } else {
-                  Get.snackbar(
-                    'Error',
-                    locationController.error.value.isNotEmpty
-                        ? locationController.error.value
-                        : "Failed to delete address",
-                    snackPosition: SnackPosition.TOP,
-                    backgroundColor: Colors.red[100],
-                    colorText: Colors.red[800],
-                    margin: EdgeInsets.all(16.w * scaleFactor),
-                    borderRadius: 8,
-                  );
-                }
-              }
-            },
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.red,
-              padding: EdgeInsets.symmetric(
-                horizontal: 16.w * scaleFactor,
-                vertical: 8.h * scaleFactor,
-              ),
-            ),
-            child: Text(
-              'Delete',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp * scaleFactor,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Inter',
-              ),
-            ),
-          ),
-        ],
-      ),
+                // Delete / Retry Button
+                TextButton(
+                  onPressed: isDeleting
+                      ? null // Disable button while loading
+                      : () async {
+                          setState(() => isDeleting = true); // Show Spinner
+
+                          // Call API (Dialog is still open)
+                          final success = await locationController.deleteAddress(addressId);
+
+                          if (context.mounted) {
+                            if (success) {
+                              // Success: Close dialog & Refresh
+                              Navigator.pop(dialogContext);
+                              Get.snackbar(
+                                'Success',
+                                'Address deleted successfully',
+                                snackPosition: SnackPosition.TOP,
+                                backgroundColor: Colors.green[100],
+                                colorText: Colors.green[800],
+                                margin: EdgeInsets.all(16.w * scaleFactor),
+                                borderRadius: 8,
+                                duration: const Duration(seconds: 2),
+                              );
+                              _alignSelectedDefaultFromData();
+                            } else {
+                          // Failure: Stop spinner, keep dialog open for Retry
+                          setState(() => isDeleting = false);
+                          
+                          // --- CHANGE START: User-Friendly Error Handling ---
+                          String rawError = locationController.error.value;
+                          String friendlyError = "Something went wrong. Please try again.";
+
+                          // check for common network keywords
+                          if (rawError.contains("SocketException") || 
+                              rawError.contains("host lookup") || 
+                              rawError.contains("connection error")) {
+                            friendlyError = "No internet connection. Please check your settings.";
+                          } else if (rawError.isNotEmpty) {
+                            friendlyError = rawError; // Use server message if it's not a socket error
+                          }
+
+                          Get.snackbar(
+                            'Connection Failed', // Clearer Title
+                            friendlyError,       // Optimized Message
+                            snackPosition: SnackPosition.TOP,
+                            backgroundColor: Colors.red[100],
+                            colorText: Colors.red[800],
+                            margin: EdgeInsets.all(16.w * scaleFactor),
+                            borderRadius: 8,
+                            icon: const Icon(Icons.wifi_off, color: Colors.red), // Visual cue
+                          );
+                            }
+                          }
+                        },
+                  style: TextButton.styleFrom(
+                    backgroundColor: isDeleting ? Colors.red.shade200 : Colors.red,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w * scaleFactor,
+                      vertical: 8.h * scaleFactor,
+                    ),
+                  ),
+                  child: isDeleting
+                      ? SizedBox(
+                          width: 14.w * scaleFactor,
+                          height: 14.w * scaleFactor,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.sp * scaleFactor,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                ).withId('delete_dialog_confirm'),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -588,6 +635,7 @@ class _OutlinedIconField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final IconData icon;
+  final String testId; // <--- 1. Add this field
   final TextInputType? keyboardType;
 
   const _OutlinedIconField({
@@ -595,6 +643,7 @@ class _OutlinedIconField extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.icon,
+    required this.testId,
     this.keyboardType,
     super.key,
   });
@@ -625,7 +674,7 @@ class _OutlinedIconField extends StatelessWidget {
                   fontSize: 15 * scaleFactor,
                 ),
               ),
-            ),
+            ).withId(testId),
           ),
         ],
       ),

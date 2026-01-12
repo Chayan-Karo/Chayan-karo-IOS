@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-
+import 'dart:io'; // <--- Required for FileImage
 // Screens
 import 'package:chayankaro/views/chayan_sathi/previouschayansathiscreen.dart';
 import 'package:chayankaro/views/profile/aboutscreen.dart';
@@ -15,6 +15,10 @@ import '../profile/EditProfileScreen.dart';
 import '../profile/manage_address_screen.dart';
 import '../profile/help_screen.dart';
 import '../profile/rating_screen.dart';
+import '../../utils/test_extensions.dart';
+import '../../controllers/location_controller.dart';
+import '../../controllers/cart_controller.dart';
+import '../../controllers/category_controller.dart';
 
 // Widgets & Controllers
 import '../../widgets/custom_bottom_nav_bar.dart';
@@ -162,22 +166,46 @@ Widget _buildUserProfile(double scaleFactor) {
 
       return GestureDetector(
         // UPDATED: Using Named route with arguments
-        onTap: () {
-          Get.toNamed('/edit-profile', arguments: _profileController.customer);
+        onTap: () async{
+         await Get.toNamed('/edit-profile', arguments: _profileController.customer);
+         // 2. Force wake-up (Fixes the bug on low-end devices)
+    if (mounted) {
+      setState(() {}); 
+    }
         },
         behavior: HitTestBehavior.opaque, // Ensures the empty space is clickable
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 40 * scaleFactor,
-              backgroundImage: customer?.imageUrl != null && customer!.imageUrl!.isNotEmpty
-                  ? NetworkImage(customer!.imageUrl!)
-                  : const AssetImage('assets/userprofile.webp') as ImageProvider,
-              onBackgroundImageError: (exception, stackTrace) {
-                print('Error loading profile image: $exception');
-              },
-              backgroundColor: Colors.grey[200],
-            ),
+          Obx(() { 
+        // We nest a small Obx here to listen to 'localImage' and 'imageVersion'
+        
+        ImageProvider imageProvider;
+        
+        // 1. Check Local File First (Instant Feedback)
+        if (_profileController.localImage.value != null) {
+          imageProvider = FileImage(_profileController.localImage.value!);
+        } 
+        // 2. Check Network Image (Server Data) WITH CACHE BUSTING
+        else if (customer?.imageUrl != null && customer!.imageUrl!.isNotEmpty) {
+          // FIX: Append the version timestamp to the URL to force a refresh
+          imageProvider = NetworkImage(
+             '${customer!.imageUrl!}?v=${_profileController.imageVersion.value}'
+          );
+        } 
+        // 3. Fallback Default
+        else {
+          imageProvider = const AssetImage('assets/userprofile.webp');
+        }
+
+        return CircleAvatar(
+          radius: 40 * scaleFactor,
+          backgroundImage: imageProvider,
+          backgroundColor: Colors.grey[200],
+          onBackgroundImageError: (exception, stackTrace) {
+            print('Error loading profile image: $exception');
+          },
+        );
+      }),
             SizedBox(width: 16.w * scaleFactor),
             Expanded(
               child: Column(
@@ -213,7 +241,8 @@ Widget _buildUserProfile(double scaleFactor) {
     });
   }
 
-  Future<void> _handleLogout() async {
+Future<void> _handleLogout() async {
+  FocusManager.instance.primaryFocus?.unfocus();
     if (_isLoggingOut) return;
 
     final bool? shouldLogout = await _showLogoutConfirmationDialog();
@@ -224,12 +253,32 @@ Widget _buildUserProfile(double scaleFactor) {
     });
 
     try {
+      // 1. Perform Secure Database Cleanup (Preserves Onboarding)
       final database = Get.find<AppDatabase>();
-      await database.clearAuthData();
-      print('✅ User logged out successfully');
+      await database.performSecureLogout();
+
+      // 2. FORCE DELETE Critical Controllers (Fixes BUG-006 Crash)
+      // This ensures fresh initialization on next login, preventing crashes from stale data.
+      try {
+        Get.delete<HomeController>(force: true);
+        Get.delete<ProfileController>(force: true);
+        Get.delete<LocationController>(force: true);
+        Get.delete<CartController>(force: true); // Add if you have this class
+        Get.delete<CategoryController>(force: true); // Add if you have this class
+        // Add any other controllers that hold user-specific data
+      } catch (e) {
+        print("⚠️ Controller disposal warning: $e");
+      }
+
+      print('✅ User logged out successfully & State cleared');
+      
+      // 3. Navigate to Login Screen (clearing stack)
       Get.offAllNamed('/login');
+      
     } catch (e) {
       print('❌ Error during logout: $e');
+      // Fallback: Force navigation even if DB cleanup fails
+      Get.offAllNamed('/login');
     } finally {
       if (mounted) {
         setState(() {
@@ -281,7 +330,7 @@ Widget _buildUserProfile(double scaleFactor) {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
+            ).withId('logout_dialog_cancel'),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: ElevatedButton.styleFrom(
@@ -298,7 +347,7 @@ Widget _buildUserProfile(double scaleFactor) {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
+            ).withId('logout_dialog_confirm'),
           ],
         );
       },
@@ -327,7 +376,7 @@ Widget _buildUserProfile(double scaleFactor) {
                     SizedBox(height: 24.h * scaleFactor),
                     
                     // User Profile Section
-                    _buildUserProfile(scaleFactor),
+                    _buildUserProfile(scaleFactor).withId('profile_user_card'),
                     
                     SizedBox(height: 24.h * scaleFactor),
                     
@@ -338,15 +387,15 @@ Widget _buildUserProfile(double scaleFactor) {
                         GestureDetector(
                           onTap: () => Get.to(() => BookingScreen()),
                           child: buildQuickAction("My Bookings", 'assets/icons/bookings.svg', scaleFactor),
-                        ),
+                        ).withId('profile_quick_bookings'),
                         GestureDetector(
                           onTap: () => Get.to(() => const ReferAndEarnScreen()),
                           child: buildQuickAction("Invite Friends", 'assets/icons/refer.svg', scaleFactor),
-                        ),
+                        ).withId('profile_quick_invite'),
                         GestureDetector(
                           onTap: () => Get.to(() => const HelpScreen()),
                           child: buildQuickAction("Help & Support", 'assets/icons/help.svg', scaleFactor),
-                        ),
+                        ).withId('profile_quick_help'),
                       ],
                     ),
                     
@@ -354,16 +403,16 @@ Widget _buildUserProfile(double scaleFactor) {
                     const Divider(color: Color(0xFFEBEBEB)),
                     
                     // Menu Items
-                    buildListItem('assets/icons/location.svg', "Manage Address", scaleFactor, onTap: () {
+                    buildListItem('assets/icons/location.svg', "Manage Address", scaleFactor,testId: 'profile_item_address', onTap: () {
                       Get.to(() => const ManageAddressScreen());
                     }),
-                    buildListItem('assets/icons/rate.svg', "Rate us", scaleFactor, onTap: () {
+                    buildListItem('assets/icons/rate.svg', "Rate us", scaleFactor,testId: 'profile_item_rate', onTap: () {
                       Get.to(() => RatingScreen());
                     }),
-                    buildListItem('assets/icons/about.svg', "About Chayan karo Services", scaleFactor, onTap: () {
+                    buildListItem('assets/icons/about.svg', "About Chayan karo Services", scaleFactor,testId: 'profile_item_about', onTap: () {
                       Get.to(() => AboutChaynkaroServicesScreen());
                     }),
-                    buildListItem('assets/icons/edit.svg', "Edit Profile", scaleFactor, onTap: () {
+                    buildListItem('assets/icons/edit.svg', "Edit Profile", scaleFactor,testId: 'profile_item_edit', onTap: () {
                       // Pass customer data to edit screen
                       Get.toNamed('/edit-profile', arguments: _profileController.customer);
                     }),
@@ -371,7 +420,8 @@ Widget _buildUserProfile(double scaleFactor) {
                     buildListItem(
                       'assets/icons/logout.svg', 
                       "Logout", 
-                      scaleFactor, 
+                      scaleFactor,
+                      testId: 'profile_item_logout', 
                       onTap: _isLoggingOut ? null : _handleLogout,
                     ),
                     
@@ -420,7 +470,7 @@ Widget _buildUserProfile(double scaleFactor) {
                           ],
                         ),
                       ),
-                    ),
+                    ).withId('profile_refer_banner'),
                     
                     SizedBox(height: 30.h * scaleFactor),
                   ],
@@ -485,7 +535,7 @@ Widget _buildUserProfile(double scaleFactor) {
     );
   }
 
-  Widget buildListItem(String iconPath, String label, double scaleFactor, {VoidCallback? onTap}) {
+  Widget buildListItem(String iconPath, String label, double scaleFactor, {VoidCallback? onTap, required String testId}) {
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 4.w * scaleFactor),
       leading: SvgPicture.asset(
@@ -513,6 +563,6 @@ Widget _buildUserProfile(double scaleFactor) {
             )
           : Icon(Icons.arrow_forward_ios, size: 16.sp * scaleFactor),
       onTap: onTap,
-    );
+    ).withId(testId);
   }
 }

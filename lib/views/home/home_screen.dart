@@ -23,6 +23,7 @@ import '../booking/booking_screen.dart';
 import '../rewards/ReferAndEarnScreen.dart';
 import '../profile/profile_screen.dart';
 import '../../controllers/booking_read_controller.dart'; // <--- ADD THIS
+import './widgets/exit_app_dialog.dart';  // <--- ADD THIS
 // Repositories
 import '../../data/repository/location_repository.dart';
 
@@ -145,8 +146,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final bottomPadding = mediaQuery.padding.bottom +
             (isTablet ? 90.h * scaleFactor : 70.h * scaleFactor);
 
-        return Scaffold(
-  backgroundColor: const Color(0xFFFDFDFD),
+return PopScope(
+  canPop: false,
+  onPopInvoked: (didPop) async {
+    if (didPop) return;
+    await showExitAppDialog(context);
+  },
+  child: Scaffold(  backgroundColor: const Color(0xFFFDFDFD),
 
   // ✅ STATUS BAR COLOR WITHOUT LAYOUT IMPACT
   appBar: PreferredSize(
@@ -221,6 +227,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     selectedIndex: _selectedIndex,
     onItemTapped: _onItemTapped,
   ),
+)
 );
 
       },

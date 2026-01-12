@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../controllers/login_controller.dart';
 import 'widgets/legal_modal.dart';
 import 'package:flutter/gestures.dart';
+import '../../utils/test_extensions.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -260,7 +261,7 @@ By Mail: Chayan Karo India Private Limited, 610/003, Keshavnagar, Sitapur Road, 
                         vertical: 14.h,
                       ),
                     ),
-                  ),
+                  ).withId('login_phone_input'),
 
                   SizedBox(height: 6.h),
 
@@ -369,7 +370,7 @@ padding: EdgeInsets.fromLTRB(
                                   : const Color(0xFF757575),
                             ),
                           ),
-                  ),
+                  ).withId('login_get_otp_btn'),
                 ),
               ),
 
@@ -414,7 +415,7 @@ RichText(
       ),
     ],
   ),
-),
+).withId('login_legal_text_block'),
             ],
           ),
         ),

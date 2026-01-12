@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:intl/intl.dart'; 
+import 'package:shared_preferences/shared_preferences.dart'; 
 import '../data/repository/saathi_repository.dart';
 import '../models/saathi_models.dart';
 
@@ -9,24 +10,39 @@ class SaathiController extends GetxController {
   SaathiController({SaathiRepository? repo})
       : _repo = repo ?? SaathiRepository();
 
+  // ---------------------------------------------------------
+  // CONSTANTS
+  // ---------------------------------------------------------
+  static const String _kLockedProviderKey = 'locked_spid';
+  
+  // NEW: Key to store the time we locked the provider
+  static const String _kLockedTimeKey = 'locked_timestamp'; 
+
+  // NEW: Auto-clear limit (set to 10 minutes)
+  static const int _kLockDurationMinutes = 10; 
+
+  // ---------------------------------------------------------
+  // VARIABLES
+  // ---------------------------------------------------------
+
   /// List of fetched providers
   final RxList<SaathiItem> saathiList = <SaathiItem>[].obs;
 
-  /// Local-only: Providers locked by THIS user
+  /// Local-only: Providers locked by THIS user (Set for quick lookup)
   final RxSet<String> myLockedProviders = <String>{}.obs;
 
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
   final RxInt selectedIndex = 2.obs;
 
-  /// Currently locking provider
+  /// Currently locking provider (Loading indicator ID)
   final RxString lockingProviderId = ''.obs;
 
   /// Response of last lock
   final Rx<LockProviderResponse?> lastLockResponse =
       Rx<LockProviderResponse?>(null);
 
-  /// Last locked ID
+  /// Last locked ID (Acts as the active Session ID)
   final RxnString lastLockedProviderId = RxnString(null);
 
   /// For debounce mode
@@ -42,12 +58,14 @@ class SaathiController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    
+    // 1. RESTORE SESSION: Checks storage AND expiration time
+    _restoreLockedSession();
 
     _debouncer = debounce<String>(
       _tapSelection,
       (spid) async {
         if (spid.isEmpty) return;
-        // _lockNow will pick up the stored _currentBookingDate
         await _lockNow(spid);
       },
       time: const Duration(milliseconds: 400),
@@ -61,18 +79,84 @@ class SaathiController extends GetxController {
   }
 
   // -------------------------------------------------------------
-  // HELPER: Check Availability (SIMPLIFIED)
+  // SHARED PREFERENCES METHODS (UPDATED FOR TIME LOGIC)
   // -------------------------------------------------------------
 
-  /// Returns TRUE if the provider can be tapped.
-  /// Since the API filters providers based on slot/duration, 
-  /// anyone in the list is "Available" unless they are actively locked.
+  /// Load saved SPID from local storage & CHECK TIME
+  Future<void> _restoreLockedSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedId = prefs.getString(_kLockedProviderKey);
+      final savedTimeStr = prefs.getString(_kLockedTimeKey); // NEW: Get time
+      
+      if (savedId != null && savedId.isNotEmpty) {
+        
+        // CHECK EXPIRATION LOGIC
+        if (savedTimeStr != null) {
+          final savedTime = DateTime.tryParse(savedTimeStr);
+          if (savedTime != null) {
+            final difference = DateTime.now().difference(savedTime).inMinutes;
+
+            // If older than 10 minutes, CLEAR IT and stop.
+            if (difference >= _kLockDurationMinutes) {
+              print("Session expired (> 10 mins). Clearing.");
+              await clearBookingSession(); 
+              return; 
+            }
+          }
+        }
+
+        // If valid (less than 10 mins), restore it
+        lastLockedProviderId.value = savedId;
+        myLockedProviders.add(savedId); 
+      }
+    } catch (e) {
+      print("Error restoring locked session: $e");
+    }
+  }
+
+  /// Save SPID + Current Timestamp
+  Future<void> _saveLockedSession(String spid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kLockedProviderKey, spid);
+      // NEW: Save current time
+      await prefs.setString(_kLockedTimeKey, DateTime.now().toIso8601String());
+    } catch (e) {
+      print("Error saving session: $e");
+    }
+  }
+
+  /// Wipe data (Call this after Booking Success OR Expiration)
+  Future<void> clearBookingSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kLockedProviderKey);
+      await prefs.remove(_kLockedTimeKey); // NEW: Remove time key
+      
+      lastLockedProviderId.value = null;
+      lockingProviderId.value = '';
+      myLockedProviders.clear();
+      lastLockResponse.value = null;
+      _tapSelection.value = '';
+    } catch (e) {
+      print("Error clearing session: $e");
+    }
+  }
+
+  // -------------------------------------------------------------
+  // HELPER: Check Availability
+  // -------------------------------------------------------------
+
   bool isProviderAvailable(SaathiItem item) {
+    if (lastLockedProviderId.value == item.id) {
+      return true;
+    }
     return !item.isLocked;
   }
 
   // -------------------------------------------------------------
-  // FETCH PROVIDERS (UPDATED)
+  // FETCH PROVIDERS
   // -------------------------------------------------------------
   Future<void> fetchProviders({
     required String categoryId,
@@ -87,7 +171,6 @@ class SaathiController extends GetxController {
       isLoading.value = true;
       error.value = '';
 
-      // Capture the date globally
       _currentBookingDate = bookingDate;
 
       if (categoryId.trim().isEmpty) throw ArgumentError('categoryId missing');
@@ -119,19 +202,17 @@ class SaathiController extends GetxController {
   // -------------------------------------------------------------
   Future<LockProviderResponse?> lockOnTap(
     String serviceProviderId, {
-    DateTime? bookingDate, // Optional override
+    DateTime? bookingDate,
   }) async {
     if (serviceProviderId.trim().isEmpty) return null;
 
     final item = saathiList.firstWhereOrNull((e) => e.id == serviceProviderId);
     if (item == null) return null;
 
-    // Check if SELECTABLE (Tapable)
     if (!isProviderAvailable(item)) {
       return null; 
     }
 
-    // Always update the global date if a specific date is passed.
     if (bookingDate != null) {
       _currentBookingDate = bookingDate;
     }
@@ -156,7 +237,7 @@ class SaathiController extends GetxController {
   }
 
   // -------------------------------------------------------------
-  // [RESTORED] Simple selection
+  // Simple selection
   // -------------------------------------------------------------
   void onProviderSelected(String serviceProviderId) {
     if (serviceProviderId.trim().isEmpty) return;
@@ -170,7 +251,7 @@ class SaathiController extends GetxController {
   }
 
   // -------------------------------------------------------------
-  // [RESTORED] Manual Lock
+  // Manual Lock
   // -------------------------------------------------------------
   Future<LockProviderResponse?> lockProviderNow(
       String serviceProviderId) async {
@@ -222,11 +303,14 @@ class SaathiController extends GetxController {
   }
 
   // -------------------------------------------------------------
-  // LOCAL USER-LOCK STATE
+  // LOCAL USER-LOCK STATE (UPDATED)
   // -------------------------------------------------------------
   void _markProviderAsMine(String id) {
     myLockedProviders.add(id);
     lastLockedProviderId.value = id;
+    
+    // Save to local storage with timestamp
+    _saveLockedSession(id);
   }
 
   // -------------------------------------------------------------

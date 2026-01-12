@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../data/repository/profile_repository.dart';
 import '../models/customer_models.dart';
+import 'package:image_cropper/image_cropper.dart'; // <--- ADD THIS
 
 class ProfileController extends GetxController {
   final ProfileRepository _profileRepository = Get.find<ProfileRepository>();
@@ -12,6 +13,9 @@ class ProfileController extends GetxController {
   final _isLoading = false.obs;
   final _isUploading = false.obs; // NEW: Uploading state
   final _errorMessage = ''.obs;
+  final imageVersion = DateTime.now().millisecondsSinceEpoch.obs;
+  final localImage = Rxn<File>();
+
 
   Customer? get customer => _customer.value;
   bool get isLoading => _isLoading.value;
@@ -69,26 +73,60 @@ class ProfileController extends GetxController {
   }
 
   // NEW: Method to Pick and Upload Image
-  Future<void> pickAndUploadImage() async {
+// Updated to accept 'source' (Camera/Gallery) and added Cropping Logic
+  Future<void> pickAndUploadImage(ImageSource source) async {
     try {
-      // 1. Pick Image
+      // 1. Pick Image (Source passed from UI)
       final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 70, // Compress slightly to save bandwidth
-        maxWidth: 1024,   // Resize large images to avoid 413 Payload Too Large
+        source: source,
+        imageQuality: 100, // High quality, we crop/compress later
       );
 
       if (pickedFile == null) return; // User canceled selection
 
-      // 2. Set loading state
-      _isUploading.value = true;
-      File imageFile = File(pickedFile.path);
+      // 2. Crop Image (BUG-024 FIX)
+      final CroppedFile? croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1), // Square for profile
+        compressQuality: 70, // Compress to save bandwidth
+        maxWidth: 1024,
+        maxHeight: 1024,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Profile Photo',
+            toolbarColor: const Color(0xFFFFEEE0), // App Theme Color
+            toolbarWidgetColor: Colors.black,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+          ),
+          IOSUiSettings(
+            title: 'Crop Profile Photo',
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+          ),
+        ],
+      );
 
-      // 3. Upload via Repository
+      if (croppedFile == null) return; // User canceled cropping
+
+      File imageFile = File(croppedFile.path);
+
+      // --- A. INSTANT PREVIEW (Fixes immediate UI lag) ---
+      localImage.value = imageFile; 
+      // ---------------------------------------------------
+
+      // 3. Set loading state
+      _isUploading.value = true;
+
+      // 4. Upload via Repository
       await _profileRepository.uploadProfileImage(imageFile);
       
-      // 4. Update local state (refreshProfile is called inside repo, but we ensure UI updates here)
+      // 5. Update local state
       await refreshProfile();
+
+      // --- B. CACHE BUSTING (Fixes navigation issues) ---
+      imageVersion.value = DateTime.now().millisecondsSinceEpoch;
+      // --------------------------------------------------
 
       Get.snackbar(
         'Success', 
@@ -99,13 +137,16 @@ class ProfileController extends GetxController {
       );
 
     } catch (e) {
+      // If upload fails, remove the local preview
+      localImage.value = null; 
+      
       print('❌ Upload Error: $e');
       Get.snackbar(
         'Error', 
         e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Get.theme.colorScheme.onError,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     } finally {
       _isUploading.value = false;

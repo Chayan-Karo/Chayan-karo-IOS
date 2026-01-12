@@ -11,6 +11,9 @@ import 'package:get/get.dart';
 import '../../controllers/location_controller.dart';
 import '../views/home/home_screen.dart';
 import '../widgets/places_search_widget.dart';
+import 'dart:convert';          // for json.decode
+import 'package:http/http.dart' as http; // for http.get
+import '../../utils/test_extensions.dart';
 //import 'package:uuid/uuid.dart';
 import 'dart:async';
 
@@ -100,15 +103,27 @@ void initState() {
  @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed && mounted) {
-      if (await Geolocator.isLocationServiceEnabled()) {
-        try {
-          final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-          await _updateAddressFromLatLng(LatLng(pos.latitude, pos.longitude));
+      // We only care if the user was stuck on the "Locating you..." screen
+      if (screenState == 'map_confirm' && isLoading) {
+        debugPrint("🔄 App resumed - Checking Location Services...");
+
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          // ✅ User enabled GPS: Proceed to fetch.
+          await _executeLocationFetch();
+        } else {
+          // ❌ User returned WITHOUT enabling GPS.
           setState(() {
-            screenState = 'map_confirm';
             isLoading = false;
+            // Smart Fallback:
+            // If we have no location data yet, go back to Choice screen.
+            // If we DO have data (Recenter attempt), stay on Map screen.
+            if (_currentLatLng == null) {
+              screenState = 'choice';
+            }
           });
-        } catch (_) {}
+        //  _showSnackBar('Location services are still disabled.', isError: true);
+        }
       }
     }
   }
@@ -146,126 +161,178 @@ void initState() {
       isSearching = false;
     });
   }
+Future<void> _executeLocationFetch() async {
+    try {
+      // 1. Get Coordinates (Critical)
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final latLng = LatLng(pos.latitude, pos.longitude);
 
-Future<void> _fetchCurrentLocation() async {
-  debugPrint('🎯 _fetchCurrentLocation() called');
-  FocusScope.of(context).unfocus();
+      if (!mounted) return;
 
-  setState(() {
-    isLoading = true;
-    screenState = 'map_confirm'; // use this exact key everywhere
-    error = null;
-  });
+      // 2. Update Map Position
+      setState(() {
+        _currentLatLng = latLng;
+        // Keep isLoading = true while we fetch the address text
+      });
 
-  try {
-    // 1) Permission FIRST
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission(); // OS dialog if not deniedForever
-    }
-    if (permission == LocationPermission.denied) {
-      _showSnackBar('Location permission is required.', isError: true);
-      setState(() { isLoading = false; screenState = 'choice'; });
-      return;
-    }
-    if (permission == LocationPermission.deniedForever) {
-      _showSnackBar('Permission permanently denied. Enable from Settings.', isError: true);
-      setState(() { isLoading = false; screenState = 'choice'; });
-      return;
-    }
-
-    // 2) Services (GPS) with inline-enable attempt first
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      final consent = await _showLocationAccuracyDialog(); // your in-app sheet
-      if (!consent) {
-        setState(() { isLoading = false; screenState = 'choice'; });
-        return;
+      // 3. Fetch Address (Non-Critical)
+      try {
+        await _updateAddressFromLatLng(latLng); // This method sets isLoading = false
+      } catch (addrErr) {
+        debugPrint("⚠️ Address fetch warning: $addrErr");
+        // If address fails, just stop loader. User is on map with correct pin.
+        if (mounted) setState(() => isLoading = false);
       }
 
-      // Soft-retry loop to allow OEM inline toggle to apply without leaving the app
-      const int totalWaitMs = 1800; // ~1.8s window
-      const int stepMs = 150;
-      int waited = 0;
-      while (waited < totalWaitMs) {
-        serviceEnabled = await Geolocator.isLocationServiceEnabled();
-        if (serviceEnabled) break;
-        await Future.delayed(const Duration(milliseconds: stepMs));
-        waited += stepMs;
-      }
-
-      // Fallback to Settings only if still off after inline attempt
-      if (!serviceEnabled) {
-        // Optionally show a CTA/bottom sheet here before opening settings
-        await Geolocator.openLocationSettings();
-        // Re-check after returning from Settings
-        serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      }
-
-      if (!serviceEnabled) {
-        _showSnackBar('Location services still disabled.', isError: true);
-        setState(() { isLoading = false; screenState = 'choice'; });
-        return;
-      }
+    } catch (e) {
+      debugPrint("❌ GPS Error: $e");
+      _handleLocationFailure('Could not fetch location');
     }
-
-    // 3) Get position
-    final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    debugPrint('📍 ${pos.latitude}, ${pos.longitude}');
-    await _updateAddressFromLatLng(LatLng(pos.latitude, pos.longitude)); // should set isLoading=false
-  } catch (e) {
-    debugPrint('❌ _fetchCurrentLocation error: $e');
-    setState(() {
-      error = 'Failed to get current location: $e';
-      isLoading = false;
-      screenState = 'choice';
-    });
-    _showSnackBar('Failed to get location', isError: true);
   }
-}
 
+  void _handleLocationFailure(String? message) {
+    if (!mounted) return;
+    
+    setState(() {
+      isLoading = false;
+      // Smart Fallback:
+      // If we don't have coordinates yet (First load), go back to Choice.
+      // If we DO have coordinates (Recenter failed), stay on Map.
+      if (_currentLatLng == null) {
+        screenState = 'choice';
+      }
+    });
+
+    if (message != null) {
+      _showSnackBar(message, isError: true);
+    }
+  }
+Future<void> _fetchCurrentLocation() async {
+    debugPrint('🎯 _fetchCurrentLocation() called');
+    FocusScope.of(context).unfocus();
+
+    // 1. Show "Locating you..." loader IMMEDIATELY
+    // This works for Choice, Manual, AND Recenter actions.
+    setState(() {
+      screenState = 'map_confirm';
+      isLoading = true;
+      error = null;
+    });
+
+    try {
+      // --- Step A: Permissions ---
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        _handleLocationFailure('Location permission is required.');
+        return;
+      }
+
+      // --- Step B: GPS Service ---
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        final consent = await _showLocationAccuracyDialog();
+        if (!consent) {
+          _handleLocationFailure(null); // Just stop loading
+          return;
+        }
+
+        // Retry loop (wait ~1.2s for quick toggle)
+        int retries = 0;
+        while (!serviceEnabled && retries < 8) {
+          await Future.delayed(const Duration(milliseconds: 150));
+          serviceEnabled = await Geolocator.isLocationServiceEnabled();
+          retries++;
+        }
+
+        // If still off, open settings
+        if (!serviceEnabled) {
+           await Geolocator.openLocationSettings();
+           // 🛑 STOP HERE. 
+           // We return to let the Lifecycle Listener handle the resume event.
+           // The screen stays on 'map_confirm' (loading) so no UI flash occurs.
+           return; 
+        }
+      }
+
+      // --- Step C: Fetch (If GPS was already on) ---
+      await _executeLocationFetch();
+
+    } catch (e) {
+      debugPrint('❌ _fetchCurrentLocation CRITICAL error: $e');
+      _handleLocationFailure('Failed to get location');
+    }
+  }
 
 
   Future<void> _updateAddressFromLatLng(LatLng latLng) async {
-    debugPrint('📍 _updateAddressFromLatLng called: ${latLng.latitude}, ${latLng.longitude}');
-    
-    try {
-      final placemarks = await placemarkFromCoordinates(
-        latLng.latitude,
-        latLng.longitude,
-      );
-      
-      final placemark = placemarks.first;
+  debugPrint('📍 Reverse geocoding: ${latLng.latitude}, ${latLng.longitude}');
 
-      final titleParts = [placemark.subLocality, placemark.locality];
-      final detailParts = [
-        placemark.street,
-        placemark.subLocality,
-        placemark.locality,
-        placemark.administrativeArea,
-        placemark.postalCode,
-      ];
+  try {
+    final url =
+        'https://maps.googleapis.com/maps/api/geocode/json'
+        '?latlng=${latLng.latitude},${latLng.longitude}'
+        '&key=$kGoogleApiKey'
+        '&language=en';
 
-      setState(() {
-        _currentLatLng = latLng;
-        locationTitle = titleParts.where((e) => e != null && e.isNotEmpty).join(', ');
-        locationDetails = detailParts.where((e) => e != null && e.isNotEmpty).join(', ');
-        isLoading = false;
-      });
-      
-      debugPrint('✅ Updated location - Title: $locationTitle');
+    final response = await http.get(Uri.parse(url));
+    final data = json.decode(response.body);
 
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(latLng, 16),
-      );
-    } catch (e) {
-      debugPrint('❌ Error in _updateAddressFromLatLng: $e');
-      setState(() {
-        error = 'Failed to get address: $e';
-        isLoading = false;
-      });
+    if (data['status'] != 'OK' || data['results'].isEmpty) {
+      throw 'Geocoding failed';
     }
+
+    final result = data['results'][0];
+    final components = result['address_components'];
+
+    String area = '';
+    String city = '';
+    String state = '';
+    String postalCode = '';
+
+    for (final comp in components) {
+      final types = List<String>.from(comp['types']);
+
+      if (types.contains('sublocality') ||
+          types.contains('sublocality_level_1') ||
+          types.contains('neighborhood')) {
+        area = comp['long_name'];
+      }
+
+      if (types.contains('locality')) {
+        city = comp['long_name'];
+      }
+
+      if (types.contains('administrative_area_level_1')) {
+        state = comp['long_name'];
+      }
+
+      if (types.contains('postal_code')) {
+        postalCode = comp['long_name'];
+      }
+    }
+
+    setState(() {
+      _currentLatLng = latLng;
+      locationTitle =
+          [area, city].where((e) => e.isNotEmpty).join(', ');
+      locationDetails =
+          [state, postalCode].where((e) => e.isNotEmpty).join(', ');
+      isLoading = false;
+    });
+
+    debugPrint('✅ Address: $locationTitle | $locationDetails');
+  } catch (e) {
+    debugPrint('❌ Reverse geocode error: $e');
+    setState(() {
+      isLoading = false;
+      error = 'Failed to fetch address';
+    });
   }
+}
 
   // ✨ UPDATED: Submit using LocationController
 Future<void> _handleSubmit() async {
@@ -530,7 +597,7 @@ if (ok) {
                         ),
                       ],
                     ),
-                  ),
+                  ).withId('location_choice_current_btn'),
                 ),
 
                 SizedBox(height: 16.h),
@@ -556,7 +623,7 @@ if (ok) {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
+                  ).withId('location_choice_manual_btn'),
                 ),
               ],
             ),
@@ -571,7 +638,7 @@ if (ok) {
   // 🗺️ Map Confirmation Screen (Like the reference image)
 // 🗺️ Map Confirmation Screen
 Widget _buildMapConfirmScreen() {
-  // 1) Guard: show a loader until _currentLatLng is set by _updateAddressFromLatLng
+  // 1) Guard: show a loader until _currentLatLng is set
   if (_currentLatLng == null) {
     return Center(
       child: Padding(
@@ -582,31 +649,33 @@ Widget _buildMapConfirmScreen() {
   }
 
   return Stack(
-    key: const ValueKey('map_confirm'), // 2) keep this key; use same string everywhere
+    key: const ValueKey('map_confirm'),
     children: [
       GoogleMap(
         initialCameraPosition: CameraPosition(
-          target: _currentLatLng!, // safe due to guard above
-          zoom: 16,
+          target: _currentLatLng!, 
+          zoom: 18.5, // ✅ UPDATED: Higher zoom for better accuracy
         ),
         onMapCreated: (controller) => _mapController = controller,
         onCameraMove: (position) {
           _cameraMoving = true;
-          _currentLatLng = position.target; // no setState here to avoid rebuild thrash
+          _currentLatLng = position.target; 
         },
         onCameraIdle: () async {
           if (_cameraIdleDebounce?.isActive ?? false) _cameraIdleDebounce!.cancel();
           _cameraIdleDebounce = Timer(const Duration(milliseconds: 150), () async {
             _cameraMoving = false;
             if (_currentLatLng != null) {
-              await _updateAddressFromLatLng(_currentLatLng!); // this method should setState with title/details
+              await _updateAddressFromLatLng(_currentLatLng!); 
             }
           });
         },
-        markers: {},
+        markers: {}, // No markers, using the center pin overlay
         myLocationEnabled: true,
         myLocationButtonEnabled: false,
         zoomControlsEnabled: false,
+        // Optional: Restrict zoom to keep it usable
+        minMaxZoomPreference: const MinMaxZoomPreference(10, 20),
       ),
 
       // Center pin + hint
@@ -621,7 +690,7 @@ Widget _buildMapConfirmScreen() {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Order will be delivered here\nPlace the pin accurately on the map',
+                'Service will be delivered here\nPlace the pin accurately on the map',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -648,7 +717,7 @@ Widget _buildMapConfirmScreen() {
           child: InkWell(
             onTap: () {
               setState(() {
-                screenState = 'choice'; // 3) use the same keys app-wide: 'choice', 'map_confirm', 'map_detail'
+                screenState = 'choice';
                 _clearSearch();
               });
             },
@@ -659,7 +728,7 @@ Widget _buildMapConfirmScreen() {
             ),
           ),
         ),
-      ),
+      ).withId('map_confirm_back_btn'),
 
       // My Location button (recenters to the latest device fix)
       Positioned(
@@ -670,20 +739,9 @@ Widget _buildMapConfirmScreen() {
           shape: const CircleBorder(),
           color: Colors.white,
           child: InkWell(
-            onTap: () async {
-  try {
-    setState(() => isLoading = true); // brief feedback while fetching
-    final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    final here = LatLng(pos.latitude, pos.longitude);
-    _currentLatLng = here;
-    await _mapController?.animateCamera(CameraUpdate.newLatLngZoom(here, 16));
-    await _updateAddressFromLatLng(here); // flips isLoading=false inside
-  } catch (e) {
-    setState(() => isLoading = false);
-    _showSnackBar('Could not fetch current location', isError: true);
-  }
-},
-
+            // ✅ UPDATED: Calls the robust method directly.
+            // This triggers the full screen loader, ensuring no crash and handling permissions.
+            onTap: isLoading ? null : _fetchCurrentLocation,
             customBorder: const CircleBorder(),
             child: Padding(
               padding: EdgeInsets.all(12.w),
@@ -691,7 +749,7 @@ Widget _buildMapConfirmScreen() {
             ),
           ),
         ),
-      ),
+      ).withId('map_confirm_recenter_btn'),
 
       // Bottom card
       Positioned(
@@ -749,7 +807,7 @@ Widget _buildMapConfirmScreen() {
                         child: Text('Change',
                             style: TextStyle(
                                 color: const Color(0xFFE47830), fontSize: 14.sp, fontWeight: FontWeight.w600)),
-                      ),
+                      ).withId('map_confirm_change_btn'),
                     ],
                   ),
                   SizedBox(height: 20.h),
@@ -757,32 +815,30 @@ Widget _buildMapConfirmScreen() {
                     width: double.infinity,
                     height: 50.h,
                     child: ElevatedButton(
-                    onPressed: isLoading ? null : () async {
-  if (_currentLatLng == null) return;
+                      onPressed: isLoading ? null : () async {
+                        if (_currentLatLng == null) return;
 
-  setState(() => isLoading = true);
+                        setState(() => isLoading = true);
 
-  // 1) Resolve serviceability WITHOUT posting
-  final canServe = await locationController.resolveForNavigation(
-    coordinates: _currentLatLng!,
-    uiLocationTitle: locationTitle,            // e.g., "Indira Nagar, Lucknow"
-    uiLocationDetails: locationDetails,        // optional context
-    composedAddress: '$locationTitle, $locationDetails',
-  );
+                        // 1) Resolve serviceability WITHOUT posting
+                        final canServe = await locationController.resolveForNavigation(
+                          coordinates: _currentLatLng!,
+                          uiLocationTitle: locationTitle,
+                          uiLocationDetails: locationDetails,
+                          composedAddress: '$locationTitle, $locationDetails',
+                        );
 
-  if (!mounted) return;
-  setState(() => isLoading = false);
+                        if (!mounted) return;
+                        setState(() => isLoading = false);
 
-  if (!canServe || locationController.areaNotServiceable.value) {
-    setState(() => screenState = 'not_available');
-    return;
-  }
+                        if (!canServe || locationController.areaNotServiceable.value) {
+                          setState(() => screenState = 'not_available');
+                          return;
+                        }
 
-  // 2) Serviceable → go to details screen; DO NOT POST here
-  setState(() => screenState = 'map_detail');
-},
-
-
+                        // 2) Serviceable → go to details screen
+                        setState(() => screenState = 'map_detail');
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE47830),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -790,7 +846,7 @@ Widget _buildMapConfirmScreen() {
                       ),
                       child: Text('Confirm Location',
                           style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.w600)),
-                    ),
+                    ).withId('map_confirm_proceed_btn'),
                   ),
                 ],
               ),
@@ -889,7 +945,7 @@ Widget _buildManualSearchScreen() {
                   Icons.arrow_back,
                   color: Colors.black87,
                   size: 22,
-                ),
+                ).withId('location_manual_back_btn'),
                 onPressed: () {
                   _clearSearch();
                   setState(() => screenState = 'choice');
@@ -922,7 +978,7 @@ Widget _buildManualSearchScreen() {
               ),
               isDense: true,
             ),
-          ),
+          ).withId('location_manual_search_input'),
         ),
 
         // Content area
@@ -944,7 +1000,7 @@ Widget _buildManualSearchScreen() {
                             SizedBox(width: 10.w),
                             Expanded(
                               child: Text(
-                                'eg. Marina Road or Redfern or DLF City Phase 4',
+                                'eg. Gomti Nagar or Indira Nagar or Hazratganj',
                                 style: TextStyle(
                                   fontSize: 13.sp,
                                   color: Colors.grey[500],
@@ -1039,7 +1095,7 @@ Widget _buildManualSearchScreen() {
                             ],
                           ),
                         ),
-                      ),
+                      ).withId('location_manual_use_current_btn'),
                       
                       SizedBox(height: MediaQuery.of(context).size.height * 0.25),
                       
@@ -1069,28 +1125,35 @@ Widget _buildManualSearchScreen() {
                     ],
                   ),
                 )
-              : PlacesSearchWidget(
-                  controller: searchController,
-                  focusNode: searchFocusNode,
-                  googleApiKey: kGoogleApiKey,
-                  onPlaceSelected: (place) async {
-                    FocusScope.of(context).unfocus();
-                    
-                    setState(() {
-                      isLoading = true;
-                      screenState = 'map_confirm';
-                    });
-                    
-                    final latLng = LatLng(place['lat'], place['lng']);
-                    await _updateAddressFromLatLng(latLng);
-                  },
-                  onBackPressed: () {
-                    _clearSearch();
-                    setState(() => screenState = 'choice');
-                  },
-                  onClearPressed: _clearSearch,
-                  showResultsOnly: true,
-                ),
+          : PlacesSearchWidget(
+  controller: searchController,
+  focusNode: searchFocusNode,
+  googleApiKey: kGoogleApiKey,
+
+  // ✅ THIS IS THE KEY LINE
+  locationBias: _currentLatLng, // map center / last known location
+
+  onPlaceSelected: (place) async {
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      isLoading = true;
+      screenState = 'map_confirm';
+    });
+
+    final latLng = LatLng(place['lat'], place['lng']);
+    await _updateAddressFromLatLng(latLng);
+  },
+
+  onBackPressed: () {
+    _clearSearch();
+    setState(() => screenState = 'choice');
+  },
+
+  onClearPressed: _clearSearch,
+  showResultsOnly: true,
+),
+
         ),
       ],
     ),
@@ -1266,11 +1329,11 @@ Widget _buildBottomSheet() {
               
               Divider(height: 32.h, thickness: 1),
               
-              _buildInputField('House/Flat Number *', houseController, Icons.home_outlined, houseFocusNode),
+              _buildInputField('House/Flat Number *', houseController, Icons.home_outlined, houseFocusNode,'location_form_house_input' ),
               SizedBox(height: 14.h),
-              _buildInputField('Landmark (Optional)', landmarkController, Icons.place_outlined, landmarkFocusNode),
+              _buildInputField('Landmark (Optional)', landmarkController, Icons.place_outlined, landmarkFocusNode,'location_form_landmark_input' ),
               SizedBox(height: 14.h),
-              _buildInputField('Phone Number (Optional)', phoneController, Icons.phone_outlined, phoneFocusNode), // ✅ ADDED
+              _buildInputField('Phone Number (Optional)', phoneController, Icons.phone_outlined, phoneFocusNode,'location_form_phone_input' ), // ✅ ADDED
               SizedBox(height: 24.h),
               
               Text(
@@ -1315,7 +1378,7 @@ Widget _buildBottomSheet() {
                       letterSpacing: 0.3,
                     ),
                   ),
-                ),
+                ).withId('location_form_save_btn'),
               ),
             ],
           ),
@@ -1436,7 +1499,7 @@ Widget _buildNotAvailable() {
                       ),
                     ],
                   ),
-                ),
+                ).withId('location_not_avail_retry_btn'),
               ),
 
               SizedBox(height: 16.h),
@@ -1466,7 +1529,7 @@ Widget _buildNotAvailable() {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
+                ).withId('location_not_avail_manual_btn'),
               ),
             ],
           ),
@@ -1480,7 +1543,7 @@ Widget _buildNotAvailable() {
 
 
 
-Widget _buildInputField(String hint, TextEditingController controller, IconData icon, FocusNode focusNode) {
+Widget _buildInputField(String hint, TextEditingController controller, IconData icon, FocusNode focusNode, String testId) {
   return TextField(
     controller: controller,
     focusNode: focusNode,
@@ -1513,7 +1576,7 @@ Widget _buildInputField(String hint, TextEditingController controller, IconData 
       ),
       contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
     ),
-  );
+  ).withId(testId);
 }
 
 
@@ -1567,7 +1630,7 @@ Widget _buildInputField(String hint, TextEditingController controller, IconData 
             ],
           ),
         ),
-      ),
+      ).withId('location_label_${label.toLowerCase()}'),
     );
   }
 }

@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-
+import '../../../utils/test_extensions.dart';
 import '../../../controllers/category_controller.dart';
 import '../../../models/category_models.dart';
 import '../../../services/universal_service_screen.dart';
@@ -78,6 +78,7 @@ class DynamicHomeSections extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(Category category, double scaleFactor) {
+    final String categorySlug = category.categoryName.toLowerCase().replaceAll(' ', '_');
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -105,7 +106,7 @@ class DynamicHomeSections extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-          ),
+          ).withId('view_all_$categorySlug'),
         ),
       ],
     );
@@ -115,6 +116,7 @@ class DynamicHomeSections extends StatelessWidget {
     double cardWidth = 144.w * scaleFactor;
     double cardHeight = 164.h * scaleFactor;
     double spacing = 12.w * scaleFactor;
+    final String categorySlug = category.categoryName.toLowerCase().replaceAll(' ', '_');
 
     return SizedBox(
       height: cardHeight + (22.h * scaleFactor),
@@ -132,7 +134,7 @@ class DynamicHomeSections extends StatelessWidget {
             width: cardWidth,
             height: cardHeight,
             scaleFactor: scaleFactor,
-          );
+          ).withId('service_${categorySlug}_$index');
         },
       ),
     );

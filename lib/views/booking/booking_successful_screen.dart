@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-
+import '../../controllers/saathi_controller.dart'; // Add this import
 import '../../controllers/cart_controller.dart'; 
 
 class BookingSuccessfulScreen extends StatelessWidget {
@@ -49,6 +49,9 @@ class BookingSuccessfulScreen extends StatelessWidget {
       if (Get.isRegistered<CartController>()) {
         final cartController = Get.find<CartController>();
         cartController.clearCart(); 
+      }
+      if (Get.isRegistered<SaathiController>()) {
+        Get.find<SaathiController>().clearBookingSession();
       }
     });
 

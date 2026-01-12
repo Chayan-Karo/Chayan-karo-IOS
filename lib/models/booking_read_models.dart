@@ -127,6 +127,8 @@ class CustomerBooking {
   // NEW FIELDS from backend
   final String? paymentMode;   // "ONLINE", "CASH"
   final String? paymentStatus; // "Paid", "UnPaid"
+  @JsonKey(defaultValue: false)
+  final bool feedbackSubmitted;
 
   final List<BookingServiceRead> bookingService;
   final CustomerInfo customerDetails;
@@ -149,6 +151,7 @@ class CustomerBooking {
     required this.bookingPin,
     this.paymentMode,
     this.paymentStatus,
+    this.feedbackSubmitted = false, // ✅
     required this.bookingService,
     required this.customerDetails,
     required this.customerAddress,

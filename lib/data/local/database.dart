@@ -1549,6 +1549,32 @@ class AppDatabase extends _$AppDatabase {
       'auth_data': authCount?.read(countAll()) ?? 0,
     };
   }
+  Future<void> performSecureLogout() async {
+    try {
+      print('🧹 Starting Secure Logout...');
+
+      // 1. Clear User Content Tables
+      await delete(cartItemsTable).go();
+      await delete(locationDataTable).go();
+      await delete(authDataTable).go();
+
+      // 2. Clear API Cache Tables
+      await delete(categoriesTable).go();
+      await delete(apiServicesTable).go();
+      await delete(serviceCategoriesTable).go();
+      await delete(servicesTable).go();
+
+      // 3. Clear User Preferences EXCEPT Onboarding Keys
+      await (delete(userPreferencesTable)
+        ..where((tbl) => tbl.key.isNotIn(['has_seen_onboarding', 'onboarding_completed_at']))
+      ).go();
+      
+      print('✅ Secure Logout Complete: User data wiped, Onboarding preserved.');
+    } catch (e) {
+      print('❌ Error during secure logout: $e');
+      throw e;
+    }
+  }
 }
 
 LazyDatabase _openConnection() {

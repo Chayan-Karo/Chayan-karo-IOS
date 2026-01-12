@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../utils/test_extensions.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -115,7 +116,7 @@ class CustomBottomNavBar extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ).withId('nav_${label.toLowerCase().replaceAll(' ', '_')}');
   }
 
   Widget _buildCenterNavItem(String iconPath, String label, int index, double scaleFactor, double bottomPadding) {
@@ -161,6 +162,6 @@ class CustomBottomNavBar extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ).withId('nav_center_home');
   }
 }

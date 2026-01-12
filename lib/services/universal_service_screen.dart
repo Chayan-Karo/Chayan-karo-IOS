@@ -12,16 +12,19 @@ import '../views/cart/cart_screen.dart';
 import '../views/booking/Summaryscreen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'snakeanimation.dart';
+import '../../utils/test_extensions.dart';
 
 
 class CategoryServiceScreen extends StatefulWidget {
   final Category category;
   final String? scrollToServiceCategoryId;
+  final String? highlightServiceId; // 1. NEW PARAMETER
 
   const CategoryServiceScreen({
     Key? key,
     required this.category,
     this.scrollToServiceCategoryId,
+    this.highlightServiceId, // 1. Add to constructor
   }) : super(key: key);
 
   @override
@@ -40,6 +43,9 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
   final RxMap<String, bool> _loadingByCategory = <String, bool>{}.obs;
   final RxMap<String, bool> _errorByCategory = <String, bool>{}.obs;
   final RxSet<String> _loadingServiceIds = <String>{}.obs;
+// 1. ADD THESE TWO VARIABLES
+  final GlobalKey _highlightKey = GlobalKey(); // Key to find the specific card
+  String? _activeHighlightId; // Tracks which ID gets the snake animation
 
   @override
   void initState() {
@@ -47,6 +53,18 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
     serviceController = Get.find<ServiceController>();
     cartController = Get.find<CartController>();
 
+// 2. ADD HIGHLIGHT INITIALIZATION LOGIC
+    _activeHighlightId = widget.highlightServiceId;
+    if (_activeHighlightId != null) {
+      // Auto-stop snake animation after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _activeHighlightId = null;
+          });
+        }
+      });
+    }
     print('🟢 CategoryServiceScreen initialized for ${widget.category.categoryName}');
 
     for (var serviceCategory in widget.category.serviceCategory) {
@@ -66,15 +84,48 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
     }
   }
 
-  void _loadServicesForCategory(String serviceCategoryId) async {
+ void _loadServicesForCategory(String serviceCategoryId) async {
     _loadingByCategory[serviceCategoryId] = true;
     _errorByCategory[serviceCategoryId] = false;
 
     try {
       print('🔄 Loading services for service category: $serviceCategoryId');
       await serviceController.loadServices(serviceCategoryId);
-      _servicesByCategory[serviceCategoryId] = List.from(serviceController.services);
-      print('✅ Loaded ${serviceController.services.length} services for category $serviceCategoryId');
+      
+      // FIX: Define the local variable 'services' here
+      final services = List<Service>.from(serviceController.services);
+      
+      // Store it in your map
+      _servicesByCategory[serviceCategoryId] = services;
+      
+      print('✅ Loaded ${services.length} services for category $serviceCategoryId');
+
+     // 3. REPLACE SCROLL LOGIC WITH THIS BLOCK
+      if (widget.highlightServiceId != null) {
+        final containsTargetService = services.any((s) => s.id == widget.highlightServiceId);
+        
+        if (containsTargetService) {
+           print('🎯 Found target service in $serviceCategoryId. Waiting for UI...');
+           
+           // Wait for the UI to rebuild with the new data
+           WidgetsBinding.instance.addPostFrameCallback((_) {
+             // Tiny delay to ensure layout is complete
+             Future.delayed(const Duration(milliseconds: 300), () {
+               if (_highlightKey.currentContext != null) {
+                 Scrollable.ensureVisible(
+                   _highlightKey.currentContext!,
+                   duration: const Duration(milliseconds: 800),
+                   curve: Curves.easeInOut,
+                   alignment: 0.5, // Center the card on screen
+                 );
+               } else {
+                 // Fallback to category header if card key isn't found
+                 _scrollToServiceCategory(serviceCategoryId);
+               }
+             });
+           });
+        }
+      }
     } catch (e) {
       print('❌ Error loading services for category $serviceCategoryId: $e');
       _errorByCategory[serviceCategoryId] = true;
@@ -1080,229 +1131,190 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
   Widget _buildServiceCard(Service service, double scaleFactor) {
     final RxBool isExpanded = false.obs;
 
-    return Obx(() => Container(
-          margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
-          padding: EdgeInsets.all(12.r * scaleFactor),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12 * scaleFactor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.orange.withOpacity(0.05),
-                blurRadius: 10 * scaleFactor,
-                offset: Offset(0, 4 * scaleFactor),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildNetworkImage(
-                    imageUrl: service.imgLink,
-                    width: 70.w * scaleFactor,
-                    height: 70.h * scaleFactor,
-                    fit: BoxFit.cover,
-                    borderRadius: 8 * scaleFactor,
-                    scaleFactor: scaleFactor,
-                    errorWidget: Container(
+    return Obx(() {
+      // Check highlight state
+      final bool isHighlighted = (service.id == widget.highlightServiceId); // Use widget ID for key/anim check
+
+      // 1. Move Margin to Padding
+      return Padding(
+        padding: EdgeInsets.only(bottom: 16.r * scaleFactor),
+        
+        // 2. Wrap with Snake Animation
+        child: AnimatedBorderWrapper(
+          isAnimating: (service.id == _activeHighlightId), // Use active ID for animation (so it stops)
+          scaleFactor: scaleFactor,
+          
+          // 3. Container with Key
+          child: Container(
+            // ASSIGN KEY HERE if highlighted
+            key: isHighlighted ? _highlightKey : null,
+            
+            padding: EdgeInsets.all(12.r * scaleFactor),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12 * scaleFactor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.05),
+                  blurRadius: 10 * scaleFactor,
+                  offset: Offset(0, 4 * scaleFactor),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // ... (Keep existing Row content) ...
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildNetworkImage(
+                      imageUrl: service.imgLink,
                       width: 70.w * scaleFactor,
                       height: 70.h * scaleFactor,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8 * scaleFactor),
-                      ),
-                      child: Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey,
-                        size: 30 * scaleFactor,
-                      ),
+                      fit: BoxFit.cover,
+                      borderRadius: 8 * scaleFactor,
+                      scaleFactor: scaleFactor,
                     ),
-                  ),
-                  SizedBox(width: 12.w * scaleFactor),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        GestureDetector(
-                          onTap: () => isExpanded.toggle(),
-                          behavior: HitTestBehavior.translucent,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              return _buildSmartServiceName(
-                                  service.name, isExpanded, scaleFactor, constraints.maxWidth);
-                            },
-                          ),
-                        ),
-                        SizedBox(height: 4.h * scaleFactor),
-                        Row(
-                          children: [
-                            SvgPicture.asset('assets/icons/star.svg',
-                                width: 16.w * scaleFactor,
-                                height: 16.h * scaleFactor,
-                                color: Colors.black),
-                            SizedBox(width: 4.w * scaleFactor),
-                            Text(
-                              "${service.rating} | ${service.formattedDuration}",
-                              style: TextStyle(
-                                fontSize: 12.sp * scaleFactor,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 6.h * scaleFactor),
-                        Text(
-                          service.formattedPrice,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14.sp * scaleFactor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _buildQuantitySelector(service, scaleFactor),
-                ],
-              ),
-              AnimatedCrossFade(
-                firstChild: const SizedBox.shrink(),
-                secondChild: service.description.isNotEmpty
-                    ? Padding(
-                        padding: EdgeInsets.only(
-                            top: 8.h * scaleFactor,
-                            left: 4.w * scaleFactor,
-                            right: 4.w * scaleFactor),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            service.description,
-                            style: TextStyle(
-                              fontSize: 12.sp * scaleFactor,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-                crossFadeState:
-                    isExpanded.value ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 200),
-              ),
-            ],
-          ),
-        ));
-  }
-
-  Widget _buildLargeServiceCard(Service service, double scaleFactor) {
-    final RxBool isExpanded = false.obs;
-    
-    return Obx(() => Container(
-      margin: EdgeInsets.only(bottom: 16.r * scaleFactor),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12 * scaleFactor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.05),
-            blurRadius: 10 * scaleFactor,
-            offset: Offset(0, 4 * scaleFactor),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 7:3 aspect ratio image
-          ClipRRect(
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(12 * scaleFactor),
-            ),
-            child: AspectRatio(
-              aspectRatio: 7 / 3,
-              child: _buildNetworkImage(
-                imageUrl: service.imgLink,
-                width: double.infinity,
-                height: 300.h * scaleFactor,
-                fit: BoxFit.cover,
-                borderRadius: 0,
-                scaleFactor: scaleFactor,
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(12.r * scaleFactor),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+                    SizedBox(width: 12.w * scaleFactor),
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () => isExpanded.toggle(),
-                        child: Text(
-                          service.name,
-                          style: TextStyle(
-                            fontSize: 15.sp * scaleFactor,
-                            fontWeight: FontWeight.bold,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GestureDetector(
+                            onTap: () => isExpanded.toggle(),
+                            behavior: HitTestBehavior.translucent,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                return _buildSmartServiceName(service.name, isExpanded, scaleFactor, constraints.maxWidth);
+                              },
+                            ),
                           ),
-                          maxLines: isExpanded.value ? null : 2,
-                          overflow: isExpanded.value ? null : TextOverflow.ellipsis,
-                        ),
+                          SizedBox(height: 4.h * scaleFactor),
+                          Row(
+                            children: [
+                              SvgPicture.asset('assets/icons/star.svg', width: 16.w * scaleFactor, height: 16.h * scaleFactor, color: Colors.black),
+                              SizedBox(width: 4.w * scaleFactor),
+                              Text("${service.ratingText} | ${service.formattedDuration}", style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.grey)),
+                            ],
+                          ),
+                          SizedBox(height: 6.h * scaleFactor),
+                          Text(service.formattedPrice, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp * scaleFactor)),
+                        ],
                       ),
                     ),
                     _buildQuantitySelector(service, scaleFactor),
                   ],
                 ),
-                SizedBox(height: 4.h * scaleFactor),
-                Row(
-                  children: [
-                    SvgPicture.asset(
-                      'assets/icons/star.svg',
-                      width: 18.w * scaleFactor,
-                      color: Colors.black,
-                    ),
-                    SizedBox(width: 4.w * scaleFactor),
-                    Text(
-                      "${service.rating} | ${service.formattedDuration}",
-                      style: TextStyle(
-                        fontSize: 12.sp * scaleFactor,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
+                // ... (Keep existing CrossFade) ...
+                AnimatedCrossFade(
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: service.description.isNotEmpty
+                      ? Padding(
+                          padding: EdgeInsets.only(top: 8.h * scaleFactor, left: 4.w * scaleFactor, right: 4.w * scaleFactor),
+                          child: Align(alignment: Alignment.centerLeft, child: Text(service.description, style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.black87))),
+                        )
+                      : const SizedBox.shrink(),
+                  crossFadeState: isExpanded.value ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 200),
                 ),
-                SizedBox(height: 6.h * scaleFactor),
-                Text(
-                  service.formattedPrice,
-                  style: TextStyle(
-                    fontSize: 16.sp * scaleFactor,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                if (service.description.isNotEmpty) ...[
-                  SizedBox(height: 8.h * scaleFactor),
-                  Text(
-                    service.description,
-                    style: TextStyle(
-                      fontSize: 12.sp * scaleFactor,
-                      color: Colors.black87,
-                    ),
-                    maxLines: isExpanded.value ? null : 3,
-                    overflow: isExpanded.value ? null : TextOverflow.ellipsis,
-                  ),
-                ],
               ],
             ),
           ),
-        ],
-      ),
-    ));
+        ),
+      );
+    });
   }
+  Widget _buildLargeServiceCard(Service service, double scaleFactor) {
+    final RxBool isExpanded = false.obs;
+    
+    return Obx(() {
+      final bool isHighlighted = (service.id == widget.highlightServiceId);
 
+      return Padding(
+        padding: EdgeInsets.only(bottom: 16.r * scaleFactor),
+        child: AnimatedBorderWrapper(
+          isAnimating: (service.id == _activeHighlightId),
+          scaleFactor: scaleFactor,
+          child: Container(
+            // ASSIGN KEY HERE if highlighted
+            key: isHighlighted ? _highlightKey : null,
+            
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12 * scaleFactor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.05),
+                  blurRadius: 10 * scaleFactor,
+                  offset: Offset(0, 4 * scaleFactor),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12 * scaleFactor)),
+                  child: AspectRatio(
+                    aspectRatio: 7 / 3,
+                    child: _buildNetworkImage(
+                      imageUrl: service.imgLink,
+                      width: double.infinity,
+                      height: 300.h * scaleFactor,
+                      fit: BoxFit.cover,
+                      borderRadius: 0,
+                      scaleFactor: scaleFactor,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(12.r * scaleFactor),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => isExpanded.toggle(),
+                              child: Text(
+                                service.name,
+                                style: TextStyle(fontSize: 15.sp * scaleFactor, fontWeight: FontWeight.bold),
+                                maxLines: isExpanded.value ? null : 2,
+                                overflow: isExpanded.value ? null : TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          _buildQuantitySelector(service, scaleFactor),
+                        ],
+                      ),
+                      // ... (Keep rest of existing large card content) ...
+                      SizedBox(height: 4.h * scaleFactor),
+                      Row(
+                        children: [
+                          SvgPicture.asset('assets/icons/star.svg', width: 18.w * scaleFactor, color: Colors.black),
+                          SizedBox(width: 4.w * scaleFactor),
+                          Text("${service.ratingText} | ${service.formattedDuration}", style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.grey)),
+                        ],
+                      ),
+                      SizedBox(height: 6.h * scaleFactor),
+                      Text(service.formattedPrice, style: TextStyle(fontSize: 16.sp * scaleFactor, fontWeight: FontWeight.bold, color: Colors.black)),
+                      if (service.description.isNotEmpty) ...[
+                        SizedBox(height: 8.h * scaleFactor),
+                        Text(service.description, style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.black87), maxLines: isExpanded.value ? null : 3, overflow: isExpanded.value ? null : TextOverflow.ellipsis),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+  
   Widget _buildSmartServiceName(
       String serviceName, RxBool isExpanded, double scaleFactor, double availableWidth) {
     final words = serviceName.split(' ');
@@ -1380,14 +1392,16 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
 Widget _buildQuantitySelector(Service service, double scaleFactor) {
     return Obx(() {
       final quantity = cartController.getQuantity(service.id);
-      final hasInteractedOnThisPage =
-          _currentPageInteractedServices.contains(service.id);
+      
+      // REMOVED: final hasInteractedOnThisPage = ...
+      // We want the UI to reflect the GLOBAL cart state, not just local interaction.
 
       // Is the animation "active"?
       final isAnimating = _loadingServiceIds.contains(service.id);
       final isMaxLimitReached = quantity >= 3;
+      final showCounter = quantity > 0;
 
-      // Decoration for the Counter
+      // Decoration for the Counter (White bg, shadow, rounded corners)
       final counterDecoration = BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8 * scaleFactor),
@@ -1405,17 +1419,22 @@ Widget _buildQuantitySelector(Service service, double scaleFactor) {
         transitionBuilder: (Widget child, Animation<double> animation) {
           return ScaleTransition(scale: animation, child: child);
         },
-        child: (quantity == 0 || !hasInteractedOnThisPage)
+        // CHANGED LOGIC: Show "Add" button ONLY if quantity is 0.
+        // If quantity > 0 (even if added from another screen), show the counter.
+        child: !showCounter
             // STATE 1: ADD BUTTON
             ? AnimatedAddButton(
                 key: ValueKey('add_${service.id}'),
-                isLoading: isAnimating, // Internal widget handles disabling
+                isLoading: isAnimating, 
                 scaleFactor: scaleFactor,
                 onTap: () {
                   HapticFeedback.lightImpact();
+                  // Note: _addToCart should also have a check for max limit if needed, 
+                  // but usually "Add" implies going from 0 to 1, so it's fine.
                   _addToCart(service);
                 },
-              )
+              ).withId('service_add_btn_${service.id}')
+            
             // STATE 2: COUNTER
             : AnimatedBorderWrapper(
                 key: ValueKey('counter_${service.id}'),
@@ -1430,11 +1449,11 @@ Widget _buildQuantitySelector(Service service, double scaleFactor) {
                     child: Material(
                       color: Colors.transparent,
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           // --- MINUS BUTTON ---
                           Expanded(
                             child: InkWell(
-                              // DISABLE CLICK IF ANIMATING
                               onTap: isAnimating
                                   ? null
                                   : () {
@@ -1445,7 +1464,6 @@ Widget _buildQuantitySelector(Service service, double scaleFactor) {
                                 child: Icon(
                                   Icons.remove,
                                   size: 16 * scaleFactor,
-                                  // Grey out if disabled
                                   color: isAnimating
                                       ? Colors.grey.shade400
                                       : const Color(0xFFE47830),
@@ -1456,8 +1474,7 @@ Widget _buildQuantitySelector(Service service, double scaleFactor) {
 
                           // --- QUANTITY TEXT ---
                           Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 4.w * scaleFactor),
+                            padding: EdgeInsets.symmetric(horizontal: 4.w * scaleFactor),
                             child: Text(
                               '$quantity',
                               style: TextStyle(
@@ -1471,9 +1488,14 @@ Widget _buildQuantitySelector(Service service, double scaleFactor) {
                           // --- PLUS BUTTON ---
                           Expanded(
                             child: InkWell(
-                              // DISABLE CLICK IF ANIMATING OR MAX LIMIT
+                              // BLOCK: Disable if max limit reached OR animating
                               onTap: (isMaxLimitReached || isAnimating)
-                                  ? null
+                                  ? () {
+                                      if (isMaxLimitReached) {
+                                         HapticFeedback.mediumImpact();
+                                         // Optional: Show snackbar or visual feedback
+                                      }
+                                    }
                                   : () {
                                       HapticFeedback.lightImpact();
                                       _incrementCart(service.id);
@@ -1482,7 +1504,7 @@ Widget _buildQuantitySelector(Service service, double scaleFactor) {
                                 child: Icon(
                                   Icons.add,
                                   size: 16 * scaleFactor,
-                                  // Grey out if disabled (limit or animation)
+                                  // GREY OUT color if limit reached
                                   color: (isMaxLimitReached || isAnimating)
                                       ? Colors.grey.shade400
                                       : const Color(0xFFE47830),
@@ -1495,7 +1517,7 @@ Widget _buildQuantitySelector(Service service, double scaleFactor) {
                     ),
                   ),
                 ),
-              ),
+              ).withId('service_counter_${service.id}'),
       );
     });
   }
@@ -1590,7 +1612,7 @@ Widget _buildBottomBar(double scaleFactor) {
                   ],
                 ),
               ),
-            ),
+            ).withId('category_view_cart_btn'),
           ],
         ),
       );

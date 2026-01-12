@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter/services.dart'; // <--- ADD THIS IMPORT AT THE TOP
 import 'package:get/get.dart';
 import '../../controllers/otp_controller.dart';
+import '../../utils/test_extensions.dart'; // Adjust path if needed
 
 class OtpVerificationScreen extends StatelessWidget {
   const OtpVerificationScreen({Key? key}) : super(key: key);
@@ -22,10 +24,14 @@ class OtpVerificationScreen extends StatelessWidget {
             backgroundColor: Colors.white,
             elevation: 0,
             foregroundColor: Colors.black,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back),
-              onPressed: () => Get.back(),
-            ),
+            // In your existing code:
+leading: IconButton(
+  icon: Icon(Icons.arrow_back),
+  onPressed: () {
+    FocusScope.of(context).unfocus(); // Close keyboard gracefully
+    Get.back(); // Then navigate
+  },
+).withId('otp_back_btn'),
           ),
           body: Padding(
             padding: EdgeInsets.symmetric(
@@ -99,7 +105,7 @@ class OtpVerificationScreen extends StatelessWidget {
                             color: controller.isLoading ? Colors.grey : Color(0xFFFF6F00),
                           ),
                         ),
-                      )),
+                      )).withId('otp_resend_btn'),
 
                 Spacer(),
 
@@ -136,7 +142,7 @@ class OtpVerificationScreen extends StatelessWidget {
                                 : Colors.grey[600],
                           ),
                         ),
-                )),
+                )).withId('otp_verify_btn'),
 
                 SizedBox(height: 24.h * scaleFactor),
               ],
@@ -154,6 +160,15 @@ class OtpVerificationScreen extends StatelessWidget {
         return SizedBox(
           width: 55.w * scaleFactor,
           height: 55.h * scaleFactor,
+          child: KeyboardListener(
+            focusNode: FocusNode(), // Required for listener to work
+            onKeyEvent: (event) {
+              // Check if key is Backspace and event is KeyDown
+              if (event is KeyDownEvent && 
+                  event.logicalKey == LogicalKeyboardKey.backspace) {
+                controller.handleBackspace(index);
+              }
+            },
           child: TextField(
             controller: controller.otpControllers[index],
             focusNode: controller.focusNodes[index],
@@ -161,7 +176,7 @@ class OtpVerificationScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             
             // 1. CHANGE THIS TO 4: Allows the full "1234" string to enter temporarily
-            maxLength: 4, 
+            maxLength: 60, 
             
             // 2. ENSURE THIS IS TRUE: Allows long-press to show "Paste"
             enableInteractiveSelection: true, 
@@ -203,6 +218,7 @@ class OtpVerificationScreen extends StatelessWidget {
                  );
               }
             },
+          ).withId('otp_input_$index'),
           ),
         );
       }),

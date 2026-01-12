@@ -33,6 +33,8 @@ class Service {
   final int duration;
   final String imgLink;
   final double discountPercentage; // Changed from int to double
+  final double averageRating;
+
 
   // NEW: carry category id coming from API (common keys: serviceCategoryId/categoryId)
   final String categoryId;
@@ -46,6 +48,8 @@ class Service {
     required this.imgLink,
     required this.discountPercentage,
     this.categoryId = '',
+    this.averageRating = 0.0,
+
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
@@ -61,6 +65,8 @@ class Service {
       imgLink: json['imgLink']?.toString() ?? '',
       discountPercentage: _parseDouble(json['discountPercentage']),
       categoryId: serviceCatId.isNotEmpty ? serviceCatId : catId,
+      averageRating: _parseDouble(json['averageRating']),
+
     );
   }
 
@@ -118,7 +124,10 @@ class Service {
   String get formattedOriginalPrice => discountPercentage > 0 ? '₹${price.toInt()}' : '';
 
   // Rating simulation (you can replace with actual API data later)
-  String get rating => '4.8';
+  String get ratingText =>
+    averageRating <= 0 ? 'New' : averageRating.toStringAsFixed(1);
+    // String get ratingText => averageRating.toStringAsFixed(1);
+
 
   // Check if service has discount
   bool get hasDiscount => discountPercentage > 0;
@@ -132,7 +141,7 @@ class Service {
       originalPrice: price,
       image: imgLink,
       duration: formattedDuration,
-      rating: rating,
+      rating: ratingText,
       description: description,
       discountPercentage: discountPercentage.toInt(),
       sourcePage: sourcePage ?? 'unknown',
@@ -331,7 +340,7 @@ class CartItem {
       originalPrice: service.price,
       image: service.imgLink,
       duration: service.formattedDuration,
-      rating: service.rating,
+      rating: service.ratingText,
       description: service.description,
       discountPercentage: service.discountPercentage.toInt(),
       sourcePage: sourcePage ?? 'unknown',

@@ -33,6 +33,7 @@ void main() async {
   );
 
   await initializeDependencies();
+  
 
   runApp(const ChayanKaroApp());
 }

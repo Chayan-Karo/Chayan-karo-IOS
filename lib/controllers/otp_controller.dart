@@ -87,27 +87,39 @@ class OtpController extends GetxController {
   }
 
 void onOtpChanged(String value, int index) {
-    // 1. 📋 HANDLE PASTE EVENT (Length is 4)
-    if (value.length == 4) {
-      // Check if the pasted content is actually numbers
-      if (int.tryParse(value) != null) {
-        for (int i = 0; i < 4; i++) {
-          if (i < otpControllers.length) {
-            otpControllers[i].text = value[i];
-          }
+    // --- 1. 🧹 SMART PASTE HANDLING (THE FIX) ---
+    // Regex: Finds the first sequence of exactly 4 digits in the pasted text
+    // Example: Pasting "Your OTP is 1234" will extract "1234"
+    final codeMatch = RegExp(r'\d{4}').firstMatch(value);
+
+    if (codeMatch != null) {
+      final String cleanCode = codeMatch.group(0)!;
+      
+      // Auto-fill all 4 fields
+      for (int i = 0; i < 4; i++) {
+        if (i < otpControllers.length) {
+          otpControllers[i].text = cleanCode[i];
         }
-        _updateOtpValue();
-        Get.focusScope?.unfocus(); // Close keyboard after pasting
-        // Optional: verifyOTP(); // Uncomment if you want auto-submit
       }
+      _updateOtpValue();
+      Get.focusScope?.unfocus(); // Close keyboard immediately
+      // Optional: verifyOTP(); // Uncomment if you want auto-submit
       return;
     }
+    // --------------------------------------------
 
-    // 2. 🚫 VALIDATION (Single Digit)
-    // We strictly allow only 0-9 for single keystrokes
-    if (value.isNotEmpty && !RegExp(r'^[0-9]$').hasMatch(value)) {
-      otpControllers[index].text = '';
-      return;
+    // 2. 🚫 VALIDATION (Single Digit Enforcement)
+    // If the input is just one character, ensure it's a number
+    if (value.length == 1) {
+      if (!RegExp(r'^[0-9]$').hasMatch(value)) {
+        otpControllers[index].text = ''; // Reject non-numbers
+        return;
+      }
+    } 
+    // If input is long but NOT a valid OTP (e.g., just text "Your OTP"), clear it
+    else if (value.length > 1) {
+       otpControllers[index].text = ''; 
+       return;
     }
 
     // Clear error if user starts typing again
@@ -123,7 +135,7 @@ void onOtpChanged(String value, int index) {
       });
     }
 
-    // 4. ⏪ SMOOTH AUTO BACKSPACE
+   /* // 4. ⏪ SMOOTH AUTO BACKSPACE
     else if (value.isEmpty && index > 0) {
       Future.microtask(() {
         focusNodes[index].unfocus();
@@ -135,12 +147,21 @@ void onOtpChanged(String value, int index) {
               offset: otpControllers[index - 1].text.length);
         }
       });
-    }
+    }  */
 
     // Update OTP Observable
     _updateOtpValue();
   }
-
+  // --- ADD THIS METHOD FOR BUG-014 (BACKSPACE LOGIC) ---
+  void handleBackspace(int index) {
+    // If we are not in the first box, and the current box is empty...
+    if (index > 0 && otpControllers[index].text.isEmpty) {
+      // Move focus back to the previous box
+      focusNodes[index].unfocus();
+      focusNodes[index - 1].requestFocus();
+    }
+  }
+  
   void _updateOtpValue() {
     final otpValue = otpControllers.map((controller) => controller.text).join();
     _otp.value = otpValue;
@@ -148,6 +169,10 @@ void onOtpChanged(String value, int index) {
   }
 
   Future<void> verifyOTP() async {
+    if (_secondsRemaining.value <= 0) {
+      _showErrorSnackbar('OTP has expired. Please click Resend OTP.');
+      return;
+    } 
     if (_otp.value.length != 4) {
       _showErrorSnackbar('Please enter complete OTP');
       return;

@@ -15,6 +15,9 @@ import '../../models/cancel_models.dart';
 import 'dart:io'; // Add this for File
 //import '../../models/booking_read_models.dart';
 import '../../models/feedback_req_model.dart'; // Add this import
+import '../../models/search_model.dart'; // Add this import
+import '../../models/most_used_service_model.dart';
+
 
 part 'api_service.g.dart';
 
@@ -155,5 +158,15 @@ Future<CancelBookingEnvelope> cancelBookingRaw(
     @Header("Authorization") String token,
     @Body() ServiceBookingRatingRequest body,
   );
-
+  
+  @GET("/user/searchActiveService")
+  Future<SearchResponse> searchActiveServices(
+    @Header("Authorization") String token,
+    @Query("search") String query,
+  );
+  // Add this to your ApiService interface
+  @GET("/user/mostUsedServices")
+  Future<MostUsedServiceResponse> getMostUsedServices(
+    @Header("Authorization") String token,
+  );
 }

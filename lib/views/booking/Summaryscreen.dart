@@ -21,6 +21,7 @@ import '../../models/category_models.dart';
 import '../../controllers/service_controller.dart';
 import '../../controllers/booking_controller.dart';
 import '../../models/booking_models.dart';
+import '../../utils/test_extensions.dart';
 
 // --- NEW IMPORT: Ensure you moved the bottom code to this file ---
 import 'merged_booking_modal.dart'; 
@@ -179,10 +180,49 @@ class _SummaryScreenState extends State<SummaryScreen> {
     final parts = <String>[l1, if (l2.trim().isNotEmpty) l2, if (city.trim().isNotEmpty) city, if (state.trim().isNotEmpty) state, if (post.trim().isNotEmpty) post];
     return parts.join(', ');
   }
+// --- HELPER: Opens Saathi Screen & Updates State ---
+  Future<void> _navigateToSaathiScreen() async {
+    // 1. Validation
+    if ((_locationId ?? '').isEmpty) return;
+    final items = _getCurrentPageCartItems(Get.find<CartController>());
+    if (items.isEmpty) return;
+    final first = items.first;
 
+    // 2. Prepare Data
+    final DateTime resolvedDate = _resolveBookingDateTime(timeSlot, const TimeOfDay(hour: 0, minute: 0));
+    final String preciseDateString = DateFormat('yyyy-MM-dd').format(resolvedDate);
+    final TimeOfDay t = _inlineTime ?? const TimeOfDay(hour: 0, minute: 0);
+    final String timeString = "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+    final int totalDuration = _estimateTotalDurationMinutes(items);
+
+    // 3. Navigate
+    final selectedSaathi = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChayanSathiScreen(
+          categoryId: first.categoryId,
+          serviceId: first.id,
+          locationId: _locationId!,
+          addressId: _addressId,
+          initialSlot: preciseDateString,
+          bookingTime: timeString,
+          currentBookingDuration: totalDuration,
+        ),
+      ),
+    );
+
+    // 4. Update State if user picked someone
+    if (selectedSaathi != null) {
+      setState(() {
+        saathi = selectedSaathi;
+        _showEditableBlocks = true; // Reveal the payment summary
+      });
+    }
+  }
   // --- MERGED MODAL LOGIC ---
-  Future<void> _openMergedBookingModal() async {
-    // 1. Calculate Constraint from Saathi
+  // --- MERGED MODAL LOGIC ---
+  Future<bool> _openMergedBookingModal() async { // Changed return type to Future<bool>
+    // 1. Calculate Constraint
     String? nextSlotConstraint;
     if (saathi != null) {
       if (saathi!['availabilityResult'] != null && saathi!['availabilityResult'] is Map) {
@@ -192,13 +232,13 @@ class _SummaryScreenState extends State<SummaryScreen> {
       }
     }
 
-    // 2. Prepare Date String (Ensure yyyy-MM-dd format)
+    // 2. Prepare Date
     String dateToSend = timeSlot;
     if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateToSend)) {
        dateToSend = DateFormat('yyyy-MM-dd').format(DateTime.now());
     }
 
-    // 3. Open Modal (Now Imported from separate file)
+    // 3. Open Modal
     final DateTime? picked = await showMergedBookingModal(
       context,
       initialDateStr: dateToSend,
@@ -212,9 +252,11 @@ class _SummaryScreenState extends State<SummaryScreen> {
         timeSlot = DateFormat('yyyy-MM-dd').format(picked);
         _inlineTime = TimeOfDay.fromDateTime(picked);
       });
+      return true; // Return TRUE: User picked a time
     }
+    
+    return false; // Return FALSE: User cancelled
   }
-
   // --- NEW FORMATTER: Combines Date & Time for Header ---
   String _formatFullScheduleDisplay() {
     if (timeSlot == 'Select time slot' || timeSlot.isEmpty) return 'Select time slot';
@@ -413,58 +455,59 @@ class _SummaryScreenState extends State<SummaryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (_showEditableBlocks) ...[
-                              _TopDetailsBlock(
-                                scale: scale,
-                                address: address,
-                                timeLabel: scheduledDisplay, // Shows "Tomorrow 9 Dec 10:30 PM"
-                                saathi: saathi,
-                                onEditAddress: () async {
-                                  final newAddress = await showScheduleAddressPopup(context);
-                                  if (newAddress != null) {
-                                    await _locationController.fetchCustomerAddresses();
-                                    final match = _locationController.addresses.firstWhereOrNull((a) {
-                                      final existing = _formatAddress(a.addressLine1, a.addressLine2, a.city, a.state, a.postCode).toLowerCase().trim();
-                                      return existing == newAddress.toLowerCase().trim();
-                                    });
-                                    setState(() {
-                                      address = newAddress;
-                                      _addressId = match?.id ?? _addressId;
-                                      _locationId = match?.locationId ?? _locationId;
-                                    });
-                                  }
-                                },
-                                onEditTime: () async {
-                                  await _openMergedBookingModal();
-                                },
-                                onEditSaathi: () async {
-                                  if ((_locationId ?? '').isEmpty) return;
-                                  final items = _getCurrentPageCartItems(Get.find<CartController>());
-                                  if (items.isEmpty) return;
-                                  final first = items.first;
+                              // Inside build() ...
+_TopDetailsBlock(
+  scale: scale,
+  address: address,
+  timeLabel: scheduledDisplay,
+  saathi: saathi,
+  
+  // 1. EDIT ADDRESS -> Forces Time -> Forces Saathi
+  onEditAddress: () async {
+    final newAddress = await showScheduleAddressPopup(context);
+    if (newAddress != null) {
+      await _locationController.fetchCustomerAddresses();
+      final match = _locationController.addresses.firstWhereOrNull((a) {
+        final existing = _formatAddress(a.addressLine1, a.addressLine2, a.city, a.state, a.postCode).toLowerCase().trim();
+        return existing == newAddress.toLowerCase().trim();
+      });
+      
+      setState(() {
+        address = newAddress;
+        _addressId = match?.id ?? _addressId;
+        _locationId = match?.locationId ?? _locationId;
+        saathi = null; // Reset Saathi
+        _showEditableBlocks = false; // Hide payment block
+      });
 
-                                  final DateTime resolvedDate = _resolveBookingDateTime(timeSlot, const TimeOfDay(hour: 0, minute: 0));
-                                  final String preciseDateString = DateFormat('yyyy-MM-dd').format(resolvedDate);
-                                  final TimeOfDay t = _inlineTime ?? const TimeOfDay(hour: 0, minute: 0);
-                                  final String timeString = "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
-                                  final int totalDuration = _estimateTotalDurationMinutes(items);
+      // CHAINING: Automatically open Time, then Saathi
+      if (mounted) {
+        bool timePicked = await _openMergedBookingModal();
+        if (timePicked && mounted) {
+           await _navigateToSaathiScreen();
+        }
+      }
+    }
+  },
 
-                                  final selectedSaathi = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ChayanSathiScreen(
-                                        categoryId: first.categoryId,
-                                        serviceId: first.id,
-                                        locationId: _locationId!,
-                                        addressId: _addressId, 
-                                        initialSlot: preciseDateString, 
-                                        bookingTime: timeString, 
-                                        currentBookingDuration: totalDuration,
-                                      ),
-                                    ),
-                                  );
-                                  if (selectedSaathi != null) setState(() => saathi = selectedSaathi);
-                                },
-                              ),
+  // 2. EDIT TIME -> Forces Saathi
+  onEditTime: () async {
+    bool timePicked = await _openMergedBookingModal();
+    if (timePicked && mounted) {
+       // Reset Saathi because time changed
+       setState(() {
+         saathi = null;
+         _showEditableBlocks = false;
+       });
+       await _navigateToSaathiScreen();
+    }
+  },
+
+  // 3. EDIT SAATHI Directly
+  onEditSaathi: () async {
+    await _navigateToSaathiScreen();
+  },
+),
                               SizedBox(height: 18.h * scale),
 
                               // --- REMOVED "Request a Service Time" Container HERE ---
@@ -489,21 +532,23 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                         Radio<PaymentMethod>(
                                           value: PaymentMethod.afterService,
                                           groupValue: _paymentMethod,
+                                          activeColor: const Color(0xFFE47830), // <--- ADD THIS LINE
                                           onChanged: (v) => setState(() => _paymentMethod = v!),
                                         ),
                                         const Text('Pay after service'),
                                       ],
-                                    ),
+                                    ).withId('payment_option_cash'),
                                     Row(
                                       children: [
                                         Radio<PaymentMethod>(
                                           value: PaymentMethod.online,
                                           groupValue: _paymentMethod,
+                                          activeColor: const Color(0xFFE47830), // <--- ADD THIS LINE
                                           onChanged: (v) => setState(() => _paymentMethod = v!),
                                         ),
                                         const Text('Pay Online Now'),
                                       ],
-                                    ),
+                                    ).withId('payment_option_online'),
                                   ],
                                 ),
                               ),
@@ -830,7 +875,7 @@ if (totalDuration < 60) {
                                       style: TextStyle(color: Colors.white, fontSize: 14.sp * scale, fontWeight: FontWeight.w500),
                                     ),
                                   ),
-                                );
+                                ).withId('summary_confirm_btn');
                         }),
                       ),
                     ),
@@ -992,7 +1037,7 @@ Widget _buildServiceItem(CartItem cartItem, double scale, bool showControls) {
                                     padding: EdgeInsets.all(4.0 * scale),
                                     child: Icon(Icons.remove, size: 16 * scale, color: Colors.black),
                                   ),
-                                ),
+                                ).withId('summary_minus_${cartItem.id}'),
                                 // Quantity
                                 Text(
                                   '${cartItem.quantity}',
@@ -1012,7 +1057,7 @@ Widget _buildServiceItem(CartItem cartItem, double scale, bool showControls) {
                                       color: isMaxLimit ? Colors.grey[400] : const Color(0xFFE47830),
                                     ),
                                   ),
-                                ),
+                                ).withId('summary_plus_${cartItem.id}'),
                               ],
                             ),
                           ),
@@ -1102,9 +1147,9 @@ class _TopDetailsBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _row(icon: 'assets/icons/home.svg', title: 'Home', value: address, onEdit: onEditAddress, scale: scale),
+          _row(icon: 'assets/icons/home.svg', title: 'Home', value: address, onEdit: onEditAddress, scale: scale,testId: 'summary_edit_address_btn'),
           SizedBox(height: 14.h * scale),
-          _row(icon: 'assets/icons/calendar.svg', title: 'Scheduled', value: timeLabel, onEdit: onEditTime, scale: scale),
+          _row(icon: 'assets/icons/calendar.svg', title: 'Scheduled', value: timeLabel, onEdit: onEditTime, scale: scale,testId: 'summary_edit_time_btn'),
           SizedBox(height: 14.h * scale),
           _row(
             icon: 'assets/icons/chayansathi.svg',
@@ -1114,6 +1159,7 @@ class _TopDetailsBlock extends StatelessWidget {
                 : "${saathi!['name']}, (${saathi!['jobs'] ?? ''}+ work), ${saathi!['rating'] ?? ''} rating",
             onEdit: onEditSaathi,
             scale: scale,
+            testId: 'summary_edit_saathi_btn', // <--- Added ID
           ),
         ],
       ),
@@ -1126,6 +1172,7 @@ class _TopDetailsBlock extends StatelessWidget {
     required String value,
     required VoidCallback onEdit,
     required double scale,
+    required String testId, // <--- 1. Add this parameter
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1139,7 +1186,7 @@ class _TopDetailsBlock extends StatelessWidget {
             Text(value, style: TextStyle(fontWeight: FontWeight.w400, fontSize: 13.sp * scale, color: Colors.black)),
           ]),
         ),
-        InkWell(onTap: onEdit, child: Icon(Icons.edit, size: 18 * scale, color: const Color(0xFFE47830))),
+        InkWell(onTap: onEdit, child: Icon(Icons.edit, size: 18 * scale, color: const Color(0xFFE47830))).withId(testId),
       ],
     );
   }
@@ -1267,7 +1314,7 @@ class _CouponsRow extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).withId('summary_open_coupon_btn');
   }
 }
 
@@ -1453,7 +1500,7 @@ class _CouponsBottomSheetState extends State<CouponsBottomSheet> {
                 IconButton(
                   icon: Icon(Icons.close, size: 24 * scale),
                   onPressed: () => Navigator.pop(context),
-                ),
+                ).withId('coupon_sheet_close_btn'),
               ],
             ),
           ),
@@ -1482,7 +1529,7 @@ class _CouponsBottomSheetState extends State<CouponsBottomSheet> {
                               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14.sp * scale),
                               border: InputBorder.none,
                             ),
-                          ),
+                          ).withId('coupon_sheet_input'),
                         ),
                         TextButton(
                           onPressed: () {
@@ -1522,7 +1569,7 @@ class _CouponsBottomSheetState extends State<CouponsBottomSheet> {
                               fontSize: 14.sp * scale
                             ),
                           ),
-                        )
+                        ).withId('coupon_sheet_apply_btn'),
                       ],
                     ),
                   ),
@@ -1626,10 +1673,10 @@ class _CouponsBottomSheetState extends State<CouponsBottomSheet> {
                        ),
                    ),
                 ),
-            )
+            ).withId('coupon_action_${coupon.code}'),
           ],
         ),
       ),
-    );
+    ).withId('coupon_item_${coupon.code}');
   }
 }

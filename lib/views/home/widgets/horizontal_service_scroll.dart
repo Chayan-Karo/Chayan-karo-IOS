@@ -4,118 +4,66 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import '../../../controllers/category_controller.dart';
-import '../../../models/category_models.dart';
-import '../../../models/service_models.dart';
-import '../../../services/universal_service_screen.dart';
-import '../../../data/repository/service_repository.dart';
-// Import the screen to navigate to
+import '../../../controllers/most_used_service_controller.dart';
+import '../../../models/most_used_service_model.dart';
 import '../../all_most_used_services/all_most_used_services_screen.dart';
 
-class HorizontalServiceScroll extends StatefulWidget {
+class HorizontalServiceScroll extends StatelessWidget {
   const HorizontalServiceScroll({super.key});
-
-  @override
-  State<HorizontalServiceScroll> createState() => _HorizontalServiceScrollState();
-}
-
-class _HorizontalServiceScrollState extends State<HorizontalServiceScroll> {
-  final RxList<Service> _combinedServices = <Service>[].obs;
-  final RxBool _isLoading = true.obs;
-  bool _hasTriggeredFetch = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  Future<void> _fetchAllSubCategoryServices(List<String> subCategoryIds) async {
-    final repo = Get.put(ServiceRepository()); 
-    _isLoading.value = true;
-    List<Service> allResults = [];
-
-    try {
-      for (String id in subCategoryIds) {
-        try {
-          final services = await repo.getServices(id); 
-          allResults.addAll(services);
-        } catch (e) {
-          print("⚠️ Error fetching sub-category $id: $e");
-        }
-      }
-      final uniqueServices = {for (var s in allResults) s.id: s}.values.toList();
-      _combinedServices.assignAll(uniqueServices);
-    } catch (e) {
-      print("❌ Critical error fetching services: $e");
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  // ✅ UPDATED: Navigate to AllMostUsedServicesScreen on tap
-  void _navigateToService(Service service) {
-    Get.to(() => const AllMostUsedServicesScreen());
-  }
 
   bool _isSvgUrl(String url) {
     return url.toLowerCase().endsWith('.svg');
   }
 
+  // ✅ UPDATED: Shows genuine rating. If null/0, shows "0.0" or actual value.
+  String _getRatingText(double? rating) {
+    double finalRating = rating ?? 0.0;
+    if (finalRating == 0.0) {
+      return "New";
+    }
+    return finalRating.toStringAsFixed(1);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final categoryController = Get.find<CategoryController>();
+    final controller = Get.put(MostUsedServiceController());
 
-      if (!_hasTriggeredFetch && categoryController.filteredCategories.isNotEmpty) {
-        final Category? targetCategory = categoryController.filteredCategories
-            .firstWhereOrNull((cat) {
-              final name = cat.categoryName.toLowerCase();
-              return (name.contains('women') || name.contains('female')) && 
-                     (name.contains('spa') || name.contains('spa'));
-            });
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isTablet = constraints.maxWidth >= 600;
+        final double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
 
-        if (targetCategory != null && targetCategory.serviceCategory.isNotEmpty) {
-          _hasTriggeredFetch = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final List<String> allSubCatIds = targetCategory.serviceCategory
-                .map((e) => e.serviceCategoryId)
-                .toList();
-            _fetchAllSubCategoryServices(allSubCatIds);
-          });
-        }
-      }
+        // UI Constants
+        final double imageWidth = 117.w * scaleFactor;
+        final double imageHeight = 116.h * scaleFactor;
+        final double titleFontSize = 12.sp * scaleFactor;
+        final double priceFontSize = 12.sp * scaleFactor;
+        final double oldPriceFontSize = 10.sp * scaleFactor;
+        final double ratingFontSize = 10.sp * scaleFactor;
+        final double starSize = 14.h * scaleFactor;
 
-      if (_isLoading.value) {
-        return _buildShimmerLoading(context);
-      }
+        // Calculated Height
+        final double contentHeight = imageHeight +
+            8.h * scaleFactor +
+            (titleFontSize * 1.33 * 2) +
+            4.h * scaleFactor +
+            (ratingFontSize * 1.2) +
+            4.h * scaleFactor +
+            (priceFontSize * 1.2) +
+            5.h * scaleFactor;
 
-      if (_combinedServices.isEmpty) {
-        return const SizedBox.shrink();
-      }
+        return Obx(() {
+          // 1. Loading State -> Show Shimmer
+          if (controller.isLoading.value) {
+            return _buildShimmerLoading(scaleFactor, imageWidth, imageHeight, contentHeight);
+          }
 
-      final services = _combinedServices;
+          // 2. Empty State
+          if (controller.mostUsedServices.isEmpty) {
+            return const SizedBox.shrink();
+          }
 
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          bool isTablet = constraints.maxWidth >= 600;
-          double scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
-
-          double imageWidth = 117.w * scaleFactor;
-          double imageHeight = 116.h * scaleFactor;
-          double titleFontSize = 12.sp * scaleFactor;
-          double priceFontSize = 12.sp * scaleFactor;
-          double oldPriceFontSize = 10.sp * scaleFactor;
-          double ratingFontSize = 10.sp * scaleFactor;
-          double starSize = 14.h * scaleFactor;
-
-          double contentHeight = imageHeight +
-              8.h * scaleFactor +
-              (titleFontSize * 1.33 * 2) +
-              4.h * scaleFactor +
-              (ratingFontSize * 1.2) +
-              4.h * scaleFactor +
-              (priceFontSize * 1.2) +
-              5.h * scaleFactor;
+          final services = controller.mostUsedServices;
 
           return SizedBox(
             height: contentHeight,
@@ -127,21 +75,28 @@ class _HorizontalServiceScrollState extends State<HorizontalServiceScroll> {
               itemBuilder: (context, index) {
                 final service = services[index];
 
+                // Price Logic
+                final double currentPrice = service.price ?? 0;
+                final double discount = service.discountPercentage ?? 0;
                 double originalPriceVal;
-                if (service.discountPercentage > 0) {
-                   originalPriceVal = service.price / ((100 - service.discountPercentage) / 100);
+                if (discount > 0) {
+                  originalPriceVal = currentPrice / ((100 - discount) / 100);
                 } else {
-                   originalPriceVal = service.price * 1.25; 
+                  originalPriceVal = currentPrice * 1.25;
                 }
                 final int finalOldPrice = originalPriceVal.toInt();
+                
+                // Get Real Rating
+                final String ratingText = _getRatingText(service.averageRating);
 
                 return GestureDetector(
-                  onTap: () => _navigateToService(service),
+                  onTap: () => Get.to(() => const AllMostUsedServicesScreen()),
                   child: SizedBox(
                     width: imageWidth,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Image
                         Container(
                           width: imageWidth,
                           height: imageHeight,
@@ -157,14 +112,17 @@ class _HorizontalServiceScrollState extends State<HorizontalServiceScroll> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10 * scaleFactor),
-                            child: _buildServiceImage(service.imgLink, scaleFactor),
+                            child: _buildServiceImage(service.imgLink ?? "", scaleFactor),
                           ),
                         ),
+                        
                         SizedBox(height: 8.h * scaleFactor),
+                        
+                        // Title
                         SizedBox(
                           width: imageWidth,
                           child: Text(
-                            service.name,
+                            service.name ?? "Service Name",
                             style: TextStyle(
                               fontSize: titleFontSize,
                               fontWeight: FontWeight.w700,
@@ -176,27 +134,23 @@ class _HorizontalServiceScrollState extends State<HorizontalServiceScroll> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        
                         SizedBox(height: 4.h * scaleFactor),
+                        
+                        // Rating
                         Row(
                           children: [
                             SvgPicture.asset(
                               'assets/icons/star.svg',
                               height: starSize,
                               width: starSize,
-                              colorFilter: const ColorFilter.mode(
-                              Colors.black,
-                                BlendMode.srcIn,
-                              ),
-                              placeholderBuilder: (_) => Icon(
-                                Icons.star,
-                                size: starSize,
-                                color: Colors.amber,
-                              ),
+                              colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                              placeholderBuilder: (_) => Icon(Icons.star, size: starSize, color: Colors.amber),
                             ),
                             SizedBox(width: 4.w * scaleFactor),
                             Expanded(
                               child: Text(
-                                "4.8 (2.3k)", 
+                                ratingText, // Shows real API value
                                 style: TextStyle(
                                   fontSize: ratingFontSize,
                                   fontWeight: FontWeight.w400,
@@ -207,11 +161,14 @@ class _HorizontalServiceScrollState extends State<HorizontalServiceScroll> {
                             ),
                           ],
                         ),
+                        
                         SizedBox(height: 4.h * scaleFactor),
+                        
+                        // Price
                         Row(
                           children: [
                             Text(
-                              "₹${service.price.toInt()}",
+                              "₹${currentPrice.toInt()}",
                               style: TextStyle(
                                 fontSize: priceFontSize,
                                 fontWeight: FontWeight.w700,
@@ -237,45 +194,131 @@ class _HorizontalServiceScrollState extends State<HorizontalServiceScroll> {
               },
             ),
           );
-        },
-      );
-    });
+        });
+      },
+    );
   }
 
   Widget _buildServiceImage(String imgUrl, double scaleFactor) {
-    if (imgUrl.isEmpty) {
-      return Container(color: Colors.grey.shade200);
-    }
-
+    if (imgUrl.isEmpty) return Container(color: Colors.grey.shade200);
     if (_isSvgUrl(imgUrl)) {
-      return SvgPicture.network(
-        imgUrl,
-        fit: BoxFit.cover,
-        placeholderBuilder: (_) => Container(color: Colors.grey.shade100),
-      );
+      return SvgPicture.network(imgUrl, fit: BoxFit.cover);
     } else {
       return CachedNetworkImage(
         imageUrl: imgUrl,
         fit: BoxFit.cover,
-        placeholder: (context, url) => Container(
-          color: Colors.grey.shade100,
-        ),
         errorWidget: (context, url, error) => Container(
           color: Colors.grey.shade200,
-          child: Icon(
-            Icons.cleaning_services,
-            color: const Color(0xFFFF6F00),
-            size: 32.sp * scaleFactor,
-          ),
+          child: Icon(Icons.cleaning_services, color: const Color(0xFFFF6F00), size: 32.sp * scaleFactor),
         ),
       );
     }
   }
 
-  Widget _buildShimmerLoading(BuildContext context) {
+  // ✅ NEW: Premium Shimmer Loading
+  Widget _buildShimmerLoading(double scaleFactor, double width, double height, double containerHeight) {
     return SizedBox(
-      height: 150.h,
-      child: const Center(child: CircularProgressIndicator()),
+      height: containerHeight,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(), // Disable scroll while loading
+        itemCount: 4,
+        separatorBuilder: (_, __) => SizedBox(width: 12.w * scaleFactor),
+        itemBuilder: (context, index) {
+          return SizedBox(
+            width: width,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image Placeholder
+                ShimmerSkeleton(
+                  width: width,
+                  height: height,
+                  borderRadius: 10 * scaleFactor,
+                ),
+                SizedBox(height: 8.h * scaleFactor),
+                // Title Line 1
+                ShimmerSkeleton(width: width, height: 12.h * scaleFactor),
+                SizedBox(height: 4.h * scaleFactor),
+                // Title Line 2 (Shorter)
+                ShimmerSkeleton(width: width * 0.7, height: 12.h * scaleFactor),
+                SizedBox(height: 8.h * scaleFactor),
+                // Rating Line
+                ShimmerSkeleton(width: width * 0.4, height: 10.h * scaleFactor),
+                SizedBox(height: 8.h * scaleFactor),
+                // Price Line
+                ShimmerSkeleton(width: width * 0.6, height: 12.h * scaleFactor),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ✅ NEW: Reusable Shimmer Skeleton Widget
+class ShimmerSkeleton extends StatefulWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  const ShimmerSkeleton({
+    super.key,
+    required this.width,
+    required this.height,
+    this.borderRadius = 4,
+  });
+
+  @override
+  State<ShimmerSkeleton> createState() => _ShimmerSkeletonState();
+}
+
+class _ShimmerSkeletonState extends State<ShimmerSkeleton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
+    _animation = Tween<double>(begin: -2, end: 2).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: const [
+                Color(0xFFEEEEEE),
+                Color(0xFFFAFAFA),
+                Color(0xFFEEEEEE),
+              ],
+              stops: [
+                0.1,
+                0.3 + (_animation.value * 0.3), // Move the highlight
+                0.6,
+              ],
+              transform: GradientRotation(_animation.value), // Adding rotation for dynamic effect
+            ),
+          ),
+        );
+      },
     );
   }
 }

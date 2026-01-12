@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../utils/test_extensions.dart';
 
 // Models and controllers
 import '../../../models/service_models.dart';      // Service, CartItem
@@ -176,7 +177,7 @@ class FrequentlyAddedBlock extends StatelessWidget {
                 ),
               ),
             ),
-          ),
+          ).withId('frequently_added_add_btn_${service.id}'),
         ],
       ),
     );

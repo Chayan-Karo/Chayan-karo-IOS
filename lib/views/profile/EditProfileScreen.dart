@@ -3,10 +3,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
-
+import 'dart:io'; // <--- Required for FileImage
 import '../../widgets/chayan_header.dart';
 import '../../models/customer_models.dart';
 import '../../controllers/profile_controller.dart';
+import '../../utils/test_extensions.dart';
+import 'package:image_picker/image_picker.dart'; // <--- ADD THIS
 
 class EditProfileScreen extends StatefulWidget {
   final Customer? customer;
@@ -39,6 +41,56 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController.dispose();
     _genderController.dispose();
     super.dispose();
+  }
+  ImageProvider _getImageProvider({File? localImage, String? networkUrl}) {
+  // 1. Priority: Show Local Image (Instant feedback)
+  if (localImage != null) {
+    return FileImage(localImage);
+  }
+
+  // 2. Secondary: Show Network Image with Cache Busting
+  if (networkUrl != null && networkUrl.isNotEmpty) {
+    // Append timestamp to force refresh
+    return NetworkImage('$networkUrl?v=${_profileController.imageVersion.value}');
+  }
+
+  // 3. Fallback: Default Placeholder
+  return const AssetImage('assets/userprofile.webp');
+}
+// NEW: Bottom Sheet to choose Camera or Gallery (Fixes BUG-022/023)
+  void _showImageSourceOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFFE47830)),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  // Calls controller with Gallery source
+                  _profileController.pickAndUploadImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFFE47830)),
+                title: const Text('Take a Photo'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  // Calls controller with Camera source
+                  _profileController.pickAndUploadImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -81,17 +133,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             Container(
                               width: 100.w * scaleFactor,
                               height: 100.w * scaleFactor,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(62 * scaleFactor),
-                                color: Colors.grey[200],
-                                image: DecorationImage(
-                                  fit: BoxFit.cover,
-                                  image: (currentCustomer?.imageUrl != null && 
-                                          currentCustomer!.imageUrl!.isNotEmpty)
-                                      ? NetworkImage(currentCustomer.imageUrl!)
-                                      : const AssetImage('assets/userprofile.webp') as ImageProvider,
-                                ),
-                              ),
+                             decoration: BoxDecoration(
+  borderRadius: BorderRadius.circular(62 * scaleFactor),
+  color: Colors.grey[200],
+  image: DecorationImage(
+    fit: BoxFit.cover,
+    
+    // --- UPDATED LOGIC ---
+    // Uses the helper to check Local File -> Network URL -> Asset
+    image: _getImageProvider(
+      localImage: _profileController.localImage.value,
+      networkUrl: currentCustomer?.imageUrl,
+    ),
+    // ---------------------
+  ),
+),
                             ),
                             
                             // 2. Edit/Upload Icon Button
@@ -101,7 +157,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               child: GestureDetector(
                                 onTap: isUploading 
                                     ? null 
-                                    : () => _profileController.pickAndUploadImage(),
+                                 : () => _showImageSourceOptions(), // <--- NEW CODE
                                 child: Container(
                                   width: 32.w * scaleFactor,
                                   height: 32.w * scaleFactor,
@@ -135,7 +191,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   ),
                                 ),
                               ),
-                            ),
+                            ).withId('edit_profile_image_btn'),
                           ],
                         );
                       }),
@@ -151,13 +207,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             label: 'Full Name',
                             controller: _fullNameController,
                             scaleFactor: scaleFactor,
+                            testId: 'edit_profile_name_input', // <--- Added ID
                             hintText: 'Enter your full name',
+                            // ADD THIS: Allows only letters (a-z, A-Z) and spaces
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                            ],
                           ),
                           editableProfileField(
                             label: 'Email',
                             controller: _emailController,
                             scaleFactor: scaleFactor,
                             keyboardType: TextInputType.emailAddress,
+                            testId: 'edit_profile_email_input', // <--- Added ID
                             hintText: 'Enter your email address',
                           ),
                           readOnlyProfileField(
@@ -172,6 +234,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             label: 'Gender',
                             controller: _genderController,
                             scaleFactor: scaleFactor,
+                            testId: 'edit_profile_gender_select', // <--- Added ID
                           ),
                           SizedBox(height: 40.h * scaleFactor),
                           SizedBox(
@@ -195,7 +258,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   color: Colors.white,
                                 ),
                               ),
-                            ),
+                            ).withId('edit_profile_save_btn'),
                           ),
                           SizedBox(height: 30.h * scaleFactor),
                         ],
@@ -211,12 +274,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget editableProfileField({
+Widget editableProfileField({
     required String label,
     required TextEditingController controller,
     required double scaleFactor,
     required String hintText,
+    required String testId, // <--- 1. ADD THIS
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters, // <--- Added this parameter
   }) {
     final hasValue = controller.text.isNotEmpty;
     return Column(
@@ -239,6 +304,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: TextFormField(
                 controller: controller,
                 keyboardType: keyboardType,
+                inputFormatters: inputFormatters, // <--- Pass it here
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16.sp,
@@ -256,7 +322,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ),
                 onChanged: (_) => setState(() {}),
-              ),
+              ).withId(testId),
             ),
             _buildStatusIcon(hasValue),
           ],
@@ -325,6 +391,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required String label,
     required TextEditingController controller,
     required double scaleFactor,
+    required String testId, // <--- 1. ADD THIS
   }) {
     final hasValue = controller.text.isNotEmpty;
     return Column(
@@ -362,7 +429,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                 ),
-              ),
+               ).withId(testId), // <--- 2. USE IT HERE
             ),
             _buildStatusIcon(hasValue),
           ],
@@ -425,16 +492,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               SizedBox(height: 30.h),
               Row(
                 children: [
-                  Expanded(child: _genderOption('Male')),
+                  Expanded(child: _genderOption('Male').withId('gender_option_male')),
                   SizedBox(width: 15.w),
-                  Expanded(child: _genderOption('Female')),
+                  Expanded(child: _genderOption('Female').withId('gender_option_female')),
                 ],
               ),
               SizedBox(height: 15.h),
               Center(
                 child: SizedBox(
                   width: 120.w,
-                  child: _genderOption('Other'),
+                  child: _genderOption('Other').withId('gender_option_other'),
                 ),
               ),
               SizedBox(height: 20.h),
@@ -480,8 +547,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _saveChanges() async {
-    // Full name must NOT be empty
-    if (_fullNameController.text.trim().isEmpty) {
+    final name = _fullNameController.text.trim();
+
+    // 1. Validation: Name Validation
+    if (name.isEmpty) {
       Get.snackbar(
         'Error',
         'Please enter your full name',
@@ -492,7 +561,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
 
-    // Gender must NOT be empty
+    // Check if name is MORE than 3 characters (must be 4 or more)
+    if (name.length <= 3) {
+      Get.snackbar(
+        'Error',
+        'Name must be more than 3 characters',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
+      return;
+    }
+
+    // Double check for special characters (Safety check)
+    final nameRegExp = RegExp(r'^[a-zA-Z\s]+$');
+    if (!nameRegExp.hasMatch(name)) {
+      Get.snackbar(
+        'Error',
+        'Special characters are not allowed in name',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
+      return;
+    }
+
+    // 2. Validation: Gender
     if (_genderController.text.trim().isEmpty) {
       Get.snackbar(
         'Error',
@@ -504,25 +598,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
 
-    // Email is OPTIONAL: only validate if not empty
+// 3. Validation: Email (Optional)
     final rawEmail = _emailController.text.trim();
-    if (rawEmail.isNotEmpty && !GetUtils.isEmail(rawEmail)) {
-      Get.snackbar(
-        'Error',
-        'Please enter a valid email address',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
-      return;
+
+    if (rawEmail.isNotEmpty) {
+      // STRICT REGEX: Enforces starting with a Letter or Number (^[a-zA-Z0-9])
+      // This explicitly blocks emails starting with dots (.) or underscores (_)
+      final emailRegExp = RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+      if (!emailRegExp.hasMatch(rawEmail)) {
+        Get.snackbar(
+          'Error',
+          'Please enter a valid email address',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[800],
+        );
+        return;
+      }
     }
 
-    // Prepare nullable email for controller
+    // Prepare nullable email
     final String? emailToSend = rawEmail.isEmpty ? null : rawEmail;
 
     final success = await _profileController.updateProfile(
       emailId: emailToSend,
-      fullName: _fullNameController.text.trim(),
+      fullName: name, // Use the trimmed name
       gender: _genderController.text.trim(),
     );
 
@@ -534,7 +635,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor: Colors.green[100],
         colorText: Colors.green[800],
       );
-      // Optional: Give a slight delay before closing so user sees the message
       await Future.delayed(const Duration(milliseconds: 500));
       Get.offAllNamed('/profile');
     } else {

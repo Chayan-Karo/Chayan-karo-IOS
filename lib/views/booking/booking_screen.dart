@@ -315,6 +315,10 @@ String _displayTime(CustomerBooking b) {
     final statusLower = (b.status).toLowerCase();
     final bool isCancelled = statusLower == 'cancelled';
     final bool isCompleted = statusLower == 'completed';
+    final bool canShowFeedbackButton =
+    isCompleted && !isCancelled && !b.feedbackSubmitted;
+
+
 
     final String statusText = isCancelled
         ? 'Cancelled'
@@ -352,46 +356,61 @@ String _displayTime(CustomerBooking b) {
 
           // Bottom actions row
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isCancelled ? Colors.grey : const Color(0xFFE47830),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10 * scaleFactor)),
-                  padding: EdgeInsets.symmetric(horizontal: 16.h * scaleFactor, vertical: 8.h * scaleFactor),
-                ),
-                // --- 2. PASS ARGUMENTS TO FEEDBACK SCREEN ---
-                onPressed: isCancelled 
-                  ? null 
-                  : () {
-                    Get.to(
-                      () => const FeedbackScreen(),
-                      arguments: {
-                        'spId': spId,
-                        'bookingId': bookingId,
-                      //  'serviceId': serviceId,
-                        'serviceName': serviceName,
-                      },
-                    );
-                  },
-                child: Text('Share Feedback', style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.white)),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PreviousBookingScreen(booking: b),
-                    ),
-                  );
-                },
-                child: Text(
-                  'View details',
-                  style: TextStyle(fontSize: 12.sp * scaleFactor, color: const Color(0xFFE47830)),
-                ),
-              ),
-            ],
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    // ✅ Share Feedback (only when allowed)
+    if (canShowFeedbackButton)
+      ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFE47830),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10 * scaleFactor),
           ),
+          padding: EdgeInsets.symmetric(
+            horizontal: 16.h * scaleFactor,
+            vertical: 8.h * scaleFactor,
+          ),
+        ),
+        onPressed: () {
+          Get.to(
+            () => const FeedbackScreen(),
+            arguments: {
+              'spId': spId,
+              'bookingId': bookingId,
+              'serviceName': serviceName,
+            },
+          );
+        },
+        child: Text(
+          'Share Feedback',
+          style: TextStyle(
+            fontSize: 12.sp * scaleFactor,
+            color: Colors.white,
+          ),
+        ),
+      ),
+
+    // Always show View Details
+    GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PreviousBookingScreen(booking: b),
+          ),
+        );
+      },
+      child: Text(
+        'View details',
+        style: TextStyle(
+          fontSize: 12.sp * scaleFactor,
+          color: const Color(0xFFE47830),
+        ),
+      ),
+    ),
+  ],
+)
+
         ],
       ),
     );

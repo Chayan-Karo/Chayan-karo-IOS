@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../controllers/location_controller.dart';
 import '../../models/location_models.dart';
 import 'package:flutter/services.dart';
+import '../../utils/test_extensions.dart';
 
 
 class ChooseLocationSheet extends StatefulWidget {
@@ -137,7 +138,7 @@ Widget build(BuildContext context) {
                       ),
                     ),
                     onPressed: _useCurrentLocation,
-                  ),
+                  ).withId('choose_loc_use_current_btn'),
                 ),
                 SizedBox(height: 12.h),
                 SizedBox(
@@ -165,7 +166,7 @@ Widget build(BuildContext context) {
                       );
                       if (res == true) lc.fetchCustomerAddresses();
                     },
-                  ),
+                  ).withId('choose_loc_add_new_btn'),
                 ),
               ],
             ),
@@ -277,7 +278,7 @@ Widget build(BuildContext context) {
                         ],
                       ),
                     ),
-                  );
+                  ).withId('choose_loc_item_$i');
                 },
               ),
             ),

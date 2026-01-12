@@ -46,6 +46,8 @@ class LoginController extends GetxController {
   }
 
   Future<void> sendOTP() async {
+    if (_isLoading.value) return; 
+    FocusManager.instance.primaryFocus?.unfocus();
     String phone = _phoneNumber.value;
 
     // 1. Check Length
@@ -65,6 +67,7 @@ class LoginController extends GetxController {
     _errorMessage.value = '';
     
     try {
+      await Future.delayed(const Duration(milliseconds: 200));
       final response = await _authRepository.sendOtp(phone);
       
       if (response.success) {

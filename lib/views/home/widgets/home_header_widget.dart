@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-
+import '../../../utils/test_extensions.dart';
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/cart_controller.dart';
 import '../../../controllers/location_controller.dart';
@@ -145,7 +145,7 @@ class HomeHeaderWidget extends StatelessWidget {
                           ),
                         ],
                       ),
-                    ),
+                    ).withId('home_header_location_selector'),
                   ),
                 ),
 
@@ -153,7 +153,7 @@ class HomeHeaderWidget extends StatelessWidget {
 
                 // === CART SECTION ===
                 Obx(() {
-                  final cartController = Get.find<CartController>();
+                  final cartController = Get.put(CartController());
                   return GestureDetector(
                     onTap: () => Get.to(() => CartScreen()),
                     child: Stack(
@@ -206,7 +206,7 @@ class HomeHeaderWidget extends StatelessWidget {
                           ),
                       ],
                     ),
-                  );
+                  ).withId('home_header_cart_btn');
                 }),
               ],
             ),
@@ -252,7 +252,7 @@ class HomeHeaderWidget extends StatelessWidget {
                 ),
               ),
             ),
-          ),
+          ).withId('home_header_search_bar'),
         ],
       ),
     );
