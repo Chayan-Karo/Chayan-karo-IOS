@@ -33,6 +33,7 @@ class CategoriesTable extends Table {
   TextColumn get categoryId => text()();
   TextColumn get categoryName => text()();
   TextColumn get imgLink => text()();
+  TextColumn get bannerLink => text().nullable()();
   TextColumn get serviceCategory => text()(); // JSON string of ServiceSubCategory array
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
@@ -125,6 +126,10 @@ class CartItemsTable extends Table {
   TextColumn get sourcePage => text().nullable()(); // Source page identifier
   TextColumn get sourceTitle => text().nullable()(); // Human-readable source title
   TextColumn get categoryId => text().nullable()(); // ✨ NEW: Category ID column
+  // ✅ NEW: Rebooking Context Support
+  TextColumn get bookingContextId => text().withDefault(const Constant('LEGACY'))();
+  TextColumn get bookingSource => text().withDefault(const Constant('NORMAL'))();
+  TextColumn get providerId => text().nullable()();
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get dateAdded => dateTime().nullable()(); // NEW: Support for new model dateAdded
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -173,7 +178,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 8; // ✨ UPDATED: Increment for location table changes
+  int get schemaVersion => 10; // ✨ UPDATED: Increment for location table changes
 
   // Migration strategy to handle schema updates
   @override
@@ -219,6 +224,16 @@ class AppDatabase extends _$AppDatabase {
         // ✨ NEW: Add categoryId column to cart items
         await m.addColumn(cartItemsTable, cartItemsTable.categoryId);
       }
+      // ✅ NEW: Migration for Version 9
+        if (from < 9) {
+          await m.addColumn(cartItemsTable, cartItemsTable.bookingContextId);
+          await m.addColumn(cartItemsTable, cartItemsTable.bookingSource);
+          await m.addColumn(cartItemsTable, cartItemsTable.providerId);
+        }
+        if (from < 10) {
+    // ✨ Add bannerLink column to categories table
+    await m.addColumn(categoriesTable, categoriesTable.bannerLink);
+  }
       },
     );
   }
@@ -605,6 +620,7 @@ class AppDatabase extends _$AppDatabase {
               categoryId: Value(category.categoryId),
               categoryName: Value(category.categoryName),
               imgLink: Value(category.imgLink),
+              bannerLink: Value(category.bannerLink),
               serviceCategory: Value(jsonEncode(category.serviceCategory.map((e) => e.toJson()).toList())),
               createdAt: Value(DateTime.now()),
             ),
@@ -636,6 +652,7 @@ class AppDatabase extends _$AppDatabase {
           categoryId: row.categoryId,
           categoryName: row.categoryName,
           imgLink: row.imgLink,
+          bannerLink: row.bannerLink,
           serviceCategory: serviceCategories,
         );
       }).toList();
@@ -1065,6 +1082,10 @@ class AppDatabase extends _$AppDatabase {
         sourceTitle: item.sourceTitle ?? 'Unknown Service',      
         categoryId: item.categoryId ?? '', // ✨ NEW: Map categoryId back
         dateAdded: item.dateAdded ?? item.addedAt,
+        // ✅ NEW: Map DB columns to Model
+        bookingContextId: item.bookingContextId, 
+        bookingSource: item.bookingSource,
+        providerId: item.providerId,
       )).toList();
     } catch (e) {
       print('❌ Error getting new cart items: $e');
@@ -1150,6 +1171,10 @@ class AppDatabase extends _$AppDatabase {
           dateAdded: Value(item.dateAdded),
           updatedAt: Value(DateTime.now()),
           categoryId: Value(item.categoryId), // ✨ NEW: Persist categoryId
+          // ✅ NEW: Save Context fields
+          bookingContextId: Value(item.bookingContextId),
+          bookingSource: Value(item.bookingSource),
+          providerId: Value(item.providerId),
 
         ),
       );

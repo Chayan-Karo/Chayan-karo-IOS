@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../widgets/chayan_header.dart';
+import '../home/home_screen.dart';
 
 class AboutChaynkaroServicesScreen extends StatelessWidget {
   const AboutChaynkaroServicesScreen({Key? key}) : super(key: key);
@@ -89,7 +90,7 @@ class AboutChaynkaroServicesScreen extends StatelessWidget {
                         ),
 
                         // Contact Information
-                        _buildContactSection(scaleFactor),
+                        _buildContactSection(context, scaleFactor),
 
                         SizedBox(height: 100.h * scaleFactor),
                       ],
@@ -186,7 +187,7 @@ class AboutChaynkaroServicesScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildContactSection(double scaleFactor) {
+  Widget _buildContactSection(BuildContext context,double scaleFactor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -260,7 +261,11 @@ class AboutChaynkaroServicesScreen extends StatelessWidget {
           width: double.infinity,
           height: 47.h * scaleFactor,
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () {Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (context) => HomeScreen()),
+);
+},
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE47830),
               shape: RoundedRectangleBorder(

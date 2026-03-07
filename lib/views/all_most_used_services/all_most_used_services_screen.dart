@@ -7,6 +7,9 @@ import 'package:collection/collection.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/snakeanimation.dart';
 import '../../utils/test_extensions.dart';
+import '../chayan_sathi/previouschayansathiscreen.dart';
+import '../rewards/ReferAndEarnScreen.dart';
+import '../booking/booking_screen.dart';
 
 // Controllers
 import '../../controllers/most_used_service_controller.dart';
@@ -136,15 +139,15 @@ class _AllMostUsedServicesScreenState extends State<AllMostUsedServicesScreen> {
 
     final currentQty = cartController.getQuantity(serviceId);
     
-    if (currentQty >= 3) {
+    if (currentQty >= 30) {
       HapticFeedback.mediumImpact();
       Get.rawSnackbar(
         messageText: const Text(
-          "Maximum limit of 3 reached for this service",
+          "Maximum limit of 30 reached for this service",
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.black87,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
         duration: const Duration(seconds: 2),
@@ -182,7 +185,7 @@ class _AllMostUsedServicesScreenState extends State<AllMostUsedServicesScreen> {
     return Obx(() {
       final quantity = cartController.getQuantity(service.id);
       final isAnimating = _loadingServiceIds.contains(service.id);
-      final isMaxLimitReached = quantity >= 3;
+      final isMaxLimitReached = quantity >= 30;
       final showCounter = quantity > 0;
 
       // Decoration for the Counter (Standard white box)
@@ -396,16 +399,16 @@ class _AllMostUsedServicesScreenState extends State<AllMostUsedServicesScreen> {
   void _onItemTapped(int index) {
     switch (index) {
       case 0:
-        Get.offAllNamed('/chayan-sathi');
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PreviousChayanSathiScreen()));
         break;
       case 1:
-        Get.offAllNamed('/bookings');
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => BookingScreen()));
         break;
       case 2:
         Get.back();
         break;
       case 3:
-        Get.offAllNamed('/rewards');
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ReferAndEarnScreen()));
         break;
       case 4:
         Get.offAllNamed('/profile');

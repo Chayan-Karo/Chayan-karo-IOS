@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../home/home_screen.dart';
+import 'booking_screen.dart';
 
 class BookingRescheduledScreen extends StatelessWidget {
   final String bookingId;         // optional display/use if needed
@@ -142,56 +143,63 @@ class BookingRescheduledScreen extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 16.w * scaleFactor),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Title
-                          Text(
-                            serviceTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14.sp * scaleFactor,
-                              fontFamily: 'Inter',
-                              color: const Color(0xFF161616),
-                            ),
-                          ),
-                          SizedBox(height: 6.h * scaleFactor),
-                          // Duration
-                          Row(
-                            children: [
-                              _dot(scaleFactor),
-                              SizedBox(width: 6.w * scaleFactor),
-                              Text(
-                                durationLabel,
-                                style: TextStyle(
-                                  fontSize: 14.sp * scaleFactor,
-                                  color: const Color(0xFF757575),
-                                  fontFamily: 'Inter',
+                    // --- FIX 2: Layout Overflow Protection ---
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    // Title
+                                    Text(
+                                      serviceTitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14.sp * scaleFactor,
+                                        fontFamily: 'Inter',
+                                        color: const Color(0xFF161616),
+                                      ),
+                                    ),
+                                    SizedBox(height: 6.h * scaleFactor),
+                                    // Duration
+                                    Row(
+                                      children: [
+                                        _dot(scaleFactor),
+                                        SizedBox(width: 6.w * scaleFactor),
+                                        Text(
+                                          durationLabel,
+                                          style: TextStyle(
+                                            fontSize: 14.sp * scaleFactor,
+                                            color: const Color(0xFF757575),
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 6.h * scaleFactor),
+                                    // Helpful caption
+                                    Row(
+                                      children: [
+                                        _dot(scaleFactor),
+                                        SizedBox(width: 6.w * scaleFactor),
+                                        Flexible(
+                                          child: Text(
+                                            'We’ve updated your slot!',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 14.sp * scaleFactor,
+                                              color: const Color(0xFF757575),
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                          SizedBox(height: 6.h * scaleFactor),
-                          // Helpful caption
-                          Row(
-                            children: [
-                              _dot(scaleFactor),
-                              SizedBox(width: 6.w * scaleFactor),
-                              Text(
-                                'We’ve updated your slot!',
-                                style: TextStyle(
-                                  fontSize: 14.sp * scaleFactor,
-                                  color: const Color(0xFF757575),
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
                     ],
                   ),
                 ),
@@ -208,7 +216,7 @@ class BookingRescheduledScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        MaterialPageRoute(builder: (_) =>  BookingScreen()),
                         (route) => false,
                       );
                     },

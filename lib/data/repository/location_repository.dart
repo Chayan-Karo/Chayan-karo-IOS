@@ -222,6 +222,7 @@ class LocationRepository {
         postCode: postCode,
         lat: double.parse(latitude),
         long: double.parse(longitude),
+        addressType: label,
       );
 
       final response =
@@ -243,6 +244,7 @@ class LocationRepository {
         city: city,
         state: state,
         postCode: postCode,
+        addressType: label,
       );
 
       return response;
@@ -320,6 +322,7 @@ class LocationRepository {
     String? city,
     String? state,
     String? postCode,
+    String? addressType, // ➕ ADD THIS PARAMETER
   }) async {
     final locationData = CachedLocationData(
       label: label,
@@ -331,6 +334,7 @@ class LocationRepository {
       city: city,
       state: state,
       postCode: postCode,
+      addressType: addressType, // ➕ ADD THIS: Save to model
       savedAt: DateTime.now(),
     );
 
@@ -475,4 +479,31 @@ class LocationRepository {
       rethrow;
     }
   }
+  Future<BaseResponse> updateCustomerAddress({
+  required String addressId,
+  required String locationId,
+  required String addressLine1,
+  required String addressLine2,
+  required String city,
+  required String state,
+  required String postCode,
+  String? addressType,
+}) async {
+  final token = await _database.getAuthToken();
+  if (token == null) throw Exception('User not authenticated');
+
+  final body = {
+    "addressId": addressId,
+    "locationId": locationId,
+    "addressLine1": addressLine1,
+    "addressLine2": addressLine2,
+    "city": city,
+    "state": state,
+    "postCode": postCode,
+    "addressType": addressType ?? "Home",
+  };
+
+  // API returns: {"type":"Update address","result":"Address updated successfully."}
+  return await _apiService.updateCustomerAddress('Bearer $token', body);
+}
 }

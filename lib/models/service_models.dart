@@ -133,7 +133,10 @@ class Service {
   bool get hasDiscount => discountPercentage > 0;
 
   // Convert to CartItem format (NEW: pass categoryId through)
-  CartItem toCartItem({String? sourcePage, String? sourceTitle}) {
+  CartItem toCartItem({String? sourcePage, String? sourceTitle,// ✅ NEW PARAMS
+    String? bookingContextId,
+    String? bookingSource,
+    String? providerId,}) {
     return CartItem(
       id: id,
       name: name,
@@ -147,6 +150,11 @@ class Service {
       sourcePage: sourcePage ?? 'unknown',
       sourceTitle: sourceTitle ?? 'Unknown Service',
       categoryId: categoryId, // carry forward
+      // ✅ NEW FIELDS MAPPING
+      bookingContextId: bookingContextId ?? 'LEGACY',
+      bookingSource: bookingSource ?? 'NORMAL',
+      providerId: providerId,
+      
     );
   }
 
@@ -177,6 +185,10 @@ class CartItem {
   final int discountPercentage;
   final String sourcePage;
   final String sourceTitle;
+  // ✅ NEW: Rebooking Context Fields
+  final String bookingContextId; // Default: 'LEGACY'
+  final String bookingSource;    // Default: 'NORMAL'
+  final String? providerId;      // Nullable, for rebooking validation
 
   // NEW: carry category id with the cart item
   final String categoryId;
@@ -199,6 +211,10 @@ class CartItem {
     this.categoryId = '',
     this.quantity = 1,
     DateTime? dateAdded,
+    // ✅ NEW: Initialize with defaults
+    this.bookingContextId = 'LEGACY',
+    this.bookingSource = 'NORMAL',
+    this.providerId,
   }) : dateAdded = dateAdded ?? DateTime.now();
 
   // Basic calculation getters
@@ -265,6 +281,10 @@ class CartItem {
     String? categoryId,
     int? quantity,
     DateTime? dateAdded,
+    // ✅ NEW ARGS
+    String? bookingContextId,
+    String? bookingSource,
+    String? providerId,
   }) {
     return CartItem(
       id: id ?? this.id,
@@ -281,6 +301,10 @@ class CartItem {
       categoryId: categoryId ?? this.categoryId,
       quantity: quantity ?? this.quantity,
       dateAdded: dateAdded ?? this.dateAdded,
+      // ✅ NEW ASSIGNMENTS
+      bookingContextId: bookingContextId ?? this.bookingContextId,
+      bookingSource: bookingSource ?? this.bookingSource,
+      providerId: providerId ?? this.providerId,
     );
     }
 
@@ -301,6 +325,10 @@ class CartItem {
       'categoryId': categoryId, // NEW
       'quantity': quantity,
       'dateAdded': dateAdded.toIso8601String(),
+      // ✅ NEW MAP ENTRIES
+      'bookingContextId': bookingContextId,
+      'bookingSource': bookingSource,
+      'providerId': providerId,
     };
   }
 
@@ -323,6 +351,10 @@ class CartItem {
       dateAdded: json['dateAdded'] != null
           ? DateTime.tryParse(json['dateAdded'].toString()) ?? DateTime.now()
           : DateTime.now(),
+          // ✅ NEW PARSING (Defaults ensure backward compatibility)
+      bookingContextId: json['bookingContextId']?.toString() ?? 'LEGACY',
+      bookingSource: json['bookingSource']?.toString() ?? 'NORMAL',
+      providerId: json['providerId']?.toString(),
     );
   }
 

@@ -120,6 +120,10 @@ class CustomBottomNavBar extends StatelessWidget {
   }
 
   Widget _buildCenterNavItem(String iconPath, String label, int index, double scaleFactor, double bottomPadding) {
+    // 1. Check if this tab is active
+    final bool isActive = selectedIndex == index;
+    // Your active orange color
+    const Color activeColor = Color(0xFFFA9441);
     return Expanded(
       child: GestureDetector(
         onTap: () => onItemTapped(index),
@@ -154,8 +158,7 @@ class CustomBottomNavBar extends StatelessWidget {
                   fontSize: 8.sp * scaleFactor,
                   fontFamily: 'SF Pro',
                   fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
+color: isActive ? activeColor : Colors.black,                ),
                 textAlign: TextAlign.center,
               ),
             ],

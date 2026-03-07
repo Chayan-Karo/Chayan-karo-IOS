@@ -12,6 +12,10 @@ import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../widgets/chayan_header.dart';
 import '../../controllers/saathi_controller.dart';
 import '../../models/saathi_models.dart';
+import 'chayan_sathi_rating_screen.dart';
+import './widgets/bouncy_card.dart';
+import '../../widgets/three_dot_loader.dart'; // Custom loader widget
+import 'previouschayansathiscreen.dart';
 
 class ChayanSathiScreen extends StatefulWidget {
   final String categoryId;
@@ -126,12 +130,12 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
                 if (isLoading && list.isEmpty)
                   Expanded(
                     child: Center(
-                      child: SizedBox(
-                        width: 28.w * scaleFactor,
-                        height: 28.w * scaleFactor,
-                        child: const CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
+                          // --- REPLACED CircularProgressIndicator ---
+                          child: ThreeDotLoader(
+                            size: 14.w * scaleFactor, // Responsive size
+                            color: const Color(0xFFE47830),
+                          ),
+                        )
                   )
                 else if ((error.isNotEmpty && list.isEmpty) || list.isEmpty)
                   Expanded(
@@ -143,7 +147,7 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
                         16.h * scaleFactor,
                         16.h * scaleFactor,
                         16.h * scaleFactor,
-                        90.h * scaleFactor,
+                        16.h * scaleFactor,
                       ),
                       itemCount: list.length,
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -165,7 +169,7 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
 
                         return Opacity(
                           opacity: isUnlocked ? 1.0 : 0.4,
-                          child: InkWell(
+                          child: BouncyCard(
                             onTap: isClickable
                                 ? () async {
                                     if (isLocking) return;
@@ -280,7 +284,7 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
     };
   }
 
- Widget _buildSaathiCard(SaathiItem saathi, double scaleFactor) {
+Widget _buildSaathiCard(SaathiItem saathi, double scaleFactor) {
     final String? img = saathi.imageUrl;
     final bool hasNetImage =
         img != null && img.isNotEmpty && img.startsWith('http');
@@ -293,8 +297,9 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min, // Ensure column only takes needed space
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // 1. Image
           ClipRRect(
             borderRadius: BorderRadius.vertical(
               top: Radius.circular(15.h * scaleFactor),
@@ -302,11 +307,11 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
             child: hasNetImage
                 ? Image.network(
                     img!,
-                    height: 125.h * scaleFactor,
+                    height: 115.h * scaleFactor,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
-                      height: 125.h * scaleFactor,
+                      height: 115.h * scaleFactor,
                       color: const Color(0xFFF5F5F5),
                       alignment: Alignment.center,
                       child: Icon(Icons.person,
@@ -314,16 +319,17 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
                     ),
                   )
                 : Container(
-                    height: 125.h * scaleFactor,
+                    height: 115.h * scaleFactor,
                     color: const Color(0xFFF5F5F5),
                     alignment: Alignment.center,
                     child: Icon(Icons.person,
                         size: 40 * scaleFactor, color: Colors.grey),
                   ),
           ),
-          SizedBox(height: 8.h * scaleFactor),
           
-          // Name
+          SizedBox(height: 8.h * scaleFactor),
+
+          // 2. Name
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0.w * scaleFactor),
             child: Text(
@@ -337,10 +343,10 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
               ),
             ),
           ),
-          
-          SizedBox(height: 6.h * scaleFactor),
-          
-          // Jobs
+
+          SizedBox(height: 4.h * scaleFactor),
+
+          // 3. Jobs Completed
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0.w * scaleFactor),
             child: Row(
@@ -351,136 +357,203 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
                   height: 14.h * scaleFactor,
                 ),
                 SizedBox(width: 4.w * scaleFactor),
-                Text(
-                  '${saathi.jobsCompleted ?? 0} jobs completed',
-                  style: TextStyle(
-                    fontFamily: 'SFPro',
-                    fontSize: 12.sp * scaleFactor,
-                    color: Colors.black,
+                Expanded(
+                  child: Text(
+                    '${saathi.jobsCompleted ?? 0} jobs completed',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'SFPro',
+                      fontSize: 11.sp * scaleFactor,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           SizedBox(height: 4.h * scaleFactor),
-          
-          // Rating
+
+          // 4. Rating Row + RATING SVG ICON
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0.w * scaleFactor),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                SvgPicture.asset(
-                  'assets/icons/star.svg',
-                  width: 14.w * scaleFactor,
-                  height: 14.h * scaleFactor,
-                  color: Colors.black,
+                // Rating Star and Number
+                Row(
+                  children: [
+                    SvgPicture.asset(
+                      'assets/icons/star.svg',
+                      width: 14.w * scaleFactor,
+                      height: 14.h * scaleFactor,
+                      color: Colors.black,
+                    ),
+                    SizedBox(width: 4.w * scaleFactor),
+                    Text(
+                      '${(saathi.rating ?? 0.0).toStringAsFixed(1)}',
+                      style: TextStyle(
+                        fontFamily: 'SFPro',
+                        fontSize: 12.sp * scaleFactor,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 4.w * scaleFactor),
-                Text(
-                  '${(saathi.rating ?? 0.0).toStringAsFixed(1)}',
-                  style: TextStyle(
-                    fontFamily: 'SFPro',
-                    fontSize: 12.sp * scaleFactor,
-                    color: Colors.black,
+
+                // --- UPDATED: Rating SVG Button ---
+                GestureDetector(
+                  onTap: () {
+                    // Stop event propagation to the card tap
+                    // Navigate to the Rating Screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ChayanSathiRatingScreen(saathi: saathi),
+                      ),
+                    );
+                  },
+                  child: SvgPicture.asset(
+                    'assets/icons/review.svg', // Ensure this file exists
+                    height: 24.h * scaleFactor, // Adjust size as needed
+                    width: 24.w * scaleFactor,
+                    fit: BoxFit.contain,
                   ),
                 ),
+                // --- END UPDATE ---
               ],
             ),
           ),
           
-          // Added a minimal padding at the bottom instead of large sized box
-          SizedBox(height: 10.h * scaleFactor),
+          SizedBox(height: 8.h * scaleFactor),
         ],
       ),
     );
   }
 
-  Widget _buildEmptySaathiState(BuildContext context, double scaleFactor) {
-    final screenHeight = MediaQuery.of(context).size.height;
+Widget _buildEmptySaathiState(BuildContext context, double scaleFactor) {
+  final screenHeight = MediaQuery.of(context).size.height;
 
-    return SingleChildScrollView(
-      child: SizedBox(
-        height: screenHeight * 0.75.h,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 110.w * scaleFactor,
-              height: 110.h * scaleFactor,
-              child: ClipOval(
-                child: SvgPicture.asset(
-                  "assets/icons/chayansathi.svg",
-                  fit: BoxFit.cover,
-                  width: 110.w * scaleFactor,
-                  height: 110.h * scaleFactor,
-                ),
+  return SingleChildScrollView(
+    child: SizedBox(
+      height: screenHeight * 0.75.h,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 110.w * scaleFactor,
+            height: 110.h * scaleFactor,
+            child: ClipOval(
+              child: SvgPicture.asset(
+                "assets/icons/chayansathi.svg",
+                fit: BoxFit.cover,
+                width: 110.w * scaleFactor,
+                height: 110.h * scaleFactor,
               ),
             ),
-            SizedBox(height: 20.h * scaleFactor),
-            Text(
-              'No Service Providers Found',
+          ),
+          SizedBox(height: 20.h * scaleFactor),
+          Text(
+            'No Service Providers Found',
+            style: TextStyle(
+              fontSize: 20.sp * scaleFactor,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'SF Pro',
+              color: Colors.black,
+            ),
+          ),
+          SizedBox(height: 5.h * scaleFactor),
+          Opacity(
+            opacity: 0.8,
+            child: Text(
+              'No service provider is currently available in your area.',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 20.sp * scaleFactor,
-                fontWeight: FontWeight.w600,
+                fontSize: 18.sp * scaleFactor,
+                fontWeight: FontWeight.w400,
                 fontFamily: 'SF Pro',
                 color: Colors.black,
               ),
             ),
-            SizedBox(height: 5.h * scaleFactor),
-            Opacity(
-              opacity: 0.8,
+          ),
+          SizedBox(height: 30.h * scaleFactor),
+
+          // --- 1. Go Back Button (Same Design) ---
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+            },
+            child: Container(
+              width: 175.w * scaleFactor,
+              height: 45.h * scaleFactor,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+                border: Border.all(
+                  color: const Color(0xFFE47830),
+                  width: 2.w * scaleFactor,
+                ),
+              ),
+              alignment: Alignment.center,
               child: Text(
-                'No service provider is currently available in your area.',
-                textAlign: TextAlign.center,
+                'Go Back',
                 style: TextStyle(
-                  fontSize: 18.sp * scaleFactor,
-                  fontWeight: FontWeight.w400,
+                  fontSize: 16.sp * scaleFactor,
+                  fontWeight: FontWeight.w500,
                   fontFamily: 'SF Pro',
-                  color: Colors.black,
+                  color: const Color(0xFFE47830),
                 ),
               ),
             ),
-            SizedBox(height: 30.h * scaleFactor),
-            GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => HomeScreen()),
-                );
-              },
-              child: Container(
-                width: 175.w * scaleFactor,
-                height: 45.h * scaleFactor,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8 * scaleFactor),
-                  border: Border.all(
-                    color: const Color(0xFFE47830),
-                    width: 2.w * scaleFactor,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Explore Services',
-                  style: TextStyle(
-                    fontSize: 16.sp * scaleFactor,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'SF Pro',
-                    color: const Color(0xFFE47830),
-                  ),
+          ),
+
+          SizedBox(height: 15.h * scaleFactor),
+
+          // --- 2. Explore Services Button ---
+          GestureDetector(
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => HomeScreen()),
+              );
+            },
+            child: Container(
+              width: 175.w * scaleFactor,
+              height: 45.h * scaleFactor,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+                border: Border.all(
+                  color: const Color(0xFFE47830),
+                  width: 2.w * scaleFactor,
                 ),
               ),
-            ).withId('chayan_sathi_empty_explore_btn'),
-          ],
-        ),
+              alignment: Alignment.center,
+              child: Text(
+                'Explore Services',
+                style: TextStyle(
+                  fontSize: 16.sp * scaleFactor,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'SF Pro',
+                  color: const Color(0xFFE47830),
+                ),
+              ),
+            ),
+          ).withId('chayan_sathi_empty_explore_btn'),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _onItemTapped(
       BuildContext context, SaathiController controller, int index) {
     controller.onItemTapped(index);
     switch (index) {
+       case 0:
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => PreviousChayanSathiScreen()));
+        break;
       case 1:
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (_) => BookingScreen()));

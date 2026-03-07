@@ -91,4 +91,13 @@ class BookingRepository {
 
     return _api.cancelBookingRaw('Bearer $token', payload);
   }
+  Future<void> refundBookingAmount(Map<String, dynamic> payload) async {
+  final token = await _db.getAuthToken();
+  if (token == null) throw Exception('User not authenticated');
+
+  if (kDebugMode) debugPrint('RefundBooking final => $payload');
+
+  // This calls the @POST('/user/refundBookingAmount') you added to ApiService
+  return _api.refundBookingAmount('Bearer $token', payload);
+}
 }

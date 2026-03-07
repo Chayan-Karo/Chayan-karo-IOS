@@ -12,6 +12,8 @@ import '../../widgets/custom_bottom_nav_bar.dart';
 import 'upcoming_booking_screen.dart';
 import 'PreviousBookingScreen.dart';
 import 'feedback_screen.dart';
+import '../../widgets/no_internet_screen.dart'; // Import the new file
+import '../../widgets/three_dot_loader.dart';
 
 // NEW
 import '../../controllers/booking_read_controller.dart';
@@ -26,9 +28,9 @@ class _BookingScreenState extends State<BookingScreen> {
   int _selectedIndex = 1;
   bool showUpcoming = true;
 
-  // Previous-tab chips
-  bool _showCancelled = true;
-  bool _showCompleted = true;
+  // UPDATED: Start both as false to represent "Show All" by default
+  bool _showCancelled = false;
+  bool _showCompleted = false;
 
   // Read controller for bookings list
   final BookingReadController readCtrl = Get.put(BookingReadController(), permanent: true);
@@ -36,16 +38,17 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUpcoming();
-  }
+WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchUpcoming();
+    });
+  }  
 
   void _fetchUpcoming() {
     readCtrl.fetchCustomerBookings();
   }
 
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
-
+void _onItemTapped(BuildContext context, int index) {
+  if (index == 1) return; // Already on Booking Screen
     switch (index) {
       case 0:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PreviousChayanSathiScreen()));
@@ -278,8 +281,33 @@ String _displayTime(CustomerBooking b) {
                   child: Text(t, style: TextStyle(fontSize: 12.sp * scaleFactor, color: const Color(0xFF555555))),
                 )),
             SizedBox(height: 12.h * scaleFactor),
-            Text('Booking scheduled', style: TextStyle(fontSize: 16.sp * scaleFactor, fontWeight: FontWeight.w600)),
-            SizedBox(height: 4.h * scaleFactor),
+// FIX: Check for both 'progress' and 'in progress'
+            if ((b.status ?? '').toLowerCase().contains('progress'))
+              Container(
+                margin: EdgeInsets.only(bottom: 4.h * scaleFactor),
+                padding: EdgeInsets.symmetric(horizontal: 10.w * scaleFactor, vertical: 4.h * scaleFactor),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE3F2FD), // Light Blue Background
+                  borderRadius: BorderRadius.circular(4 * scaleFactor),
+                  border: Border.all(color: const Color(0xFF2196F3)), // Blue Border
+                ),
+                child: Text(
+                  'In Progress', // Always display "In Progress" for better UX
+                  style: TextStyle(
+                    fontSize: 12.sp * scaleFactor,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF2196F3), // Blue Text
+                  ),
+                ),
+              )
+            else
+              Text(
+                'Booking scheduled',
+                style: TextStyle(
+                  fontSize: 16.sp * scaleFactor, 
+                  fontWeight: FontWeight.w600
+                ),
+              ),            SizedBox(height: 4.h * scaleFactor),
             Text.rich(
               TextSpan(
                 children: [
@@ -300,13 +328,19 @@ String _displayTime(CustomerBooking b) {
   }
 
   // PRESENT previous-card design, with simplified status label
+  // UPDATED: Previous Card to show Multiple Services
   Widget buildPreviousCardFromBooking(CustomerBooking b, double scaleFactor) {
     final services = b.bookingService;
-    final firstService = services.isNotEmpty ? services.first : null;
     
-    // --- 1. EXTRACT DATA FOR FEEDBACK ---
-    final String serviceName = firstService?.serviceIName ?? 'Service';
-  //  final String serviceId = firstService?.serviceId ?? '';
+    // We keep firstService logic for the feedback parameters
+    final firstService = services.isNotEmpty ? services.first : null;
+    final String serviceNameForFeedback = firstService?.serviceIName ?? 'Service';
+
+    // EXTRACT ALL SERVICE NAMES
+    final serviceBullets = services.isNotEmpty 
+        ? services.map((s) => "• ${s.serviceIName}").toList() 
+        : ["• Service"];
+
     final String bookingId = b.id ?? '';
     final String spId = b.spId ?? '';
 
@@ -315,15 +349,16 @@ String _displayTime(CustomerBooking b) {
     final statusLower = (b.status).toLowerCase();
     final bool isCancelled = statusLower == 'cancelled';
     final bool isCompleted = statusLower == 'completed';
-    final bool canShowFeedbackButton =
-    isCompleted && !isCancelled && !b.feedbackSubmitted;
+    final bool canShowFeedbackButton = isCompleted && !isCancelled && !b.feedbackSubmitted;
 
-
-
-    final String statusText = isCancelled
-        ? 'Cancelled'
-        : (isCompleted ? 'Completed' : b.status);
-
+    final String statusText = isCancelled ? 'Cancelled' : (isCompleted ? 'Completed' : b.status);
+// BUG FIX: Set specific colors for status
+    Color statusColor = Colors.black54; // Default grey
+    if (isCancelled) {
+      statusColor = Colors.red; // Explicit Red for Cancelled
+    } else if (isCompleted) {
+      statusColor = Colors.green; // Explicit Green for Completed
+    }
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.h * scaleFactor, vertical: 10.h * scaleFactor),
       padding: EdgeInsets.all(16.r * scaleFactor),
@@ -340,77 +375,97 @@ String _displayTime(CustomerBooking b) {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(dateLabel, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp * scaleFactor)),
-              Text(statusText, style: TextStyle(color: Colors.black54, fontSize: 14.sp * scaleFactor)),
-            ],
+// Apply the dynamic color here
+              Text(
+                statusText, 
+                style: TextStyle(
+                  color: statusColor, 
+                  fontSize: 14.sp * scaleFactor,
+                  fontWeight: FontWeight.w600 // Optional: make bold for better visibility
+                )
+              ),            ],
           ),
           SizedBox(height: 8.h * scaleFactor),
 
-          // Service line
-          Row(
-            children: [
-              Text('• $serviceName', style: TextStyle(color: Colors.black54, fontSize: 12.sp * scaleFactor)),
-              Icon(Icons.arrow_drop_down, size: 16 * scaleFactor, color: Colors.black54),
-            ],
-          ),
+          // UPDATED: Service lines (Multiple)
+          ...serviceBullets.map((t) => Padding(
+                padding: EdgeInsets.only(bottom: 4.h * scaleFactor),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        t,
+                        style: TextStyle(
+                            color: Colors.black54, 
+                            fontSize: 12.sp * scaleFactor
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Removed the single dropdown icon, as we are listing multiple items now
+                  ],
+                ),
+              )),
+          
           SizedBox(height: 12.h * scaleFactor),
 
           // Bottom actions row
           Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    // ✅ Share Feedback (only when allowed)
-    if (canShowFeedbackButton)
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFE47830),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10 * scaleFactor),
-          ),
-          padding: EdgeInsets.symmetric(
-            horizontal: 16.h * scaleFactor,
-            vertical: 8.h * scaleFactor,
-          ),
-        ),
-        onPressed: () {
-          Get.to(
-            () => const FeedbackScreen(),
-            arguments: {
-              'spId': spId,
-              'bookingId': bookingId,
-              'serviceName': serviceName,
-            },
-          );
-        },
-        child: Text(
-          'Share Feedback',
-          style: TextStyle(
-            fontSize: 12.sp * scaleFactor,
-            color: Colors.white,
-          ),
-        ),
-      ),
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // ✅ Share Feedback (only when allowed)
+              if (canShowFeedbackButton)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE47830),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10 * scaleFactor),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.h * scaleFactor,
+                      vertical: 8.h * scaleFactor,
+                    ),
+                  ),
+                  onPressed: () {
+                    Get.to(
+                      () => const FeedbackScreen(),
+                      arguments: {
+                        'spId': spId,
+                        'bookingId': bookingId,
+                        'serviceName': serviceNameForFeedback,
+                      },
+                    );
+                  },
+                  child: Text(
+                    'Share Feedback',
+                    style: TextStyle(
+                      fontSize: 12.sp * scaleFactor,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
 
-    // Always show View Details
-    GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PreviousBookingScreen(booking: b),
-          ),
-        );
-      },
-      child: Text(
-        'View details',
-        style: TextStyle(
-          fontSize: 12.sp * scaleFactor,
-          color: const Color(0xFFE47830),
-        ),
-      ),
-    ),
-  ],
-)
-
+              // Always show View Details
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PreviousBookingScreen(booking: b),
+                    ),
+                  );
+                },
+                child: Text(
+                  'View details',
+                  style: TextStyle(
+                    fontSize: 12.sp * scaleFactor,
+                    color: const Color(0xFFE47830),
+                  ),
+                ),
+              ),
+            ],
+          )
         ],
       ),
     );
@@ -418,24 +473,44 @@ String _displayTime(CustomerBooking b) {
   
   Widget _buildPillChipsRow(double scaleFactor) {
   return Padding(
-    padding: EdgeInsets.fromLTRB(16.w * scaleFactor, 6.h * scaleFactor, 16.w * scaleFactor, 4.h * scaleFactor), // reduced
+    padding: EdgeInsets.fromLTRB(16.w * scaleFactor, 6.h * scaleFactor, 16.w * scaleFactor, 4.h * scaleFactor),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // --- Cancelled Chip ---
         Expanded(
           child: _OutlinedPill(
             label: 'Cancelled',
             selected: _showCancelled,
-            onTap: () => setState(() => _showCancelled = !_showCancelled),
+            onTap: () {
+              setState(() {
+                if (_showCancelled) {
+                  _showCancelled = false; // Deselect -> Show All
+                } else {
+                  _showCancelled = true;  // Select Cancelled
+                  _showCompleted = false; // Turn off Completed
+                }
+              });
+            },
             scaleFactor: scaleFactor,
           ),
         ),
-        SizedBox(width: 8.w * scaleFactor), // was 10
+        SizedBox(width: 8.w * scaleFactor),
+        // --- Completed Chip ---
         Expanded(
           child: _OutlinedPill(
             label: 'Completed',
             selected: _showCompleted,
-            onTap: () => setState(() => _showCompleted = !_showCompleted),
+            onTap: () {
+              setState(() {
+                if (_showCompleted) {
+                  _showCompleted = false; // Deselect -> Show All
+                } else {
+                  _showCompleted = true;  // Select Completed
+                  _showCancelled = false; // Turn off Cancelled
+                }
+              });
+            },
             scaleFactor: scaleFactor,
           ),
         ),
@@ -444,8 +519,18 @@ String _displayTime(CustomerBooking b) {
   );
 }
 
-  Widget _buildEmptyState(BuildContext context, double scaleFactor, {bool isPrevious = false}) {
+Widget _buildEmptyState(BuildContext context, double scaleFactor, {
+    bool isPrevious = false,
+    String? title,    // NEW: Allow custom title
+    String? message,  // NEW: Allow custom message
+  }) {
     final screenHeight = MediaQuery.of(context).size.height;
+
+    // Default texts if custom ones aren't provided
+    final defaultTitle = isPrevious ? 'No Previous Booking Yet' : 'No Upcoming Booking Yet';
+    final defaultMessage = isPrevious
+        ? 'You don’t have any previous bookings yet'
+        : 'You don’t have any upcoming bookings right now';
 
     return SingleChildScrollView(
       child: SizedBox(
@@ -467,7 +552,7 @@ String _displayTime(CustomerBooking b) {
             ),
             SizedBox(height: 20.h * scaleFactor),
             Text(
-              isPrevious ? 'No Previous Booking Yet' : 'No Upcoming Booking Yet',
+              title ?? defaultTitle, // Use custom title or fallback
               style: TextStyle(
                 fontSize: 20.sp * scaleFactor,
                 fontWeight: FontWeight.w600,
@@ -479,9 +564,7 @@ String _displayTime(CustomerBooking b) {
             Opacity(
               opacity: 0.8,
               child: Text(
-                isPrevious
-                    ? 'You don’t have any previous bookings yet'
-                    : 'You don’t have any upcoming bookings right now',
+                message ?? defaultMessage, // Use custom message or fallback
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 18.sp * scaleFactor,
@@ -526,7 +609,6 @@ String _displayTime(CustomerBooking b) {
       ),
     );
   }
-  
 
   @override
   Widget build(BuildContext context) {
@@ -548,15 +630,41 @@ String _displayTime(CustomerBooking b) {
 
             Expanded(
               child: Obx(() {
+                // 1. Loading State
                 if (readCtrl.isLoading.value && readCtrl.bookings.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(
+                          // --- REPLACED CircularProgressIndicator ---
+                          child: ThreeDotLoader(
+                            size: 14.w * scaleFactor, // Responsive size
+                            color: const Color(0xFFE47830),
+                          ),
+                        );
                 }
 
+                // 2. Error Handling (Network Check)
                 if (readCtrl.error.isNotEmpty) {
+                  final err = readCtrl.error.value.toLowerCase();
+                  // Check for common network error keywords
+                  if (err.contains('socketexception') ||
+                      err.contains('connection timeout') ||
+                      err.contains('handshakeexception') || 
+                      err.contains('network is unreachable')) {
+                    return NoInternetScreen(onRetry: _fetchUpcoming);
+                  }
+                  
+                  // Generic Error
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Text('Failed to load bookings: ${readCtrl.error.value}'),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Something went wrong', style: TextStyle(fontWeight: FontWeight.bold)),
+                          SizedBox(height: 8),
+                          Text(readCtrl.error.value, textAlign: TextAlign.center),
+                          TextButton(onPressed: _fetchUpcoming, child: Text("Try Again"))
+                        ],
+                      ),
                     ),
                   );
                 }
@@ -564,24 +672,68 @@ String _displayTime(CustomerBooking b) {
                 // Base dataset by tab
                 final base = showUpcoming ? readCtrl.upcoming : readCtrl.previous;
 
-                // Apply chip filters for Previous
+               // UPDATED FILTER LOGIC
                 final data = showUpcoming
                     ? base
                     : base.where((b) {
+                        // 1. If NO filters are selected, Show ALL
+                        if (!_showCancelled && !_showCompleted) return true;
+
                         final s = (b.status).toLowerCase();
-                        if (s == 'cancelled' && _showCancelled) return true;
-                        if (s == 'completed' && _showCompleted) return true;
+
+                        // 2. If Cancelled is selected, show only Cancelled
+                        if (_showCancelled && s == 'cancelled') return true;
+
+                        // 3. If Completed is selected, show only Completed
+                        if (_showCompleted && s == 'completed') return true;
+
                         return false;
                       }).toList();
 
-                if (data.isEmpty) {
-                  return _buildEmptyState(context, scaleFactor, isPrevious: !showUpcoming);
-                }
+               if (data.isEmpty) {
+                  String? customTitle;
+                  String? customMsg;
 
-                // Sort newest first
-                final list = [...data]..sort(
-                  (a, b) => DateTime.parse(b.creationTime).compareTo(DateTime.parse(a.creationTime)),
-                );
+                  if (!showUpcoming) {
+                    // Logic for Previous Tab Empty States
+                    if (_showCancelled) {
+                      customTitle = "No Cancelled Bookings";
+                      customMsg = "You don't have any cancelled bookings.";
+                    } else if (_showCompleted) {
+                      customTitle = "No Completed Bookings";
+                      customMsg = "You don't have any completed bookings yet.";
+                    } else {
+                      // Default Previous Empty State (No filters selected)
+                      customTitle = "No Previous Booking Yet";
+                      customMsg = "You don’t have any previous bookings yet";
+                    }
+                  }
+
+                  return _buildEmptyState(
+                    context, 
+                    scaleFactor, 
+                    isPrevious: !showUpcoming,
+                    title: customTitle,
+                    message: customMsg,
+                  );
+                }
+                // ----------------------------------
+
+                // SORTING LOGIC: In Progress first, then Newest Date
+                final list = [...data]..sort((a, b) {
+                  // 1. Check if item is In Progress
+                  // We use .contains('progress') to catch "Progress" or "In Progress"
+                  final aInProgress = (a.status ?? '').toLowerCase().contains('progress');
+                  final bInProgress = (b.status ?? '').toLowerCase().contains('progress');
+
+                  // 2. Prioritize In Progress
+                  if (aInProgress && !bInProgress) return -1; // 'a' comes first
+                  if (!aInProgress && bInProgress) return 1;  // 'b' comes first
+
+                  // 3. Fallback: Sort by Creation Time (Newest First)
+                  return DateTime.parse(b.creationTime)
+                      .compareTo(DateTime.parse(a.creationTime));
+                });
 
                 return ListView.builder(
                   itemCount: list.length,
@@ -594,9 +746,9 @@ String _displayTime(CustomerBooking b) {
           ],
         ),
         bottomNavigationBar: CustomBottomNavBar(
-          selectedIndex: _selectedIndex,
-          onItemTapped: _onItemTapped,
-        ),
+        selectedIndex: 1, // <--- FIXED: Hardcoded to 1
+        onItemTapped: (index) => _onItemTapped(context, index),
+      ),
       );
     });
   }

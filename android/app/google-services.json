@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "895359772902",
+    "project_id": "chayan-karo-mvp-470914",
+    "storage_bucket": "chayan-karo-mvp-470914.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:895359772902:android:87236cc10e912b47f4f327",
+        "android_client_info": {
+          "package_name": "com.chayankaroindia.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-zD4sv8kBOoYyRYQDKlmYYj1M0T0eVIk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -517,4 +517,44 @@ class LocationController extends GetxController {
     final t = text.split(',').first.trim();
     return t.isEmpty ? null : t;
   }
+  Future<bool> updateCustomerAddress({
+  required String addressId,
+  required String locationId,
+  required String houseNumber,
+  required String landmark,
+  required String city,
+  required String state,
+  required String postCode,
+  String? addressType,
+}) async {
+  try {
+    isMutatingAddress.value = true;
+    error.value = '';
+
+    final response = await _repository.updateCustomerAddress(
+      addressId: addressId,
+      locationId: locationId,
+      addressLine1: houseNumber,
+      addressLine2: landmark,
+      city: city,
+      state: state,
+      postCode: postCode,
+      addressType: addressType,
+    );
+
+    if (response.success) {
+      // Refresh the list from server so the UI shows new data
+      await fetchCustomerAddresses(silent: true);
+      return true;
+    } else {
+      error.value = response.message ?? "Failed to update address";
+      return false;
+    }
+  } catch (e) {
+    error.value = e.toString();
+    return false;
+  } finally {
+    isMutatingAddress.value = false;
+  }
+}
 }

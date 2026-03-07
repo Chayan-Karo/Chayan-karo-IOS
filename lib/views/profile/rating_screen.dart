@@ -39,12 +39,43 @@ class _RatingScreenState extends State<RatingScreen> {
     );
   }
 
-  // Helper to launch URLs
-  void _launchURL(String url) async {
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  // Helper to launch URLs with Top-SnackBar Error
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        // CHANGED: platformDefault is safer for "Back" navigation
+        // when switching between apps (like Facebook) and your app.
+        mode: LaunchMode.platformDefault,
+      );
     } else {
-      throw 'Could not launch $url';
+      if (mounted) {
+        // Calculate screen height to force SnackBar to the top
+        final double screenHeight = MediaQuery.of(context).size.height;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Could not open link',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            // Pushes the SnackBar to the Top by adding huge bottom margin
+            margin: EdgeInsets.only(
+              bottom: screenHeight - 140, 
+              left: 20,
+              right: 20,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -157,9 +188,17 @@ class _RatingScreenState extends State<RatingScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             ElevatedButton(
-                              onPressed: _showReviewSubmittedDialog,
+                              // ✅ CHANGED: Validation Check
+                              // If selectedRating is 0, onPressed is null (Disabled)
+                              onPressed: selectedRating > 0
+                                  ? _showReviewSubmittedDialog
+                                  : null, 
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE47830),
+                                // ✅ CHANGED: Visual Feedback
+                                // Grey if disabled, Orange if enabled
+                                backgroundColor: selectedRating > 0
+                                    ? const Color(0xFFE47830)
+                                    : Colors.grey,
                                 shape: RoundedRectangleBorder(
                                   borderRadius:
                                       BorderRadius.circular(10 * scaleFactor),

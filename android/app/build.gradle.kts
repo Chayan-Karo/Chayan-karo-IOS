@@ -2,6 +2,8 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services") // ✅ ADD THIS
+
 }
 
 // 🔥 CRITICAL FIX: Force older stable version of androidx.activity
@@ -22,6 +24,7 @@ android {
     ndkVersion = "27.0.12077973"
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -34,7 +37,7 @@ android {
         applicationId = "com.chayankaroindia.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36 // Matches your compileSdk
-        versionCode = 29
+        versionCode = 32
         versionName = "1.0.2"
     }
 
@@ -61,4 +64,8 @@ android {
 
 flutter {
     source = "../.."
+}
+// Add this at the very end of your file
+dependencies {
+coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

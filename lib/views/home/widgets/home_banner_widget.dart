@@ -1,11 +1,16 @@
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 
-import '../../../controllers/home_controller.dart';
+import '../../../controllers/banner_controller.dart';
 import '../../../controllers/profile_controller.dart';
+import '../../../services/universal_service_screen.dart';
+import '../../../controllers/category_controller.dart';
 
-class HomeBannerWidget extends StatelessWidget {
+class HomeBannerWidget extends StatefulWidget {
   final double scaleFactor;
   final double horizontalPadding;
 
@@ -16,163 +21,247 @@ class HomeBannerWidget extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<HomeBannerWidget> createState() => _HomeBannerWidgetState();
+}
+
+class _HomeBannerWidgetState extends State<HomeBannerWidget> {
+  int _currentIndex = 0;
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      child: Obx(() {
-        final homeController = Get.find<HomeController>();
-        final profileController = Get.find<ProfileController>();
+    final bannerController = Get.find<BannerController>();
+    final profileController = Get.find<ProfileController>();
 
-        // Show loading indicator if homeController is loading
-        if (homeController.isLoading) {
-          return Container(
-            height: 120.h * scaleFactor,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12 * scaleFactor),
-              color: Colors.grey[300],
+    return Obx(() {
+      if (bannerController.isLoading.value) return _buildShimmerLoading();
+      if (bannerController.banners.isEmpty) return const SizedBox.shrink();
+
+      return Column(
+        children: [
+          CarouselSlider.builder(
+            itemCount: bannerController.banners.length,
+            options: CarouselOptions(
+              // Using auto-height or a generous base height to ensure full text visibility
+              height: 145.h * widget.scaleFactor, 
+              viewportFraction: 1.0,
+              autoPlay: true,
+              autoPlayInterval: const Duration(seconds: 6),
+              enlargeCenterPage: false,
+              onPageChanged: (index, _) => setState(() => _currentIndex = index),
             ),
-            child: const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFFFF6F00),
-              ),
-            ),
-          );
-        }
+            itemBuilder: (context, index, _) {
+              final banner = bannerController.banners[index];
+              final customer = profileController.customer;
+              String userName = (customer?.fullName != null && customer!.fullName.isNotEmpty) 
+                  ? customer.fullName.trim().split(' ').first 
+                  : 'Customer';
 
-        // Get user's first name
-        final customer = profileController.customer;
-        String userName = 'Chayan Customer';
-        if (customer?.fullName != null &&
-            customer!.fullName.isNotEmpty &&
-            customer.fullName != 'User') {
-          // Split and take the first name part, fallback safe
-          userName = customer.fullName.trim().split(' ').first;
-        }
+              return _buildBannerContent(
+    title: banner.description ?? "Special Offer",
+    subtitle: banner.serviceCategory?.name ?? banner.category?.name ?? "View Details",
+    imageUrl: banner.bannerUrl ?? "",
+    scaleFactor: widget.scaleFactor,
+    onTap: () {
+      // 1. Get the category ID from the banner
+      final String? targetCategoryId = banner.category?.id;
+      final String? targetServiceCatId = banner.serviceCategory?.id;
 
-        // Banner text
-        final bannerTitle = "Let's make a package just\nfor you, $userName!";
-        const bannerSubtitle = "Salon for women";
-        const bannerImage = 'assets/banner_woman.webp';
-
-        return _buildBannerContent(
-          userName: userName,
-          scaleFactor: scaleFactor,
-          bannerTitle: bannerTitle,
-          bannerSubtitle: bannerSubtitle,
-          bannerImage: bannerImage,
+      if (targetCategoryId != null) {
+        // 2. Find the REAL Category object from your main CategoryController
+        // This avoids the "Type Mismatch" because we find the correct type by ID
+        final categoryController = Get.find<CategoryController>();
+        final realCategory = categoryController.filteredCategories.firstWhereOrNull(
+          (cat) => cat.categoryId == targetCategoryId
         );
-      }),
-    );
+
+        if (realCategory != null) {
+          Get.to(() => CategoryServiceScreen(
+            category: realCategory,
+            scrollToServiceCategoryId: targetServiceCatId,
+          ));
+        }
+      }
+    },
+  );
+            },
+          ),
+          SizedBox(height: 12.h),
+          _buildDotsIndicator(bannerController.banners.length),
+        ],
+      );
+    });
   }
 
-  Widget _buildBannerContent({
-    required String userName,
-    required double scaleFactor,
-    required String bannerTitle,
-    required String bannerSubtitle,
-    required String bannerImage,
-  }) {
-    return GestureDetector(
-      // onTap: () {
-      //   // Navigation/tap functionality commented out
-      //   Get.snackbar(
-      //     'Redirecting',
-      //     'Redirecting to Women Salon Services...',
-      //     snackPosition: SnackPosition.BOTTOM,
-      //     backgroundColor: const Color(0xFFFF6F00),
-      //     colorText: Colors.white,
-      //     duration: Duration(seconds: 2),
-      //   );
-      // },
+Widget _buildBannerContent({
+  required String title,
+  required String subtitle,
+  required String imageUrl,
+  required double scaleFactor,
+  required VoidCallback onTap,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: widget.horizontalPadding),
       child: Container(
-        height: 120.h * scaleFactor,
+        // The banner itself remains scalable based on text length
+        constraints: BoxConstraints(minHeight: 135.h * scaleFactor),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12 * scaleFactor),
+          borderRadius: BorderRadius.circular(16.r * scaleFactor),
           gradient: const LinearGradient(
-            colors: [Color(0xFFFF8F39), Color(0xFFFF6F00)],
+            colors: [Color(0xFFFF9248), Color(0xFFFF6F00)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF6F00).withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+              color: const Color(0xFFFF6F00).withOpacity(0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Row(
+          // Use crossAxisAlignment.center to keep image centered 
+          // while text expands the banner height
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Left Side: Full Text Content
             Expanded(
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16.w * scaleFactor,
-                  vertical: 12.h * scaleFactor,
+                padding: EdgeInsets.fromLTRB(
+                  20.w * scaleFactor,
+                  16.h * scaleFactor,
+                  12.w * scaleFactor,
+                  16.h * scaleFactor,
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min, // Wrap content
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      bannerTitle,
+                      title,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 16.sp * scaleFactor,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 15.sp * scaleFactor,
+                        fontWeight: FontWeight.w800,
                         height: 1.3,
+                        letterSpacing: 0.1,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 8.h * scaleFactor),
-                    Row(
-                      children: [
-                        Text(
-                          bannerSubtitle,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 12.sp * scaleFactor,
-                            fontWeight: FontWeight.w400,
+                    SizedBox(height: 12.h * scaleFactor),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              subtitle.toUpperCase(),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.sp * scaleFactor,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 6.w * scaleFactor),
-                        Icon(
-                          Icons.arrow_forward,
-                          size: 16.sp * scaleFactor,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ],
+                          SizedBox(width: 4.w),
+                          Icon(Icons.arrow_forward_ios, size: 9.sp, color: Colors.white),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            ClipRRect(
-              borderRadius: BorderRadius.only(
-                topRight: Radius.circular(12.r * scaleFactor),
-                bottomRight: Radius.circular(12.r * scaleFactor),
+
+            // Right Side: Fixed-Size Image Card with Subtle Border
+            Container(
+              // Fixed dimensions: Image stays same size even if banner grows
+              width: 105.w * scaleFactor,
+              height: 115.h * scaleFactor,
+              margin: EdgeInsets.only(right: 12.w * scaleFactor, left: 4.w * scaleFactor),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14.r * scaleFactor),
+                // SUBTLE BORDER
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.4),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(-1, 2),
+                  )
+                ],
               ),
-              child: Image.asset(
-                bannerImage,
-                height: 120.h * scaleFactor,
-                width: 100.w * scaleFactor,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 120.h * scaleFactor,
-                    width: 100.w * scaleFactor,
-                    color: Colors.white.withOpacity(0.2),
-                    child: Icon(
-                      Icons.image_not_supported,
-                      color: Colors.white.withOpacity(0.7),
-                      size: 32.sp * scaleFactor,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12.5.r * scaleFactor), // Slightly less than parent for border
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.fill,
+                  // PROFESSIONAL PLACEHOLDER (Shimmer Effect)
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: Colors.grey[200]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      color: Colors.white,
                     ),
-                  );
-                },
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[100],
+                    child: Icon(
+                      Icons.image_outlined,
+                      color: Colors.grey[400],
+                      size: 28.sp,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
         ),
+      ),
+    ),
+  );
+}
+  Widget _buildDotsIndicator(int count) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(count, (i) {
+        bool isSelected = _currentIndex == i;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 350),
+          width: isSelected ? 20.w : 7.w,
+          height: 6.h,
+          margin: EdgeInsets.symmetric(horizontal: 3.w),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: isSelected ? const Color(0xFFFF6F00) : const Color(0xFFFF6F00).withOpacity(0.15),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildShimmerLoading() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        height: 135.h * widget.scaleFactor,
+        margin: EdgeInsets.symmetric(horizontal: widget.horizontalPadding),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16.r)),
       ),
     );
   }

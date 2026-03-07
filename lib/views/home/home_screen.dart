@@ -114,8 +114,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
+ void _onItemTapped(BuildContext context, int index) {
+    if (index == 2) return;
 
     setState(() => _selectedIndex = index);
     switch (index) {
@@ -224,9 +224,9 @@ return PopScope(
   ),
 
   bottomNavigationBar: CustomBottomNavBar(
-    selectedIndex: _selectedIndex,
-    onItemTapped: _onItemTapped,
-  ),
+        selectedIndex: 2, // Hardcoded 2
+        onItemTapped: (index) => _onItemTapped(context, index), // Correct call
+      ),
 )
 );
 

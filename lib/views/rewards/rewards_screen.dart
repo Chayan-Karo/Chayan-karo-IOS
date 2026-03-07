@@ -24,8 +24,8 @@ class RewardsScreen extends StatefulWidget {
 class _RewardsScreenState extends State<RewardsScreen> {
   int _selectedIndex = 3;
 
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
+void _onItemTapped(BuildContext context, int index) {
+    if (index == 3) return;
 
     switch (index) {
       case 0:
@@ -267,10 +267,10 @@ Widget build(BuildContext context) {
               ),
             ],
           ),
-          bottomNavigationBar: CustomBottomNavBar(
-            selectedIndex: _selectedIndex,
-            onItemTapped: _onItemTapped,
-          ),
+        bottomNavigationBar: CustomBottomNavBar(
+        selectedIndex: 3, // Hardcoded 3
+        onItemTapped: (index) => _onItemTapped(context, index), // Correct call
+      ),
         ),
       );
     },

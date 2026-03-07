@@ -2,72 +2,51 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import '../../widgets/three_dot_loader.dart';
-
 
 // --- App Imports ---
-import 'frequently_added_block.dart';
 import '../../widgets/chayan_header.dart';
-import '../../controllers/cart_controller.dart';
-import '../../controllers/location_controller.dart';
-import '../../models/service_models.dart';
-import '../chayan_sathi/chayan_sathi_screen.dart';
-import 'PaymentScreen.dart';
+import '../../widgets/three_dot_loader.dart';
+import 'frequently_added_block.dart';
+import 'merged_booking_modal.dart';
 import 'showScheduleAddressPopup.dart';
 import 'booking_successful_screen.dart';
+import 'PaymentScreen.dart';
+import '../chayan_sathi/chayan_sathi_screen.dart';
+
+// --- Controller & Model Imports ---
+import '../../controllers/cart_controller.dart';
+import '../../controllers/location_controller.dart';
 import '../../controllers/category_controller.dart';
-import '../../models/category_models.dart';
 import '../../controllers/service_controller.dart';
 import '../../controllers/booking_controller.dart';
+import '../../models/service_models.dart';
+import '../../models/category_models.dart'; 
 import '../../models/booking_models.dart';
 import '../../utils/test_extensions.dart';
 
-// --- NEW IMPORT: Ensure you moved the bottom code to this file ---
-import 'merged_booking_modal.dart'; 
+// --- WIDGET IMPORT ---
+// Ensure summary_widgets.dart is in the same folder or update path
+import './widgets/summary_widgets.dart'; 
 
-// --- UPDATED MODEL: Coupon Model ---
-class CouponModel {
-  final String id;
-  final String title;
-  final String description;
-  final String code;
-  final double value; 
-  final bool isPercentage;
-  final double minOrderAmount;
-  final Color iconColor;
-
-  CouponModel({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.code,
-    required this.value,
-    this.isPercentage = false,
-    this.minOrderAmount = 0,
-    this.iconColor = Colors.blue,
-  });
+// Helper class for mapping
+class _Agg {
+  _Agg({required this.categoryId, required this.serviceId, required this.discountPct});
+  final String categoryId;
+  final String serviceId;
+  final int discountPct;
+  num price = 0;
+  num discountPrice = 0;
 }
-
-// Updated Mock Data
-final List<CouponModel> mockCoupons = [
-  CouponModel(
-    id: '1',
-    title: '20% Off',
-    description: 'On orders above ₹500',
-    code: 'SAVE20',
-    value: 20, 
-    isPercentage: true,
-    minOrderAmount: 500,
-    iconColor: Colors.orange,
-  ),
-];
 
 class SummaryScreen extends StatefulWidget {
   final List<String>? currentPageSelectedServices;
   final String initialAddress;
-  final String initialTimeSlot; 
+  final String initialTimeSlot;
   final Map<String, dynamic>? initialSaathi;
+  // ✅ NEW: Rebooking Context Parameters
+  final bool isRebooking;
+  final String? rebookingLocationId;
+  final String? rebookingAddressId;
 
   const SummaryScreen({
     Key? key,
@@ -75,61 +54,40 @@ class SummaryScreen extends StatefulWidget {
     this.initialAddress = 'Default Address',
     this.initialTimeSlot = 'Select time slot',
     this.initialSaathi,
+    // ✅ NEW: Defaults
+    this.isRebooking = false,
+    this.rebookingLocationId,
+    this.rebookingAddressId,
   }) : super(key: key);
 
   @override
   State<SummaryScreen> createState() => _SummaryScreenState();
 }
 
-enum PaymentMethod { afterService, online }
-
 class _SummaryScreenState extends State<SummaryScreen> {
+  // --- State Variables ---
   late String address;
   late String timeSlot;
   late Map<String, dynamic>? saathi;
 
   String? _locationId;
   String? _addressId;
+  
   List<Service> _frequentlyServices = [];
   bool _frequentlyLoading = false;
 
-  bool _showEditableBlocks = false;
+  bool _showEditableBlocks = false; // Logic for showing Payment Summary vs Cart View
 
   PaymentMethod _paymentMethod = PaymentMethod.afterService;
   TimeOfDay? _inlineTime;
-  bool _isGlobalLoading = false; 
-
-  // 2. UPDATE: Logic to toggle global loader
-  Future<void> _updateServiceQty(String itemId, bool increment) async {
-    // Safety check: max limit 3
-    if (increment && Get.find<CartController>().getQuantity(itemId) >= 3) return;
-
-    setState(() {
-      _isGlobalLoading = true; // Turn on global loader
-    });
-
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    if (increment) {
-      Get.find<CartController>().incrementQuantity(itemId);
-    } else {
-      Get.find<CartController>().decrementQuantity(itemId);
-    }
-
-    if (mounted) {
-      setState(() {
-        _isGlobalLoading = false; // Turn off global loader
-      });
-    }
-  }
-  // --- Coupon State ---
+  bool _isGlobalLoading = false;
+  
   CouponModel? _selectedCoupon;
 
   late final LocationController _locationController;
   late final BookingController _bookingController;
 
-  @override
+@override
   void initState() {
     super.initState();
     address = widget.initialAddress;
@@ -139,13 +97,46 @@ class _SummaryScreenState extends State<SummaryScreen> {
     _locationController = Get.find<LocationController>();
     _bookingController = Get.put(BookingController(), permanent: false);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _locationController.fetchCustomerAddresses();
-      _useDefaultAddress();
-      await _loadFrequentlyServicesForCurrentCategory();
+    // --- ✅ FIXED: Time Parsing for Rebooking ---
+    if (widget.isRebooking && timeSlot.contains(' ')) {
+      try {
+        // Expected format from SaathiServiceScreen: "yyyy-MM-dd hh:mm a"
+        // Example: "2023-10-25 04:30 PM"
+        final format = DateFormat("yyyy-MM-dd hh:mm a");
+        final DateTime parsedDate = format.parse(timeSlot);
+        
+        // Extract the date part for the API/Display logic
+        timeSlot = DateFormat('yyyy-MM-dd').format(parsedDate);
+        
+        // Extract the time part for _inlineTime
+        _inlineTime = TimeOfDay.fromDateTime(parsedDate);
+      } catch (e) {
+        debugPrint("Error parsing rebooking time: $e");
+        // Fallback if parsing fails
+        _inlineTime = const TimeOfDay(hour: 10, minute: 0);
+      }
+    }
+
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // ✅ NEW: Skip default fetching if Rebooking
+      if (widget.isRebooking) {
+         _locationId = widget.rebookingLocationId;
+         _addressId = widget.rebookingAddressId;
+         // Lock the UI immediately for rebooking
+         _showEditableBlocks = true; 
+      } else {
+         await _locationController.fetchCustomerAddresses();
+         _useDefaultAddress();
+      }
+      
+      // ✅ NEW: Only load frequently added for normal flow
+      if (!widget.isRebooking) {
+        await _loadFrequentlyServicesForCurrentCategory();
+      }
     });
   }
 
+  // --- Address Logic ---
   void _useDefaultAddress() {
     final list = _locationController.addresses;
     if (list.isEmpty) return;
@@ -162,12 +153,20 @@ class _SummaryScreenState extends State<SummaryScreen> {
       address = disp;
       _locationId = def.locationId;
       _addressId = def.id;
-      // CRITICAL: Start hidden to trigger the "Request Now" -> "Time" -> "Saathi" flow
-      _showEditableBlocks = false; 
+      _showEditableBlocks = false;
     });
   }
 
+  String _formatAddress(String l1, String l2, String city, String state, String post) {
+    final parts = <String>[l1, if (l2.trim().isNotEmpty) l2, if (city.trim().isNotEmpty) city, if (state.trim().isNotEmpty) state, if (post.trim().isNotEmpty) post];
+    return parts.join(', ');
+  }
+
+  // --- Cart/Service Logic ---
+  // --- Cart/Service Logic (UPDATED) ---
+  
   void _addServiceIdToCurrentPage(String serviceId) {
+    if (widget.isRebooking) return; // Disable for rebooking
     if (widget.currentPageSelectedServices == null) return;
     if (!widget.currentPageSelectedServices!.contains(serviceId)) {
       setState(() {
@@ -176,26 +175,170 @@ class _SummaryScreenState extends State<SummaryScreen> {
     }
   }
 
-  String _formatAddress(String l1, String l2, String city, String state, String post) {
-    final parts = <String>[l1, if (l2.trim().isNotEmpty) l2, if (city.trim().isNotEmpty) city, if (state.trim().isNotEmpty) state, if (post.trim().isNotEmpty) post];
-    return parts.join(', ');
+  // ✅ NEW: Context-Aware Cart Item Retrieval
+  List<CartItem> _getCurrentPageCartItems(CartController cartController) {
+    if (widget.isRebooking) {
+      // Return ALL items from rebooking context
+      return cartController.rebookingItems;
+    }
+
+    // Normal Flow
+    if (widget.currentPageSelectedServices == null || widget.currentPageSelectedServices!.isEmpty) return [];
+    return cartController.cartItems
+        .where((item) => widget.currentPageSelectedServices!.contains(item.id) && cartController.getQuantity(item.id) > 0)
+        .toList();
   }
-// --- HELPER: Opens Saathi Screen & Updates State ---
+
+  // ✅ NEW: Context-Aware Total Calculation
+  double _calculateCurrentPageTotal(List<CartItem> items) {
+    double total = 0;
+    final cartController = Get.find<CartController>();
+    
+    for (final item in items) {
+      final qty = widget.isRebooking
+          ? cartController.getRebookingQuantity(item.id)
+          : cartController.getQuantity(item.id);
+      total += item.price * qty;
+    }
+    return total;
+  }
+
+  // ✅ NEW: Context-Aware Quantity Update
+  Future<void> _updateServiceQty(String itemId, bool increment) async {
+    final cartController = Get.find<CartController>();
+    final currentQty = widget.isRebooking
+        ? cartController.getRebookingQuantity(itemId)
+        : cartController.getQuantity(itemId);
+
+    if (increment && currentQty >= 30) return;
+
+    setState(() => _isGlobalLoading = true);
+    await Future.delayed(const Duration(milliseconds: 500)); 
+
+    if (widget.isRebooking) {
+       // 🎯 REBOOKING UPDATE
+       if (increment) {
+         cartController.updateRebookingQuantity(itemId, currentQty + 1);
+       } else {
+         cartController.updateRebookingQuantity(itemId, currentQty - 1);
+       }
+    } else {
+       // 🛒 NORMAL UPDATE
+       if (increment) {
+         cartController.incrementQuantity(itemId);
+       } else {
+         cartController.decrementQuantity(itemId);
+       }
+    }
+
+    if (mounted) setState(() => _isGlobalLoading = false);
+  }
+
+  Future<void> _loadFrequentlyServicesForCurrentCategory() async {
+    final cartController = Get.find<CartController>();
+    final categoryController = Get.find<CategoryController>();
+    final serviceController = Get.find<ServiceController>();
+    final currentItems = _getCurrentPageCartItems(cartController);
+
+    if (currentItems.isEmpty) return;
+    final currentCategoryId = currentItems.first.categoryId;
+    if (currentCategoryId.isEmpty) return;
+    
+    setState(() {
+      _frequentlyLoading = true;
+      _frequentlyServices = [];
+    });
+
+    final subCats = categoryController.getServiceSubCategories(currentCategoryId);
+    final List<Service> all = [];
+    for (final sub in subCats) {
+      final scId = sub.serviceCategoryId;
+      await serviceController.loadServices(scId);
+      all.addAll(serviceController.services);
+    }
+    
+    setState(() {
+      _frequentlyServices = all;
+      _frequentlyLoading = false;
+    });
+  }
+
+  // --- Scheduling Logic ---
+  String _formatFullScheduleDisplay() {
+    if (timeSlot == 'Select time slot' || timeSlot.isEmpty) return 'Select time slot';
+    
+    DateTime datePart;
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(timeSlot)) {
+       datePart = DateFormat('yyyy-MM-dd').parse(timeSlot);
+    } else {
+       return timeSlot;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final checkDate = DateTime(datePart.year, datePart.month, datePart.day);
+    final diff = checkDate.difference(today).inDays;
+
+    String dayPrefix = '';
+    if (diff == 0) dayPrefix = 'Today';
+    else if (diff == 1) dayPrefix = 'Tomorrow';
+    else dayPrefix = DateFormat('EEE').format(datePart); 
+
+    final dayMonth = DateFormat('d MMM').format(datePart);
+    String timeString = '';
+    if (_inlineTime != null) {
+      final dt = DateTime(2022, 1, 1, _inlineTime!.hour, _inlineTime!.minute);
+      timeString = DateFormat('h:mm a').format(dt);
+    } else {
+      timeString = 'Select time';
+    }
+    return '$dayPrefix $dayMonth $timeString';
+  }
+
+  Future<bool> _openMergedBookingModal() async {
+    String? nextSlotConstraint;
+    if (saathi != null) {
+      if (saathi!['availabilityResult'] != null && saathi!['availabilityResult'] is Map) {
+         nextSlotConstraint = saathi!['availabilityResult']['nextAvailableSlot'];
+      } else if (saathi!['nextAvailableSlot'] != null) {
+         nextSlotConstraint = saathi!['nextAvailableSlot'];
+      }
+    }
+
+    String dateToSend = timeSlot;
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateToSend)) {
+       dateToSend = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    }
+
+    final DateTime? picked = await showMergedBookingModal(
+      context,
+      initialDateStr: dateToSend,
+      initialTime: _inlineTime,
+      minTimeConstraint: nextSlotConstraint,
+    );
+
+    if (picked != null) {
+      setState(() {
+        timeSlot = DateFormat('yyyy-MM-dd').format(picked);
+        _inlineTime = TimeOfDay.fromDateTime(picked);
+      });
+      return true; 
+    }
+    return false;
+  }
+
   Future<void> _navigateToSaathiScreen() async {
-    // 1. Validation
     if ((_locationId ?? '').isEmpty) return;
     final items = _getCurrentPageCartItems(Get.find<CartController>());
     if (items.isEmpty) return;
     final first = items.first;
 
-    // 2. Prepare Data
     final DateTime resolvedDate = _resolveBookingDateTime(timeSlot, const TimeOfDay(hour: 0, minute: 0));
     final String preciseDateString = DateFormat('yyyy-MM-dd').format(resolvedDate);
     final TimeOfDay t = _inlineTime ?? const TimeOfDay(hour: 0, minute: 0);
     final String timeString = "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
     final int totalDuration = _estimateTotalDurationMinutes(items);
 
-    // 3. Navigate
     final selectedSaathi = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -211,90 +354,12 @@ class _SummaryScreenState extends State<SummaryScreen> {
       ),
     );
 
-    // 4. Update State if user picked someone
     if (selectedSaathi != null) {
       setState(() {
         saathi = selectedSaathi;
-        _showEditableBlocks = true; // Reveal the payment summary
+        _showEditableBlocks = true; 
       });
     }
-  }
-  // --- MERGED MODAL LOGIC ---
-  // --- MERGED MODAL LOGIC ---
-  Future<bool> _openMergedBookingModal() async { // Changed return type to Future<bool>
-    // 1. Calculate Constraint
-    String? nextSlotConstraint;
-    if (saathi != null) {
-      if (saathi!['availabilityResult'] != null && saathi!['availabilityResult'] is Map) {
-         nextSlotConstraint = saathi!['availabilityResult']['nextAvailableSlot'];
-      } else if (saathi!['nextAvailableSlot'] != null) {
-         nextSlotConstraint = saathi!['nextAvailableSlot'];
-      }
-    }
-
-    // 2. Prepare Date
-    String dateToSend = timeSlot;
-    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateToSend)) {
-       dateToSend = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    }
-
-    // 3. Open Modal
-    final DateTime? picked = await showMergedBookingModal(
-      context,
-      initialDateStr: dateToSend,
-      initialTime: _inlineTime,
-      minTimeConstraint: nextSlotConstraint,
-    );
-
-    // 4. Update State
-    if (picked != null) {
-      setState(() {
-        timeSlot = DateFormat('yyyy-MM-dd').format(picked);
-        _inlineTime = TimeOfDay.fromDateTime(picked);
-      });
-      return true; // Return TRUE: User picked a time
-    }
-    
-    return false; // Return FALSE: User cancelled
-  }
-  // --- NEW FORMATTER: Combines Date & Time for Header ---
-  String _formatFullScheduleDisplay() {
-    if (timeSlot == 'Select time slot' || timeSlot.isEmpty) return 'Select time slot';
-    
-    // Parse Date
-    DateTime datePart;
-    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(timeSlot)) {
-       datePart = DateFormat('yyyy-MM-dd').parse(timeSlot);
-    } else {
-       // Fallback logic if needed
-       return timeSlot;
-    }
-
-    // Determine Relative Day (Today/Tomorrow)
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final checkDate = DateTime(datePart.year, datePart.month, datePart.day);
-    final diff = checkDate.difference(today).inDays;
-
-    String dayPrefix = '';
-    if (diff == 0) dayPrefix = 'Today';
-    else if (diff == 1) dayPrefix = 'Tomorrow';
-    else dayPrefix = DateFormat('EEE').format(datePart); // e.g. Mon, Tue
-
-    // Format Date: "9 Dec"
-    final dayMonth = DateFormat('d MMM').format(datePart);
-
-    // Format Time: "10:30 PM"
-    String timeString = '';
-    if (_inlineTime != null) {
-      final dt = DateTime(2022, 1, 1, _inlineTime!.hour, _inlineTime!.minute);
-      timeString = DateFormat('h:mm a').format(dt);
-    } else {
-      timeString = 'Select time';
-    }
-
-    // Combine: "Tomorrow 9 Dec 10:30 PM"
-    return '$dayPrefix $dayMonth $timeString';
   }
 
   DateTime _resolveBookingDateTime(String dayToken, TimeOfDay? tod) {
@@ -312,43 +377,17 @@ class _SummaryScreenState extends State<SummaryScreen> {
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
-  List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
-    final cart = Get.find<CartController>();
-    final Map<String, _Agg> agg = {};
-    for (final it in items) {
-      final q = cart.getQuantity(it.id);
-      if (q <= 0) continue;
-
-      final key = '${it.categoryId}::${it.id}';
-      final pricePerUnit = it.hasDiscount ? it.originalPrice : it.price;
-      final discountPerUnit = it.hasDiscount ? it.price : it.price;
-      final discountPct = it.hasDiscount && it.originalPrice > 0
-          ? (((it.originalPrice - it.price) / it.originalPrice) * 100).round()
-          : 0;
-
-      final entry = agg.putIfAbsent(
-        key,
-        () => _Agg(categoryId: it.categoryId, serviceId: it.id, discountPct: discountPct),
-      );
-      entry.price += pricePerUnit * q;
-      entry.discountPrice += discountPerUnit * q;
-    }
-
-    return agg.values
-        .map((a) => BookingServiceItem(
-              categoryId: a.categoryId,
-              serviceId: a.serviceId,
-              discountPercentage: a.discountPct,
-              price: a.price,
-              discountPrice: a.discountPrice,
-            ))
-        .toList();
-  }
-
+  // --- Booking Helpers ---
   int _estimateTotalDurationMinutes(List<CartItem> items) {
     int total = 0;
+    final cartController = Get.find<CartController>(); // Get instance once
+
     for (final it in items) {
-      final q = Get.find<CartController>().getQuantity(it.id);
+      // ✅ FIX: Use correct quantity getter based on mode
+      final q = widget.isRebooking 
+          ? cartController.getRebookingQuantity(it.id)
+          : cartController.getQuantity(it.id);
+          
       final mins = _parseDurationToMinutes(it.duration);
       total += (mins > 0 ? mins : 30) * q;
     }
@@ -383,6 +422,45 @@ class _SummaryScreenState extends State<SummaryScreen> {
     return totalMinutes;
   }
 
+List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
+    final cart = Get.find<CartController>();
+    final Map<String, _Agg> agg = {};
+    
+    for (final it in items) {
+      // ✅ FIX: Use correct quantity getter based on mode
+      final q = widget.isRebooking 
+          ? cart.getRebookingQuantity(it.id) 
+          : cart.getQuantity(it.id);
+
+      // If quantity is 0, it skips adding to the list (This was your bug)
+      if (q <= 0) continue;
+
+      final key = '${it.categoryId}::${it.id}';
+      final pricePerUnit = it.hasDiscount ? it.originalPrice : it.price;
+      final discountPerUnit = it.hasDiscount ? it.price : it.price;
+      final discountPct = it.hasDiscount && it.originalPrice > 0
+          ? (((it.originalPrice - it.price) / it.originalPrice) * 100).round()
+          : 0;
+
+      final entry = agg.putIfAbsent(
+        key,
+        () => _Agg(categoryId: it.categoryId, serviceId: it.id, discountPct: discountPct),
+      );
+      entry.price += pricePerUnit * q;
+      entry.discountPrice += discountPerUnit * q;
+    }
+
+    return agg.values
+        .map((a) => BookingServiceItem(
+              categoryId: a.categoryId,
+              serviceId: a.serviceId,
+              discountPercentage: a.discountPct,
+              price: a.price,
+              discountPrice: a.discountPrice,
+            ))
+        .toList();
+  }
+  // --- BUILD METHOD ---
   @override
   Widget build(BuildContext context) {
     final CartController cartController = Get.find<CartController>();
@@ -392,6 +470,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
       final double scale = isTablet ? constraints.maxWidth / 411 : 1.0;
 
       return Obx(() {
+        // Data Preparation
         final currentPageItems = _getCurrentPageCartItems(cartController);
         final hasCurrentPageItems = currentPageItems.isNotEmpty;
         
@@ -400,15 +479,16 @@ class _SummaryScreenState extends State<SummaryScreen> {
           currentCategoryId = currentPageItems.first.categoryId;
         }
         
+        // Fetch Category Name
         final categoryController = Get.find<CategoryController>();
         final category = categoryController.getCategoryById(currentCategoryId);
         final String categoryName = category?.categoryName ?? '';
 
+        // Financial Calculations
         final itemTotal = _calculateCurrentPageTotal(currentPageItems);
         final int servicePriceInclusive = itemTotal.round();
         
-        // --- Pricing Logic ---
-        final int booking     = servicePriceInclusive;
+        final int booking       = servicePriceInclusive;
         final int platformFee = (booking * 0.20).round();
         final int perService  = (booking * 0.80).round();
         final int gst         = (platformFee * 0.18).round();
@@ -427,19 +507,15 @@ class _SummaryScreenState extends State<SummaryScreen> {
         
         final int totalRaw = (subTotal - discountAmount).toInt();
         final int total = totalRaw > 0 ? totalRaw : 0; 
-        // ---------------------
         
         final inr = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
-        
-        // --- UPDATED: Use the new single string formatter ---
         final scheduledDisplay = _formatFullScheduleDisplay();
 
         return Scaffold(
-          extendBodyBehindAppBar: true, // ✅ ADD
-
+          extendBodyBehindAppBar: true,
           backgroundColor: const Color(0xFFFFFEFD),
           body: SafeArea(
-            top: false, // ✅ ADD
+            top: false,
             child: Stack(
               children: [
                 Column(
@@ -454,120 +530,101 @@ class _SummaryScreenState extends State<SummaryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (_showEditableBlocks) ...[
-                              // Inside build() ...
-_TopDetailsBlock(
-  scale: scale,
-  address: address,
-  timeLabel: scheduledDisplay,
-  saathi: saathi,
-  
-  // 1. EDIT ADDRESS -> Forces Time -> Forces Saathi
-  onEditAddress: () async {
-    final newAddress = await showScheduleAddressPopup(context);
-    if (newAddress != null) {
-      await _locationController.fetchCustomerAddresses();
-      final match = _locationController.addresses.firstWhereOrNull((a) {
-        final existing = _formatAddress(a.addressLine1, a.addressLine2, a.city, a.state, a.postCode).toLowerCase().trim();
-        return existing == newAddress.toLowerCase().trim();
-      });
-      
-      setState(() {
-        address = newAddress;
-        _addressId = match?.id ?? _addressId;
-        _locationId = match?.locationId ?? _locationId;
-        saathi = null; // Reset Saathi
-        _showEditableBlocks = false; // Hide payment block
-      });
+                           if (_showEditableBlocks || widget.isRebooking) ...[
+                              // --- MODULE 1: TOP DETAILS ---
+                              SummaryTopDetailsBlock(
+                                scale: scale,
+                                address: address,
+                                timeLabel: scheduledDisplay,
+                                saathi: saathi,
+                                
+                                // ✅ FIXED: Pass a valid function that does nothing if rebooking
+                                onEditAddress: () {
+                                  if (widget.isRebooking) return; // Locked for rebooking
 
-      // CHAINING: Automatically open Time, then Saathi
-      if (mounted) {
-        bool timePicked = await _openMergedBookingModal();
-        if (timePicked && mounted) {
-           await _navigateToSaathiScreen();
-        }
-      }
-    }
-  },
+                                  showScheduleAddressPopup(context).then((newAddress) async {
+                                    if (newAddress != null) {
+                                      await _locationController.fetchCustomerAddresses();
+                                      final match = _locationController.addresses.firstWhereOrNull((a) {
+                                        final existing = _formatAddress(
+                                          a.addressLine1 ?? "", 
+                                          a.addressLine2 ?? "", 
+                                          a.city ?? "", 
+                                          a.state ?? "", 
+                                          a.postCode ?? ""
+                                        ).toLowerCase().trim();
+                                        return existing == newAddress.toLowerCase().trim();
+                                      });
+                                      
+                                      setState(() {
+                                        address = newAddress;
+                                        _addressId = match?.id ?? _addressId;
+                                        _locationId = match?.locationId ?? _locationId;
+                                        saathi = null; 
+                                        _showEditableBlocks = false; 
+                                      });
 
-  // 2. EDIT TIME -> Forces Saathi
-  onEditTime: () async {
-    bool timePicked = await _openMergedBookingModal();
-    if (timePicked && mounted) {
-       // Reset Saathi because time changed
-       setState(() {
-         saathi = null;
-         _showEditableBlocks = false;
-       });
-       await _navigateToSaathiScreen();
-    }
-  },
+                                      if (mounted) {
+                                        _openMergedBookingModal().then((timePicked) async {
+                                          if (timePicked && mounted) {
+                                              await _navigateToSaathiScreen();
+                                          }
+                                        });
+                                      }
+                                    }
+                                  });
+                                },
 
-  // 3. EDIT SAATHI Directly
-  onEditSaathi: () async {
-    await _navigateToSaathiScreen();
-  },
-),
+                                // ✅ FIXED: Pass a valid function that does nothing if rebooking
+                                onEditTime: () {
+                                  if (widget.isRebooking) return; // Locked for rebooking
+
+                                  _openMergedBookingModal().then((timePicked) async {
+                                    if (timePicked && mounted) {
+                                       setState(() {
+                                          saathi = null;
+                                          _showEditableBlocks = false;
+                                       });
+                                       await _navigateToSaathiScreen();
+                                    }
+                                  });
+                                },
+
+                                // ✅ FIXED: Pass a valid function that does nothing if rebooking
+                                onEditSaathi: () {
+                                  if (widget.isRebooking) return; // Locked for rebooking
+                                  _navigateToSaathiScreen();
+                                },
+                              ),
                               SizedBox(height: 18.h * scale),
-
-                              // --- REMOVED "Request a Service Time" Container HERE ---
-
-                              // Payment selection
-                              Container(
-                                padding: EdgeInsets.all(16.r * scale),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20 * scale),
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.grey.withOpacity(0.07), blurRadius: 8 * scale, offset: Offset(0, 2 * scale)),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Payment Method', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16.sp * scale)),
-                                    SizedBox(height: 8.h * scale),
-                                    Row(
-                                      children: [
-                                        Radio<PaymentMethod>(
-                                          value: PaymentMethod.afterService,
-                                          groupValue: _paymentMethod,
-                                          activeColor: const Color(0xFFE47830), // <--- ADD THIS LINE
-                                          onChanged: (v) => setState(() => _paymentMethod = v!),
-                                        ),
-                                        const Text('Pay after service'),
-                                      ],
-                                    ).withId('payment_option_cash'),
-                                    Row(
-                                      children: [
-                                        Radio<PaymentMethod>(
-                                          value: PaymentMethod.online,
-                                          groupValue: _paymentMethod,
-                                          activeColor: const Color(0xFFE47830), // <--- ADD THIS LINE
-                                          onChanged: (v) => setState(() => _paymentMethod = v!),
-                                        ),
-                                        const Text('Pay Online Now'),
-                                      ],
-                                    ).withId('payment_option_online'),
-                                  ],
-                                ),
+                              // --- MODULE 2: PAYMENT METHOD ---
+                              SummaryPaymentMethodBlock(
+                                scale: scale,
+                                groupValue: _paymentMethod,
+                                onChanged: (v) => setState(() => _paymentMethod = v!),
                               ),
                               SizedBox(height: 20.h * scale),
                             ],
 
+                           // --- MODULE 3: SERVICE LIST ---
                             if (hasCurrentPageItems) ...[
-                              _SelectedServicesBlock(
+                              SummarySelectedServicesBlock(
                                 items: currentPageItems,
                                 scale: scale,
-                                buildItem: (ci) => _buildServiceItem(ci, scale, !_showEditableBlocks),                              
-                                ),
-                              SizedBox(height: 20.h * scale),
+                                // ✅ FIX: Lock buttons if blocks are editable OR if rebooking
+                                isLocked: _showEditableBlocks || widget.isRebooking, 
+                                isLoading: _isGlobalLoading,
+                                onUpdateQty: _updateServiceQty,
+                              ),
                             ] else ...[
-                              _EmptyServicesBlock(scale: scale),
+                              // Empty State
+                              SummaryEmptyServicesBlock(scale: scale),
                               SizedBox(height: 20.h * scale),
                             ],
 
-                 if (!_showEditableBlocks && !_frequentlyLoading && _frequentlyServices.isNotEmpty)
+// --- FREQUENTLY ADDED ---
+                            // ✅ NEW: Hide frequently added block in rebooking flow
+                            if (!widget.isRebooking && !_showEditableBlocks && !_frequentlyLoading && _frequentlyServices.isNotEmpty)
                               FrequentlyAddedBlock(
                                 scale: scale,
                                 categoryId: currentCategoryId,
@@ -582,8 +639,9 @@ _TopDetailsBlock(
 
                             SizedBox(height: 20.h * scale),
 
+                            // --- MODULE 4: COUPONS ---
                             if (hasCurrentPageItems) ...[
-                              _CouponsRow(
+                              SummaryCouponsRow(
                                 scale: scale,
                                 selectedCoupon: _selectedCoupon,
                                 discountAmount: discountAmount,
@@ -595,38 +653,28 @@ _TopDetailsBlock(
                                     builder: (context) => CouponsBottomSheet(
                                       scale: scale,
                                       selectedCoupon: _selectedCoupon,
+                                      orderAmount: subTotal.toDouble(),
                                       onApply: (coupon) {
                                         setState(() {
                                           _selectedCoupon = coupon;
                                         });
-                                        Get.snackbar(
-                                          'Coupon Applied', 
-                                          '${coupon.code} applied successfully!',
-                                          snackPosition: SnackPosition.BOTTOM,
-                                          backgroundColor: Colors.green[100],
-                                          colorText: Colors.green[800],
-                                        );
+                                        Get.snackbar('Coupon Applied', '${coupon.code} applied!', backgroundColor: Colors.green[100], colorText: Colors.green[800]);
                                       },
                                       onRemove: () {
                                         setState(() {
                                           _selectedCoupon = null;
                                         });
-                                        Get.snackbar(
-                                          'Coupon Removed', 
-                                          'Coupon removed successfully',
-                                          snackPosition: SnackPosition.BOTTOM,
-                                          backgroundColor: Colors.red[100],
-                                          colorText: Colors.red[800],
-                                        );
+                                        Get.snackbar('Coupon Removed', 'Coupon removed', backgroundColor: Colors.red[100], colorText: Colors.red[800]);
                                       },
                                     ),
                                   );
-                                }
+                                },
                               ),
                               
                               SizedBox(height: 20.h * scale),
                               
-                              PaymentSummaryBlock(
+                              // --- MODULE 5: PAYMENT BILL SUMMARY ---
+                              SummaryPaymentDetailsBlock(
                                 scale: scale,
                                 grandTotal: servicePriceInclusive,
                                 feeRate: 0.20,
@@ -644,12 +692,10 @@ _TopDetailsBlock(
                   ],
                 ),
 
-                // Bottom CTA
+                // --- Bottom CTA ---
                 if (hasCurrentPageItems)
                   Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
+                    bottom: 0, left: 0, right: 0,
                     child: Container(
                       color: Colors.white,
                       padding: EdgeInsets.symmetric(horizontal: 16.h * scale, vertical: 12.h * scale),
@@ -657,1026 +703,189 @@ _TopDetailsBlock(
                         top: false,
                         child: Obx(() {
                           final placing = _bookingController.isPlacing.value;
+                          // ✅ MODIFIED: Button Text Logic
+                          final btnText = placing 
+                              ? 'Placing...' 
+                              : ((_showEditableBlocks || widget.isRebooking)
+                                  ? (_paymentMethod == PaymentMethod.online ? 'Pay Now (${inr.format(total)})' : 'Confirm & Book') 
+                                  : 'Request Now (${inr.format(total)})');
 
-                          return _showEditableBlocks
-                              ? InkWell(
-                                  onTap: placing
-                                      ? null
-                                      : () async {
-                                          // Validate inputs
-                                          if ((_locationId ?? '').isEmpty) {
-                                            Get.snackbar('Address required', 'Please select an address', snackPosition: SnackPosition.TOP, backgroundColor: Colors.green[100], colorText: Colors.green[800], margin: const EdgeInsets.all(12), borderRadius: 8);
-                                            return;
-                                          }
+                          return InkWell(
+                            onTap: placing ? null : () async {
+                                // 1. Validate Address
+                                if ((_locationId ?? '').isEmpty) {
+                                  final newAddress = await showScheduleAddressPopup(context);
+                                  if (newAddress != null) {
+                                     // In real app, you might want to call _locationController.fetch... here again or assume return is up to date
+                                     return; 
+                                  }
+                                  if((_locationId ?? '').isEmpty) {
+                                      Get.snackbar('Address required', 'Please select an address');
+                                      return;
+                                  }
+                                }
+                                
+                                // 2. Validate Time/Saathi Logic flow
+                                // ✅ CHECK: In Rebooking, blocks ARE shown/locked, so we skip this validation step 
+                                // because we already have the data.
+                                if (!_showEditableBlocks && !widget.isRebooking) {
+                                     // Normal Flow Trigger
+                                     bool timePicked = await _openMergedBookingModal();
+                                     if (timePicked && mounted) {
+                                          await _navigateToSaathiScreen();
+                                     }
+                                     return;
+                                }
+                                // 3. Validate for Final Submission
+                                if (saathi == null || (saathi?['id']?.toString().isEmpty ?? true)) {
+                                  Get.snackbar('Saathi required', 'Please select a Chayan Saathi');
+                                  return;
+                                }
+                                if (_inlineTime == null) {
+                                  Get.snackbar('Time required', 'Please select a preferred time');
+                                  return;
+                                }
 
-                                          if (saathi == null || (saathi?['id']?.toString().isEmpty ?? true)) {
-                                            Get.snackbar('Saathi required', 'Please select a Chayan Saathi', snackPosition: SnackPosition.TOP, backgroundColor: Colors.green[100], colorText: Colors.green[800], margin: const EdgeInsets.all(12), borderRadius: 8);
-                                            return;
-                                          }
-
-                                          if (_inlineTime == null) {
-                                            Get.snackbar('Time required', 'Please select a preferred time', snackPosition: SnackPosition.TOP, backgroundColor: Colors.green[100], colorText: Colors.green[800], margin: const EdgeInsets.all(12), borderRadius: 8);
-                                            return;
-                                          }
-
-                                          final preferredDateTime = _resolveBookingDateTime(
-                                              RegExp(r'^(\d{4}-\d{2}-\d{2})').hasMatch(timeSlot)
-                                                  ? timeSlot
-                                                  : (RegExp(r'\b(\d{2})\b').firstMatch(timeSlot)?.group(1) ?? DateFormat('dd').format(DateTime.now())),
-                                              _inlineTime,
-                                          );
-
-                                          final currentItems = _getCurrentPageCartItems(Get.find<CartController>());
-                                          if (currentItems.isEmpty) {
-                                            Get.snackbar('No service', 'Please add at least one service');
-                                            return;
-                                          }
-
-                                          final bookingItems = _mapCartToBookingItems(currentItems);
-                                          final totalDuration = _estimateTotalDurationMinutes(currentItems);
-                                          final spId = saathi!['id'].toString();
-                                          final addressId = _addressId!;
-                                          final paymentMode = _paymentMethod == PaymentMethod.afterService ? 'CASH' : 'ONLINE';
-                                          final dateStr = "${preferredDateTime.year.toString().padLeft(4, '0')}-${preferredDateTime.month.toString().padLeft(2, '0')}-${preferredDateTime.day.toString().padLeft(2, '0')}";
-        final firstItem = currentItems.first;
-        final title = firstItem.name;
-        final imageUrl = firstItem.image;
-
-                                          if (_paymentMethod == PaymentMethod.online) {
-                                            try {
-                                              final res = await _bookingController.placeBooking(
-                                                spId: spId,
-                                                addressId: addressId,
-                                                slot: preferredDateTime,
-                                                paymentMode: 'ONLINE',
-                                                services: bookingItems,
-                                                totalDuration: totalDuration,
-                                              );
-
-                                              if (!(res.success) || (res.bookingId ?? '').isEmpty) {
-                                                Get.snackbar('Error', res.message.isNotEmpty ? res.message : 'Failed to create booking for online payment');
-                                                return;
-                                              }
-
-                                              final bookingId = res.bookingId!;
-                                              
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) => const PaymentScreen(),
-                                                  settings: RouteSettings(arguments: {
-                                                    'amount': total,
-                                                    'bookingId': bookingId,
-                                                    'paymentMethod': 'online',
-                                                    'preferredTime': DateFormat('hh:mm a').format(preferredDateTime),
-                                                    'bookingCard': {
-                    'bookingId': bookingId,
-                    'bookingDate': dateStr,
-                    'serviceTitle': title,
-                    'totalDuration': totalDuration, // Passing INT minutes (e.g., 90)
-                    'imageUrl': imageUrl,
-                  }
-                                                  }),
-                                                ),
-                                              );
-                                            } catch (e) {
-                                              Get.snackbar('Error', e.toString());
-                                            }
-                                            return;
-                                          }
-
-                                          try {
-                                            final res = await _bookingController.placeBooking(
-                                              spId: spId,
-                                              addressId: addressId,
-                                              slot: preferredDateTime,
-                                              paymentMode: paymentMode,
-                                              services: bookingItems,
-                                              totalDuration: totalDuration,
-                                            );
-
-                                            if (res.success && (res.bookingId?.isNotEmpty ?? false)) {
-                                              final dateStr = "${preferredDateTime.year.toString().padLeft(4, '0')}-${preferredDateTime.month.toString().padLeft(2, '0')}-${preferredDateTime.day.toString().padLeft(2, '0')}";
-                                              final firstItem = currentItems.first;
-                                              final title = firstItem.name;
-                                              final int hours = totalDuration ~/ 60; // Integer division (90 ~/ 60 = 1)
-final int minutes = totalDuration % 60; // Remainder (90 % 60 = 30)
-
-String dur;
-if (totalDuration < 60) {
-  dur = '$totalDuration min';
-} else if (minutes == 0) {
-  dur = '$hours hr';
-} else {
-  dur = '$hours hr $minutes m'; // This gives "1 hr 30 m"
-}
-
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) => BookingSuccessfulScreen(
-                                                    bookingId: res.bookingId!,
-                                                    bookingDate: dateStr,
-                                                    serviceTitle: title,
-                                                    durationLabel: dur,
-                                                    imageUrl: firstItem.image,
-                                                  ),
-                                                ),
-                                              );
-                                            } else {
-                                              Get.snackbar('Provider unavailable', res.message.isNotEmpty ? res.message : 'Could not place booking', snackPosition: SnackPosition.TOP, backgroundColor: Colors.green[100], colorText: Colors.green[800], borderRadius: 8, duration: const Duration(seconds: 3));
-                                            }
-                                          } catch (e) {
-                                            Get.snackbar('Error', _bookingController.error.value.isEmpty ? e.toString() : _bookingController.error.value);
-                                          }
-                                        },
-                                  child: Container(
-                                    height: 47.h * scale,
-                                    decoration: ShapeDecoration(
-                                      color: const Color(0xFFE47830),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10 * scale)),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      placing
-                                          ? 'Placing...'
-                                          : (_paymentMethod == PaymentMethod.online ? 'Pay Now (${inr.format(total)})' : 'Confirm & Book'),
-                                      style: TextStyle(color: Colors.white, fontSize: 14.sp * scale, fontWeight: FontWeight.w500),
-                                    ),
-                                  ),
-                                )
-                              : InkWell(
-                                  onTap: () async {
-                                    // A. Check Address (Silent load should have handled this)
-                                    if ((_locationId ?? '').isEmpty) {
-                                      // Fallback: If address missing, ask now
-                                      final newAddress = await showScheduleAddressPopup(context);
-                                      if (newAddress == null) return;
-                                      await _locationController.fetchCustomerAddresses();
-                                      final match = _locationController.addresses.firstWhereOrNull((a) {
-                                         final existing = _formatAddress(a.addressLine1 ?? "", a.addressLine2 ?? "", a.city ?? "", a.state ?? "", a.postCode ?? "").toLowerCase().trim();
-                                         return existing == newAddress.toLowerCase().trim();
-                                      });
-                                      setState(() {
-                                        address = newAddress;
-                                        _locationId = match?.locationId ?? _locationId;
-                                        _addressId = match?.id ?? _addressId;
-                                      });
-                                    }
-
-                                    // B. Pick Time
-                                    await _openMergedBookingModal();
-                                    if (_inlineTime == null) return; // User cancelled time
-
-                                    // C. Pick Saathi
-                                    final items = _getCurrentPageCartItems(Get.find<CartController>());
-                                    if (items.isEmpty) return;
-                                    final first = items.first;
-                                    
-                                    // Prepare data for Saathi Screen
-                                    final DateTime resolvedDate = _resolveBookingDateTime(timeSlot, const TimeOfDay(hour: 0, minute: 0));
-                                    final String preciseDateString = DateFormat('yyyy-MM-dd').format(resolvedDate);
-                                    final TimeOfDay t = _inlineTime!;
-                                    final String timeString = "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
-                                    final int totalDuration = _estimateTotalDurationMinutes(items);
-
-                                    final selectedSaathi = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ChayanSathiScreen(
-                                          categoryId: first.categoryId,
-                                          serviceId: first.id,
-                                          locationId: _locationId!,
-                                          addressId: _addressId!,
-                                          initialSlot: preciseDateString,
-                                          bookingTime: timeString,
-                                          currentBookingDuration: totalDuration,
-                                        ),
-                                      ),
+                                // 4. PREPARE DATA
+                                final preferredDateTime = _resolveBookingDateTime(
+                                    RegExp(r'^(\d{4}-\d{2}-\d{2})').hasMatch(timeSlot)
+                                        ? timeSlot
+                                        : (RegExp(r'\b(\d{2})\b').firstMatch(timeSlot)?.group(1) ?? DateFormat('dd').format(DateTime.now())),
+                                    _inlineTime,
+                                );
+                                
+                                final bookingItems = _mapCartToBookingItems(currentPageItems);
+                                final totalDuration = _estimateTotalDurationMinutes(currentPageItems);
+                                final spId = saathi!['id'].toString();
+                                final addressId = _addressId!;
+                                final paymentMode = _paymentMethod == PaymentMethod.afterService ? 'CASH' : 'ONLINE';
+                                
+                                // 5. SUBMIT VIA CONTROLLER
+                                
+                                // --- FIXED: Online Payment Logic ---
+                                if (_paymentMethod == PaymentMethod.online) {
+                                  try {
+                                    final res = await _bookingController.placeBooking(
+                                      spId: spId,
+                                      addressId: addressId,
+                                      slot: preferredDateTime,
+                                      paymentMode: 'ONLINE',
+                                      services: bookingItems,
+                                      totalDuration: totalDuration,
                                     );
 
-                                    // D. If Saathi Selected -> REVEAL SUMMARY
-                                    if (selectedSaathi != null) {
-                                      setState(() {
-                                        saathi = selectedSaathi;
-                                        _showEditableBlocks = true; // This switches the button to "Pay Now" and shows the card
-                                      });
+                                    if (!(res.success) || (res.bookingId ?? '').isEmpty) {
+                                       // Error Handling for Online Init
+                                       String title = 'Booking Failed';
+                                       String msg = res.message.isNotEmpty ? res.message : 'Failed to create booking for online payment';
+                                       final mLower = msg.toLowerCase();
+                                       if (mLower.contains('network') || mLower.contains('internet')) {
+                                          title = 'Connection Error';
+                                       } else if (mLower.contains('already booked') || mLower.contains('unavailable')) {
+                                          title = 'Provider Unavailable';
+                                       }
+                                       Get.snackbar(title, msg, backgroundColor: Colors.red[100], colorText: Colors.red[900]);
+                                       return; 
                                     }
-                                  },
-                                  child: Container(
-                                    height: 47.h * scale,
-                                    decoration: ShapeDecoration(
-                                      color: const Color(0xFFE47830),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10 * scale)),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Request Now (${inr.format(total)})',
-                                      style: TextStyle(color: Colors.white, fontSize: 14.sp * scale, fontWeight: FontWeight.w500),
-                                    ),
-                                  ),
-                                ).withId('summary_confirm_btn');
+
+                                    // Navigate to Payment Screen
+                                    final bookingId = res.bookingId!;
+                                    final dateStr = "${preferredDateTime.year.toString().padLeft(4, '0')}-${preferredDateTime.month.toString().padLeft(2, '0')}-${preferredDateTime.day.toString().padLeft(2, '0')}";
+                                    final firstItem = currentPageItems.first;
+                                    final title = firstItem.name;
+                                    final imageUrl = firstItem.image;
+
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const PaymentScreen(),
+                                        settings: RouteSettings(arguments: {
+                                          'amount': total,
+                                          'bookingId': bookingId,
+                                          'paymentMethod': 'online',
+                                          'preferredTime': DateFormat('hh:mm a').format(preferredDateTime),
+                                          'bookingCard': {
+                                            'bookingId': bookingId,
+                                            'bookingDate': dateStr,
+                                            'serviceTitle': title,
+                                            'totalDuration': totalDuration,
+                                            'imageUrl': imageUrl,
+                                          }
+                                        }),
+                                      ),
+                                    );
+                                    // ✅ NEW: Clear Rebooking Cart if successful init
+                                    if(widget.isRebooking) cartController.clearRebookingCart();
+                                  } catch (e) {
+                                    Get.snackbar('Error', e.toString(), backgroundColor: Colors.red[100]);
+                                  }
+                                  return; // <--- CRITICAL FIX: Stops execution here so it doesn't run the Cash logic below.
+                                }
+
+                                // --- Cash / Pay After Service Logic ---
+                                try {
+                                    final res = await _bookingController.placeBooking(
+                                      spId: spId,
+                                      addressId: addressId,
+                                      slot: preferredDateTime,
+                                      paymentMode: paymentMode,
+                                      services: bookingItems,
+                                      totalDuration: totalDuration,
+                                    );
+
+                                    if (res.success && (res.bookingId?.isNotEmpty ?? false)) {
+                                       // Success Navigation
+                                       final firstItem = currentPageItems.first;
+                                       int h = totalDuration ~/ 60;
+                                       int m = totalDuration % 60;
+                                       String dur = (totalDuration < 60) ? '$totalDuration min' : (m == 0 ? '$h hr' : '$h hr $m m');
+
+                                       // ✅ NEW: Clear Rebooking Cart on Success
+                                       if(widget.isRebooking) cartController.clearRebookingCart();
+                                       
+                                       Navigator.push(context, MaterialPageRoute(builder: (_) => BookingSuccessfulScreen(
+                                            bookingId: res.bookingId!,
+                                            bookingDate: DateFormat('yyyy-MM-dd').format(preferredDateTime),
+                                            serviceTitle: firstItem.name,
+                                            durationLabel: dur,
+                                            imageUrl: firstItem.image,
+                                       )));
+                                    } else {
+                                        // Error Handling
+                                        Get.snackbar('Booking Failed', res.message.isNotEmpty ? res.message : 'Could not place booking', backgroundColor: Colors.red[100], colorText: Colors.red[900]);
+                                    }
+                                } catch (e) {
+                                    Get.snackbar('Error', e.toString(), backgroundColor: Colors.red[100]);
+                                }
+                            },
+                            child: Container(
+                              height: 47.h * scale,
+                              decoration: ShapeDecoration(
+                                color: const Color(0xFFE47830),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10 * scale)),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(btnText, style: TextStyle(color: Colors.white, fontSize: 14.sp * scale, fontWeight: FontWeight.w500)),
+                            ),
+                          ).withId('summary_confirm_btn');
                         }),
                       ),
                     ),
                   ),
-                  if (_isGlobalLoading)
-            Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.black.withOpacity(0.3), // Semi-transparent dimming
-              child: Center(
-                child: ThreeDotLoader(
-                  size: 20.0, // Bigger size for full screen
-                  color: const Color(0xFFE47830),
-                ),
-              ),
-            ),
+                  
+                if (_isGlobalLoading)
+                   Container(
+                     width: double.infinity, height: double.infinity,
+                     color: Colors.black.withOpacity(0.3),
+                     child: Center(
+                       child: ThreeDotLoader(size: 20.0, color: const Color(0xFFE47830)),
+                     ),
+                   ),
               ],
             ),
           ),
         );
       });
     });
-  }
-
-  // Cart helpers
-  List<CartItem> _getCurrentPageCartItems(CartController cartController) {
-    if (widget.currentPageSelectedServices == null || widget.currentPageSelectedServices!.isEmpty) return [];
-    return cartController.cartItems
-        .where((item) => widget.currentPageSelectedServices!.contains(item.id) && cartController.getQuantity(item.id) > 0)
-        .toList();
-  }
-
-  double _calculateCurrentPageTotal(List<CartItem> items) {
-    double total = 0;
-    for (final item in items) {
-      final qty = Get.find<CartController>().getQuantity(item.id);
-      total += item.price * qty;
-    }
-    return total;
-  }
-
-  int _getCurrentPageItemCount(List<CartItem> items) {
-    int count = 0;
-    for (final item in items) {
-      count += Get.find<CartController>().getQuantity(item.id);
-    }
-    return count;
-  }
-  
-
-  Future<void> _loadFrequentlyServicesForCurrentCategory() async {
-    final cartController = Get.find<CartController>();
-    final categoryController = Get.find<CategoryController>();
-    final serviceController = Get.find<ServiceController>();
-    final currentItems = _getCurrentPageCartItems(cartController);
-
-    if (currentItems.isEmpty) return;
-    final currentCategoryId = currentItems.first.categoryId;
-    if (currentCategoryId.isEmpty) return;
-    
-    setState(() {
-      _frequentlyLoading = true;
-      _frequentlyServices = [];
-    });
-
-    final subCats = categoryController.getServiceSubCategories(currentCategoryId);
-    final List<Service> all = [];
-    for (final sub in subCats) {
-      final scId = sub.serviceCategoryId;
-      await serviceController.loadServices(scId);
-      all.addAll(serviceController.services);
-    }
-    
-    setState(() {
-      _frequentlyServices = all;
-      _frequentlyLoading = false;
-    });
-  }
-
-Widget _buildServiceItem(CartItem cartItem, double scale, bool showControls) {
-  final cartController = Get.find<CartController>();
-  final totalItemPrice = cartItem.price * cartItem.quantity;
-  
-  // CHECK: Is the limit reached?
-  final bool isMaxLimit = cartItem.quantity >= 3;
-
-  return Container(
-    margin: EdgeInsets.only(bottom: 12.h * scale),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // --- IMAGE BLOCK (Clean, no loader here) ---
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12 * scale),
-          child: Image.network(
-            cartItem.image,
-            width: 60.w * scale,
-            height: 60.h * scale,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              width: 60.w * scale,
-              height: 60.h * scale,
-              color: Colors.grey[300],
-              child: Icon(Icons.image, color: Colors.grey, size: 30 * scale),
-            ),
-          ),
-        ),
-        SizedBox(width: 12.w * scale),
-
-        // --- DETAILS BLOCK ---
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          cartItem.name,
-                          style: TextStyle(
-                            fontSize: 14.sp * scale,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 6.h * scale),
-
-                        if (!showControls) ...[
-                          // LOCKED STATE
-                          Text(
-                            'Quantity: ${cartItem.quantity} × ₹${cartItem.price.toInt()}',
-                            style: TextStyle(fontSize: 12.sp * scale, color: Colors.grey[600], fontWeight: FontWeight.w500),
-                          ),
-                        ] else ...[
-                          // EDITABLE STATE
-                          Container(
-                            width: 90.w * scale,
-                            padding: EdgeInsets.symmetric(horizontal: 4.w * scale, vertical: 2.h * scale),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(6 * scale),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Decrement
-                                InkWell(
-                                  onTap: _isGlobalLoading 
-                                      ? null 
-                                      : () => _updateServiceQty(cartItem.id, false),
-                                  child: Padding(
-                                    padding: EdgeInsets.all(4.0 * scale),
-                                    child: Icon(Icons.remove, size: 16 * scale, color: Colors.black),
-                                  ),
-                                ).withId('summary_minus_${cartItem.id}'),
-                                // Quantity
-                                Text(
-                                  '${cartItem.quantity}',
-                                  style: TextStyle(fontSize: 13.sp * scale, fontWeight: FontWeight.w600, color: const Color(0xFFE47830)),
-                                ),
-                                // Increment
-                                InkWell(
-                                  onTap: (_isGlobalLoading || isMaxLimit)
-                                      ? null
-                                      : () => _updateServiceQty(cartItem.id, true),
-                                  child: Padding(
-                                    padding: EdgeInsets.all(4.0 * scale),
-                                    child: Icon(
-                                      Icons.add,
-                                      size: 16 * scale,
-                                      // Grey out if limit reached
-                                      color: isMaxLimit ? Colors.grey[400] : const Color(0xFFE47830),
-                                    ),
-                                  ),
-                                ).withId('summary_plus_${cartItem.id}'),
-                              ],
-                            ),
-                          ),
-                        ],
-                        // ... Rest of rating/duration code ...
-                         if (cartItem.rating.isNotEmpty &&
-                              cartItem.duration.isNotEmpty) ...[
-                            SizedBox(height: 4.h * scale),
-                            Row(
-                              children: [
-                                SvgPicture.asset('assets/icons/star.svg',
-                                    width: 12.w, height: 12.h, color: Colors.black),
-                                SizedBox(width: 2.w * scale),
-                                Text(
-                                  '${cartItem.rating} | ${cartItem.duration}',
-                                  style: TextStyle(
-                                      fontSize: 11.sp * scale,
-                                      color: Colors.grey[600]),
-                                ),
-                              ],
-                            ),
-                          ],
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: 8.w * scale),
-                  // ... Price Code ...
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '₹${totalItemPrice.toInt()}',
-                        style: TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w700, color: const Color(0xFFE47830)),
-                      ),
-                      if (cartItem.hasDiscount) ...[
-                        SizedBox(height: 2.h * scale),
-                        Text(
-                          '₹${(cartItem.originalPrice * cartItem.quantity).toInt()}',
-                          style: TextStyle(fontSize: 12.sp * scale, decoration: TextDecoration.lineThrough, color: Colors.grey),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-              if (cartItem.description.isNotEmpty) ...[
-                SizedBox(height: 8.h * scale),
-                BulletText(cartItem.description, scale: scale),
-              ],
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-}
-
-class _TopDetailsBlock extends StatelessWidget {
-  final double scale;
-  final String address;
-  final String timeLabel;
-  final Map<String, dynamic>? saathi;
-  final VoidCallback onEditAddress;
-  final VoidCallback onEditTime;
-  final VoidCallback onEditSaathi;
-
-  const _TopDetailsBlock({
-    required this.scale,
-    required this.address,
-    required this.timeLabel,
-    required this.saathi,
-    required this.onEditAddress,
-    required this.onEditTime,
-    required this.onEditSaathi,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16.r * scale),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20 * scale),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.07), blurRadius: 8 * scale, offset: Offset(0, 2 * scale))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _row(icon: 'assets/icons/home.svg', title: 'Home', value: address, onEdit: onEditAddress, scale: scale,testId: 'summary_edit_address_btn'),
-          SizedBox(height: 14.h * scale),
-          _row(icon: 'assets/icons/calendar.svg', title: 'Scheduled', value: timeLabel, onEdit: onEditTime, scale: scale,testId: 'summary_edit_time_btn'),
-          SizedBox(height: 14.h * scale),
-          _row(
-            icon: 'assets/icons/chayansathi.svg',
-            title: 'Chayan Saathi',
-            value: saathi == null
-                ? 'Select Chayan Saathi'
-                : "${saathi!['name']}, (${saathi!['jobs'] ?? ''}+ work), ${saathi!['rating'] ?? ''} rating",
-            onEdit: onEditSaathi,
-            scale: scale,
-            testId: 'summary_edit_saathi_btn', // <--- Added ID
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _row({
-    required String icon,
-    required String title,
-    required String value,
-    required VoidCallback onEdit,
-    required double scale,
-    required String testId, // <--- 1. Add this parameter
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SvgPicture.asset(icon, width: 22 * scale, height: 22 * scale, color: Colors.black),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp * scale, color: Colors.black)),
-            const SizedBox(height: 2),
-            Text(value, style: TextStyle(fontWeight: FontWeight.w400, fontSize: 13.sp * scale, color: Colors.black)),
-          ]),
-        ),
-        InkWell(onTap: onEdit, child: Icon(Icons.edit, size: 18 * scale, color: const Color(0xFFE47830))).withId(testId),
-      ],
-    );
-  }
-}
-
-class _SelectedServicesBlock extends StatelessWidget {
-  final List<CartItem> items;
-  final double scale;
-  final Widget Function(CartItem) buildItem;
-
-  const _SelectedServicesBlock({required this.items, required this.scale, required this.buildItem});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16.r * scale),
-      decoration: BoxDecoration(color: const Color(0xFFE5E9FF), borderRadius: BorderRadius.circular(20 * scale)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Selected Services (${items.fold<int>(0, (p, e) => p + e.quantity)} items)',
-              style: TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w700)),
-          SizedBox(height: 12.h * scale),
-          ...items.map(buildItem).toList(),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyServicesBlock extends StatelessWidget {
-  final double scale;
-  const _EmptyServicesBlock({required this.scale});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(32.r * scale),
-      decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(20 * scale)),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(Icons.shopping_cart_outlined, size: 64 * scale, color: Colors.grey),
-            SizedBox(height: 16.h * scale),
-            Text('No services selected from this page',
-                style: TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w600, color: Colors.grey[600])),
-            SizedBox(height: 8.h * scale),
-            Text('Go back and select services to proceed', style: TextStyle(fontSize: 14.sp * scale, color: Colors.grey[500])),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CouponsRow extends StatelessWidget {
-  final double scale;
-  final VoidCallback onTap;
-  final CouponModel? selectedCoupon;
-  final double discountAmount;
-
-  const _CouponsRow({
-    required this.scale, 
-    required this.onTap,
-    this.selectedCoupon,
-    this.discountAmount = 0.0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(16.r * scale),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20 * scale),
-           boxShadow: [
-             BoxShadow(
-               color: Colors.grey.withOpacity(0.07),
-               blurRadius: 8 * scale,
-               offset: Offset(0, 2 * scale),
-             ),
-           ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(children: [
-              Icon(Icons.local_offer_outlined, size: 20 * scale, color: selectedCoupon != null ? Colors.green : Colors.black),
-              SizedBox(width: 8.w * scale),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Coupons and offers', 
-                    style: TextStyle(fontSize: 14.sp * scale, fontWeight: FontWeight.w600)
-                  ),
-                  if (selectedCoupon != null)
-                    Text(
-                      '${selectedCoupon!.code} applied',
-                      style: TextStyle(fontSize: 12.sp * scale, color: Colors.green, fontWeight: FontWeight.w500),
-                    )
-                ],
-              ),
-            ]),
-            Row(
-              children: [
-                if(selectedCoupon != null && discountAmount > 0)
-                   Text(
-                    '-₹${discountAmount.toInt()}',
-                    style: TextStyle(fontWeight: FontWeight.w700, color: Colors.green, fontSize: 14.sp * scale),
-                  )
-                else if (selectedCoupon != null)
-                   Text(
-                    'Add items > ₹${selectedCoupon!.minOrderAmount.toInt()}',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.orange, fontSize: 12.sp * scale),
-                   )
-                else
-                   Text('1 offer', style: TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFFFA9441))),
-                
-                SizedBox(width: 4.w * scale),
-                Icon(Icons.chevron_right, color: const Color(0xFFFA9441), size: 18 * scale)
-              ],
-            ),
-          ],
-        ),
-      ),
-    ).withId('summary_open_coupon_btn');
-  }
-}
-
-class PaymentSummaryBlock extends StatelessWidget {
-  final double scale;
-  final int grandTotal;
-  final double feeRate;
-  final double gstOnFeeRate;
-  final bool showSavingsTag;
-  final double discountAmount;
-
-  const PaymentSummaryBlock({
-    super.key,
-    required this.scale,
-    required this.grandTotal,
-    this.feeRate = 0.20,
-    this.gstOnFeeRate = 0.18,
-    this.showSavingsTag = false,
-    this.discountAmount = 0.0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final int booking = grandTotal;
-    final int platformFee = (booking * feeRate).round();        
-    final int perService  = (booking * (1 - feeRate)).round();  
-    final int gst         = (platformFee * gstOnFeeRate).round(); 
-    
-    final int subTotal = perService + platformFee + gst;
-    final int total = (subTotal - discountAmount).toInt() > 0 ? (subTotal - discountAmount).toInt() : 0;
-
-    return Container(
-      padding: EdgeInsets.all(16.r * scale),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20 * scale),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10 * scale,
-            offset: Offset(0, 2 * scale),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Payment Summary',
-              style: TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w700)),
-          SizedBox(height: 12.h * scale),
-
-          PriceRow(title: 'Per Service Charge',  amount: '₹${perService.toString()}',  scale: scale),
-          PriceRow(title: 'Platform Fee',    amount: '₹${platformFee.toString()}', scale: scale),
-          PriceRow(title: 'GST on Platform (18%)', amount: '₹${gst.toString()}',          scale: scale, color: Colors.black87),
-          
-          if (discountAmount > 0)
-             Padding(
-               padding: EdgeInsets.symmetric(vertical: 2.h * scale),
-               child: Row(
-                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                 children: [
-                   Text('Coupon Discount', style: TextStyle(fontSize: 14.sp * scale, color: Colors.green)),
-                   Text('-₹${discountAmount.toInt()}', style: TextStyle(fontSize: 14.sp * scale, color: Colors.green, fontWeight: FontWeight.w600)),
-                 ],
-               ),
-             ),
-
-          Divider(height: 20.h * scale),
-          PriceRow(title: 'Total', amount: '₹$total', isBold: true, scale: scale),
-        ],
-      ),
-    );
-  }
-}
-
-class BulletText extends StatelessWidget {
-  final String text;
-  final double scale;
-  const BulletText(this.text, {super.key, this.scale = 1});
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 4.h * scale),
-      child: Row(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(right: 6.r * scale, top: 4.r * scale),
-            child: CircleAvatar(radius: 2 * scale, backgroundColor: const Color(0xFF757575)),
-          ),
-          Flexible(child: Text(text, style: TextStyle(color: const Color(0xFF757575), fontSize: 12.sp * scale))),
-        ],
-      ),
-    );
-  }
-}
-
-class PriceRow extends StatelessWidget {
-  final String title;
-  final String amount;
-  final Color? color;
-  final bool isBold;
-  final double scale;
-
-  const PriceRow({
-    super.key,
-    required this.title,
-    required this.amount,
-    this.color,
-    this.isBold = false,
-    this.scale = 1,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 2.h * scale),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: TextStyle(fontSize: 14.sp * scale, fontWeight: isBold ? FontWeight.w700 : FontWeight.w400)),
-          Text(amount,
-              style: TextStyle(
-                  fontSize: 14.sp * scale, color: color ?? Colors.black, fontWeight: isBold ? FontWeight.w700 : FontWeight.w400)),
-        ],
-      ),
-    );
-  }
-}
-
-class _Agg {
-  _Agg({required this.categoryId, required this.serviceId, required this.discountPct});
-  final String categoryId;
-  final String serviceId;
-  final int discountPct;
-  num price = 0;
-  num discountPrice = 0;
-}
-
-// --- COUPON BOTTOM SHEET ---
-class CouponsBottomSheet extends StatefulWidget {
-  final double scale;
-  final Function(CouponModel) onApply;
-  final VoidCallback onRemove;
-  final CouponModel? selectedCoupon;
-
-  const CouponsBottomSheet({
-      Key? key, 
-      required this.scale, 
-      required this.onApply,
-      required this.onRemove,
-      this.selectedCoupon,
-  }) : super(key: key);
-
-  @override
-  State<CouponsBottomSheet> createState() => _CouponsBottomSheetState();
-}
-
-class _CouponsBottomSheetState extends State<CouponsBottomSheet> {
-  final TextEditingController _codeController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    final scale = widget.scale;
-    
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20 * scale)),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w * scale, vertical: 16.h * scale),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Coupons & Offers',
-                  style: TextStyle(fontSize: 18.sp * scale, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: Icon(Icons.close, size: 24 * scale),
-                  onPressed: () => Navigator.pop(context),
-                ).withId('coupon_sheet_close_btn'),
-              ],
-            ),
-          ),
-          Divider(height: 1, thickness: 1, color: Colors.grey[200]),
-          
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: 16.w * scale, vertical: 16.h * scale),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8 * scale),
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 12.w * scale),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _codeController,
-                            onChanged: (val) => setState(() {}),
-                            decoration: InputDecoration(
-                              hintText: 'Enter Coupon Code',
-                              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14.sp * scale),
-                              border: InputBorder.none,
-                            ),
-                          ).withId('coupon_sheet_input'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                             final inputCode = _codeController.text.trim();
-                             if (inputCode.isEmpty) return;
-                             CouponModel? validCoupon;
-                             try {
-                               validCoupon = mockCoupons.firstWhere(
-                                 (c) => c.code.toLowerCase() == inputCode.toLowerCase()
-                               );
-                             } catch (e) {
-                               validCoupon = null;
-                             }
-                             if (validCoupon != null) {
-                               Navigator.pop(context);
-                               widget.onApply(validCoupon);
-                             } else {
-                               Get.snackbar(
-                                 'Invalid Coupon',
-                                 'Please enter valid coupon',
-                                 snackPosition: SnackPosition.TOP,
-                                 backgroundColor: Colors.red[100],
-                                 colorText: Colors.red[800],
-                                 margin: const EdgeInsets.all(10),
-                                 borderRadius: 8,
-                                 duration: const Duration(seconds: 2),
-                               );
-                             }
-                          },
-                          child: Text(
-                            'Apply',
-                            style: TextStyle(
-                              color: _codeController.text.isNotEmpty 
-                                  ? const Color(0xFFE47830) 
-                                  : Colors.grey[400], 
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14.sp * scale
-                            ),
-                          ),
-                        ).withId('coupon_sheet_apply_btn'),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 24.h * scale),
-                  Text(
-                    'Payment offers',
-                    style: TextStyle(fontSize: 16.sp * scale, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'No code required',
-                    style: TextStyle(fontSize: 13.sp * scale, color: Colors.grey[600]),
-                  ),
-                  SizedBox(height: 16.h * scale),
-
-                  ...mockCoupons.map((coupon) => _buildCouponItem(coupon, scale)).toList(),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCouponItem(CouponModel coupon, double scale) {
-    final bool isSelected = widget.selectedCoupon?.id == coupon.id;
-
-    return InkWell(
-      onTap: () {
-        if (!isSelected) {
-            widget.onApply(coupon);
-            Navigator.pop(context);
-        }
-      },
-      child: Container(
-        margin: EdgeInsets.only(bottom: 24.h * scale),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40.w * scale,
-              height: 40.h * scale,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey[200]!),
-                borderRadius: BorderRadius.circular(8 * scale),
-              ),
-              child: Center(
-                child: Icon(Icons.account_balance_wallet, color: coupon.iconColor, size: 20 * scale), 
-              ),
-            ),
-            SizedBox(width: 12.w * scale),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    coupon.title,
-                    style: TextStyle(fontSize: 15.sp * scale, fontWeight: FontWeight.w600),
-                  ),
-                  SizedBox(height: 4.h * scale),
-                  Text(
-                    coupon.description,
-                    style: TextStyle(fontSize: 13.sp * scale, color: Colors.grey[600]),
-                  ),
-                  SizedBox(height: 8.h * scale),
-                  Text(
-                    'View T&C',
-                    style: TextStyle(
-                      fontSize: 12.sp * scale, 
-                      fontWeight: FontWeight.w600, 
-                      color: Colors.black,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            InkWell(
-                onTap: () {
-                    if (isSelected) {
-                        widget.onRemove();
-                        Navigator.pop(context);
-                    } else {
-                        widget.onApply(coupon);
-                        Navigator.pop(context);
-                    }
-                },
-                child: Container(
-                   padding: EdgeInsets.symmetric(horizontal: 12.w * scale, vertical: 6.h * scale),
-                   decoration: BoxDecoration(
-                     border: Border.all(color: isSelected ? Colors.red : const Color(0xFFE47830)),
-                     borderRadius: BorderRadius.circular(20 * scale)
-                   ),
-                   child: Text(
-                       isSelected ? 'REMOVE' : 'APPLY', 
-                       style: TextStyle(
-                           color: isSelected ? Colors.red : const Color(0xFFE47830), 
-                           fontSize: 12.sp * scale, 
-                           fontWeight: FontWeight.bold
-                       ),
-                   ),
-                ),
-            ).withId('coupon_action_${coupon.code}'),
-          ],
-        ),
-      ),
-    ).withId('coupon_item_${coupon.code}');
   }
 }

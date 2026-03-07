@@ -221,7 +221,7 @@ class CategoriesGridWidget extends StatelessWidget {
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: 9.sp * scaleFactor,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                             height: 1.2,
                           ),
                           maxLines: 2,

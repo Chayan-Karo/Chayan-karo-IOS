@@ -9,6 +9,8 @@ import '../../models/customer_models.dart';
 import '../../controllers/profile_controller.dart';
 import '../../utils/test_extensions.dart';
 import 'package:image_picker/image_picker.dart'; // <--- ADD THIS
+import '../../widgets/discard_changes_sheet.dart'; // <--- IMPORT YOUR DIALOG FILE HERE
+
 
 class EditProfileScreen extends StatefulWidget {
   final Customer? customer;
@@ -24,23 +26,104 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _genderController;
 
   final ProfileController _profileController = Get.find();
+  // To track initial values for comparison
+  late String _initialName;
+  late String _initialEmail;
+  late String _initialGender;
+  // --- ADD THESE VARIABLES ---
+  String? _nameError;
+  String? _emailError;
+  String? _genderError;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with passed customer or fallback to controller's current value
+    // 1. Get the current customer data
     final c = widget.customer ?? _profileController.customer;
-    _fullNameController = TextEditingController(text: c?.fullName ?? '');
-    _emailController = TextEditingController(text: c?.emailId ?? '');
-    _genderController = TextEditingController(text: c?.gender ?? '');
-  }
+    
+    // 2. FIX: Initialize the comparison variables so they are not null/late error
+    _initialName = c?.fullName ?? '';
+    _initialEmail = c?.emailId ?? '';
+    _initialGender = c?.gender ?? '';
 
+    // 3. Initialize the Controllers
+    _fullNameController = TextEditingController(text: _initialName);
+    _emailController = TextEditingController(text: _initialEmail);
+    _genderController = TextEditingController(text: _initialGender);
+  }
   @override
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
     _genderController.dispose();
     super.dispose();
+  }
+  // --- VALIDATION HELPERS ---
+  bool _isNameValid(String name) {
+    final trimmed = name.trim();
+    if (trimmed.length <= 3) return false;
+    // Regex allows letters and spaces only
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(trimmed)) return false;
+    return true;
+  }
+
+  bool _isEmailValid(String email) {
+    final trimmed = email.trim();
+    if (trimmed.isEmpty) return false; // Optional field, so empty is valid
+    // Strict Email Regex
+    return RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(trimmed);
+  }
+
+  bool _isGenderValid(String gender) {
+    return gender.trim().isNotEmpty;
+  }
+  // Helper to check for changes
+  bool get _hasChanges {
+    return _fullNameController.text.trim() != _initialName ||
+           _emailController.text.trim() != _initialEmail ||
+           _genderController.text.trim() != _initialGender;
+  }
+
+  // Unified Back Handler
+// Unified Back Handler
+  Future<void> _handleBack() async {
+    // 1. MANDATORY CHECK (From Controller)
+    // If the profile currently saved on the server is incomplete, BLOCK exit.
+    // We check the controller because it holds the "source of truth" data.
+    if (!_profileController.isBasicInfoComplete) {
+      Get.snackbar(
+        'Action Required',
+        'Please complete your profile details to continue.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.orange[100],
+        colorText: Colors.orange[900],
+        margin: EdgeInsets.all(16.w),
+        borderRadius: 12,
+        icon: const Icon(Icons.info_outline, color: Colors.orange),
+        duration: const Duration(seconds: 4), // Stay visible longer
+      );
+      return; // <--- STOP. Do not pop.
+    }
+
+    // 2. Standard "Discard Changes" Logic
+    // Only reachable if the profile is already valid/complete
+    if (_hasChanges) {
+      final shouldDiscard = await showDiscardChangesSheet(context);
+      if (shouldDiscard && mounted) {
+        _safePop();
+      }
+    } else {
+      _safePop();
+    }
+  }
+
+  // Helper to prevent Black Screen if navigation history is empty
+  void _safePop() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Get.offAllNamed('/profile');
+    }
   }
   ImageProvider _getImageProvider({File? localImage, String? networkUrl}) {
   // 1. Priority: Show Local Image (Instant feedback)
@@ -100,7 +183,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         final isTablet = constraints.maxWidth > 600;
         final scaleFactor = isTablet ? constraints.maxWidth / 411 : 1.0;
         
-        return AnnotatedRegion<SystemUiOverlayStyle>(
+        // 1. Wrap Scaffold in PopScope
+        return PopScope(
+          canPop: false, // Disable automatic popping
+          onPopInvoked: (didPop) async {
+            if (didPop) return;
+            await _handleBack(); // Use our custom logic
+          },
+          child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark.copyWith(
             statusBarColor: const Color(0xFFFFEDE0),
             statusBarIconBrightness: Brightness.dark,
@@ -115,8 +205,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 child: Column(
                   children: [
-                    const ChayanHeader(
+                     ChayanHeader(
                       title: 'Edit Profile',
+                      onBack: _handleBack,
                     ),
                     
                     // UPDATED: Profile Image Section with Upload Logic
@@ -209,6 +300,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             scaleFactor: scaleFactor,
                             testId: 'edit_profile_name_input', // <--- Added ID
                             hintText: 'Enter your full name',
+                            validator: _isNameValid,
+                            errorText: _nameError,
                             // ADD THIS: Allows only letters (a-z, A-Z) and spaces
                             inputFormatters: [
                               FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
@@ -221,6 +314,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             keyboardType: TextInputType.emailAddress,
                             testId: 'edit_profile_email_input', // <--- Added ID
                             hintText: 'Enter your email address',
+                            validator: _isEmailValid,
+                            errorText: _emailError,
                           ),
                           readOnlyProfileField(
                             label: 'Mobile Number',
@@ -234,7 +329,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             label: 'Gender',
                             controller: _genderController,
                             scaleFactor: scaleFactor,
-                            testId: 'edit_profile_gender_select', // <--- Added ID
+                            testId: 'edit_profile_gender_select',
+                            errorText: _genderError, // <--- PASS IT HERE // <--- Added ID
+                            
                           ),
                           SizedBox(height: 40.h * scaleFactor),
                           SizedBox(
@@ -269,6 +366,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
           ),
+        )
         );
       },
     );
@@ -282,9 +380,14 @@ Widget editableProfileField({
     required String testId, // <--- 1. ADD THIS
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters, // <--- Added this parameter
+    bool Function(String)? validator, // <--- NEW PARAMETER
+    String? errorText, // <--- NEW PARAMETER
   }) {
-    final hasValue = controller.text.isNotEmpty;
-    return Column(
+// UPDATED LOGIC: Use validator if provided, otherwise default to non-empty check
+    final isValid = validator != null 
+        ? validator(controller.text) 
+        : controller.text.isNotEmpty;
+            return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -297,14 +400,15 @@ Widget editableProfileField({
             height: 1.83,
           ),
         ),
-        SizedBox(height: 4.h),
+SizedBox(height: 4.h),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start, // Align top so error text doesn't misalign icon
           children: [
             Expanded(
               child: TextFormField(
                 controller: controller,
                 keyboardType: keyboardType,
-                inputFormatters: inputFormatters, // <--- Pass it here
+                inputFormatters: inputFormatters,
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16.sp,
@@ -312,7 +416,21 @@ Widget editableProfileField({
                   color: Colors.black,
                 ),
                 decoration: InputDecoration(
-                  border: InputBorder.none,
+                  // --- VISUAL ERROR HANDLING ---
+                  errorText: errorText,
+                  errorStyle: TextStyle(fontSize: 12.sp, color: Colors.red[800]),
+                  // Turn lines red on error
+                  border: errorText != null 
+                      ? const UnderlineInputBorder(borderSide: BorderSide(color: Colors.red)) 
+                      : InputBorder.none,
+                  enabledBorder: errorText != null 
+                      ? const UnderlineInputBorder(borderSide: BorderSide(color: Colors.red)) 
+                      : InputBorder.none,
+                  focusedBorder: errorText != null 
+                      ? const UnderlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 2)) 
+                      : InputBorder.none,
+                  // -----------------------------
+                  contentPadding: EdgeInsets.zero,
                   hintText: hintText,
                   hintStyle: TextStyle(
                     fontFamily: 'Inter',
@@ -321,18 +439,31 @@ Widget editableProfileField({
                     color: Colors.black.withOpacity(0.4),
                   ),
                 ),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) {
+                  // Clear specific error when user types
+                  if (errorText != null) {
+                    setState(() {
+                      if (label == 'Full Name') _nameError = null;
+                      if (label == 'Email') _emailError = null;
+                    });
+                  }
+                },
               ).withId(testId),
             ),
-            _buildStatusIcon(hasValue),
+            // Only show the Checkmark/X icon if there is NO error to avoid clutter
+            if (errorText == null) _buildStatusIcon(isValid),
           ],
         ),
-        SizedBox(height: 12.h),
-        Container(
-          height: 2.h,
-          width: double.infinity,
-          color: const Color(0xFFEBEBEB),
-        ),
+        
+        // Hide the custom gray divider if InputDecorator is showing the red error line
+        if (errorText == null) ...[
+          SizedBox(height: 12.h),
+          Container(
+            height: 2.h,
+            width: double.infinity,
+            color: const Color(0xFFEBEBEB),
+          ),
+        ],
         SizedBox(height: 20.h),
       ],
     );
@@ -392,8 +523,9 @@ Widget editableProfileField({
     required TextEditingController controller,
     required double scaleFactor,
     required String testId, // <--- 1. ADD THIS
+    String? errorText, // <--- 1. NEW PARAMETER
   }) {
-    final hasValue = controller.text.isNotEmpty;
+   final isValid = _isGenderValid(controller.text) && errorText == null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -412,8 +544,12 @@ Widget editableProfileField({
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: _showGenderDialog,
-                child: Container(
+                onTap: () {
+                  // Clear error as soon as user opens the dialog
+                  if (errorText != null) setState(() => _genderError = null);
+                  _showGenderDialog();
+                },
+                  child: Container(
                   padding: EdgeInsets.symmetric(vertical: 8.h),
                   child: Text(
                     controller.text.isNotEmpty
@@ -423,23 +559,26 @@ Widget editableProfileField({
                       fontFamily: 'Inter',
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
-                      color: hasValue
-                          ? Colors.black
-                          : Colors.black.withOpacity(0.4),
+                     color: isValid ? Colors.black : Colors.black.withOpacity(0.4),
                     ),
                   ),
                 ),
                ).withId(testId), // <--- 2. USE IT HERE
             ),
-            _buildStatusIcon(hasValue),
+       if (errorText == null) _buildStatusIcon(isValid),
           ],
         ),
-        SizedBox(height: 12.h),
-        Container(
-          height: 2.h,
-          width: double.infinity,
-          color: const Color(0xFFEBEBEB),
-        ),
+        // --- 2. ERROR DISPLAY LOGIC ---
+        if (errorText != null) ...[
+           // Show RED line and Error Text
+           Container(height: 2.h, width: double.infinity, color: Colors.red),
+           SizedBox(height: 4.h),
+           Text(errorText, style: TextStyle(color: Colors.red[800], fontSize: 12.sp)),
+        ] else ...[
+           // Show Standard Grey Line
+           SizedBox(height: 12.h),
+           Container(height: 2.h, width: double.infinity, color: const Color(0xFFEBEBEB)),
+        ],
         SizedBox(height: 20.h),
       ],
     );
@@ -547,83 +686,66 @@ Widget editableProfileField({
   }
 
   void _saveChanges() async {
+    // 1. Reset Errors
+    setState(() {
+      _nameError = null;
+      _emailError = null;
+      _genderError = null;
+    });
+
     final name = _fullNameController.text.trim();
+    bool hasError = false; // Flag to stop execution if any error is found
 
-    // 1. Validation: Name Validation
+    // 2. Validation: Name
     if (name.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter your full name',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
-      return;
-    }
-
-    // Check if name is MORE than 3 characters (must be 4 or more)
-    if (name.length <= 3) {
-      Get.snackbar(
-        'Error',
-        'Name must be more than 3 characters',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
-      return;
-    }
-
-    // Double check for special characters (Safety check)
-    final nameRegExp = RegExp(r'^[a-zA-Z\s]+$');
-    if (!nameRegExp.hasMatch(name)) {
-      Get.snackbar(
-        'Error',
-        'Special characters are not allowed in name',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
-      return;
-    }
-
-    // 2. Validation: Gender
-    if (_genderController.text.trim().isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please select your gender',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
-      return;
-    }
-
-// 3. Validation: Email (Optional)
-    final rawEmail = _emailController.text.trim();
-
-    if (rawEmail.isNotEmpty) {
-      // STRICT REGEX: Enforces starting with a Letter or Number (^[a-zA-Z0-9])
-      // This explicitly blocks emails starting with dots (.) or underscores (_)
-      final emailRegExp = RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-
-      if (!emailRegExp.hasMatch(rawEmail)) {
-        Get.snackbar(
-          'Error',
-          'Please enter a valid email address',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[800],
-        );
-        return;
+      setState(() => _nameError = 'Please enter your full name');
+      hasError = true;
+    } else if (name.length <= 3) {
+      setState(() => _nameError = 'Name must be more than 3 characters');
+      hasError = true;
+    } else {
+      final nameRegExp = RegExp(r'^[a-zA-Z\s]+$');
+      if (!nameRegExp.hasMatch(name)) {
+        setState(() => _nameError = 'Special characters are not allowed');
+        hasError = true;
       }
     }
 
-    // Prepare nullable email
+    // 3. Validation: Gender
+    if (_genderController.text.trim().isEmpty) {
+      setState(() => _genderError = 'Please select your gender');
+      hasError = true;
+    }
+
+    // 4. Validation: Email
+    final rawEmail = _emailController.text.trim();
+    if (rawEmail.isNotEmpty) {
+      final emailRegExp = RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+      if (!emailRegExp.hasMatch(rawEmail)) {
+        setState(() => _emailError = 'Please enter a valid email address');
+        hasError = true;
+      }
+    }
+
+    // STOP execution here if there are errors (Visuals will update automatically)
+    if (hasError) {
+      // Optional: Keep a generic snackbar if you want extra feedback
+      Get.snackbar(
+        'Action Required',
+        'Please correct the highlighted fields',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
+      return; 
+    }
+
+    // 5. Proceed with API Call
     final String? emailToSend = rawEmail.isEmpty ? null : rawEmail;
 
     final success = await _profileController.updateProfile(
       emailId: emailToSend,
-      fullName: name, // Use the trimmed name
+      fullName: name,
       gender: _genderController.text.trim(),
     );
 

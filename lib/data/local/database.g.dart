@@ -343,6 +343,17 @@ class $CategoriesTableTable extends CategoriesTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _bannerLinkMeta = const VerificationMeta(
+    'bannerLink',
+  );
+  @override
+  late final GeneratedColumn<String> bannerLink = GeneratedColumn<String>(
+    'banner_link',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _serviceCategoryMeta = const VerificationMeta(
     'serviceCategory',
   );
@@ -371,6 +382,7 @@ class $CategoriesTableTable extends CategoriesTable
     categoryId,
     categoryName,
     imgLink,
+    bannerLink,
     serviceCategory,
     createdAt,
   ];
@@ -413,6 +425,12 @@ class $CategoriesTableTable extends CategoriesTable
     } else if (isInserting) {
       context.missing(_imgLinkMeta);
     }
+    if (data.containsKey('banner_link')) {
+      context.handle(
+        _bannerLinkMeta,
+        bannerLink.isAcceptableOrUnknown(data['banner_link']!, _bannerLinkMeta),
+      );
+    }
     if (data.containsKey('service_category')) {
       context.handle(
         _serviceCategoryMeta,
@@ -451,6 +469,10 @@ class $CategoriesTableTable extends CategoriesTable
         DriftSqlType.string,
         data['${effectivePrefix}img_link'],
       )!,
+      bannerLink: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}banner_link'],
+      ),
       serviceCategory: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}service_category'],
@@ -473,12 +495,14 @@ class CategoriesTableData extends DataClass
   final String categoryId;
   final String categoryName;
   final String imgLink;
+  final String? bannerLink;
   final String serviceCategory;
   final DateTime createdAt;
   const CategoriesTableData({
     required this.categoryId,
     required this.categoryName,
     required this.imgLink,
+    this.bannerLink,
     required this.serviceCategory,
     required this.createdAt,
   });
@@ -488,6 +512,9 @@ class CategoriesTableData extends DataClass
     map['category_id'] = Variable<String>(categoryId);
     map['category_name'] = Variable<String>(categoryName);
     map['img_link'] = Variable<String>(imgLink);
+    if (!nullToAbsent || bannerLink != null) {
+      map['banner_link'] = Variable<String>(bannerLink);
+    }
     map['service_category'] = Variable<String>(serviceCategory);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -498,6 +525,9 @@ class CategoriesTableData extends DataClass
       categoryId: Value(categoryId),
       categoryName: Value(categoryName),
       imgLink: Value(imgLink),
+      bannerLink: bannerLink == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bannerLink),
       serviceCategory: Value(serviceCategory),
       createdAt: Value(createdAt),
     );
@@ -512,6 +542,7 @@ class CategoriesTableData extends DataClass
       categoryId: serializer.fromJson<String>(json['categoryId']),
       categoryName: serializer.fromJson<String>(json['categoryName']),
       imgLink: serializer.fromJson<String>(json['imgLink']),
+      bannerLink: serializer.fromJson<String?>(json['bannerLink']),
       serviceCategory: serializer.fromJson<String>(json['serviceCategory']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -523,6 +554,7 @@ class CategoriesTableData extends DataClass
       'categoryId': serializer.toJson<String>(categoryId),
       'categoryName': serializer.toJson<String>(categoryName),
       'imgLink': serializer.toJson<String>(imgLink),
+      'bannerLink': serializer.toJson<String?>(bannerLink),
       'serviceCategory': serializer.toJson<String>(serviceCategory),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -532,12 +564,14 @@ class CategoriesTableData extends DataClass
     String? categoryId,
     String? categoryName,
     String? imgLink,
+    Value<String?> bannerLink = const Value.absent(),
     String? serviceCategory,
     DateTime? createdAt,
   }) => CategoriesTableData(
     categoryId: categoryId ?? this.categoryId,
     categoryName: categoryName ?? this.categoryName,
     imgLink: imgLink ?? this.imgLink,
+    bannerLink: bannerLink.present ? bannerLink.value : this.bannerLink,
     serviceCategory: serviceCategory ?? this.serviceCategory,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -550,6 +584,9 @@ class CategoriesTableData extends DataClass
           ? data.categoryName.value
           : this.categoryName,
       imgLink: data.imgLink.present ? data.imgLink.value : this.imgLink,
+      bannerLink: data.bannerLink.present
+          ? data.bannerLink.value
+          : this.bannerLink,
       serviceCategory: data.serviceCategory.present
           ? data.serviceCategory.value
           : this.serviceCategory,
@@ -563,6 +600,7 @@ class CategoriesTableData extends DataClass
           ..write('categoryId: $categoryId, ')
           ..write('categoryName: $categoryName, ')
           ..write('imgLink: $imgLink, ')
+          ..write('bannerLink: $bannerLink, ')
           ..write('serviceCategory: $serviceCategory, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -574,6 +612,7 @@ class CategoriesTableData extends DataClass
     categoryId,
     categoryName,
     imgLink,
+    bannerLink,
     serviceCategory,
     createdAt,
   );
@@ -584,6 +623,7 @@ class CategoriesTableData extends DataClass
           other.categoryId == this.categoryId &&
           other.categoryName == this.categoryName &&
           other.imgLink == this.imgLink &&
+          other.bannerLink == this.bannerLink &&
           other.serviceCategory == this.serviceCategory &&
           other.createdAt == this.createdAt);
 }
@@ -592,6 +632,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
   final Value<String> categoryId;
   final Value<String> categoryName;
   final Value<String> imgLink;
+  final Value<String?> bannerLink;
   final Value<String> serviceCategory;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -599,6 +640,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     this.categoryId = const Value.absent(),
     this.categoryName = const Value.absent(),
     this.imgLink = const Value.absent(),
+    this.bannerLink = const Value.absent(),
     this.serviceCategory = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -607,6 +649,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     required String categoryId,
     required String categoryName,
     required String imgLink,
+    this.bannerLink = const Value.absent(),
     required String serviceCategory,
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -618,6 +661,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     Expression<String>? categoryId,
     Expression<String>? categoryName,
     Expression<String>? imgLink,
+    Expression<String>? bannerLink,
     Expression<String>? serviceCategory,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -626,6 +670,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
       if (categoryId != null) 'category_id': categoryId,
       if (categoryName != null) 'category_name': categoryName,
       if (imgLink != null) 'img_link': imgLink,
+      if (bannerLink != null) 'banner_link': bannerLink,
       if (serviceCategory != null) 'service_category': serviceCategory,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -636,6 +681,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     Value<String>? categoryId,
     Value<String>? categoryName,
     Value<String>? imgLink,
+    Value<String?>? bannerLink,
     Value<String>? serviceCategory,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -644,6 +690,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,
       imgLink: imgLink ?? this.imgLink,
+      bannerLink: bannerLink ?? this.bannerLink,
       serviceCategory: serviceCategory ?? this.serviceCategory,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -661,6 +708,9 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     }
     if (imgLink.present) {
       map['img_link'] = Variable<String>(imgLink.value);
+    }
+    if (bannerLink.present) {
+      map['banner_link'] = Variable<String>(bannerLink.value);
     }
     if (serviceCategory.present) {
       map['service_category'] = Variable<String>(serviceCategory.value);
@@ -680,6 +730,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
           ..write('categoryId: $categoryId, ')
           ..write('categoryName: $categoryName, ')
           ..write('imgLink: $imgLink, ')
+          ..write('bannerLink: $bannerLink, ')
           ..write('serviceCategory: $serviceCategory, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -2681,6 +2732,41 @@ class $CartItemsTableTable extends CartItemsTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _bookingContextIdMeta = const VerificationMeta(
+    'bookingContextId',
+  );
+  @override
+  late final GeneratedColumn<String> bookingContextId = GeneratedColumn<String>(
+    'booking_context_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('LEGACY'),
+  );
+  static const VerificationMeta _bookingSourceMeta = const VerificationMeta(
+    'bookingSource',
+  );
+  @override
+  late final GeneratedColumn<String> bookingSource = GeneratedColumn<String>(
+    'booking_source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('NORMAL'),
+  );
+  static const VerificationMeta _providerIdMeta = const VerificationMeta(
+    'providerId',
+  );
+  @override
+  late final GeneratedColumn<String> providerId = GeneratedColumn<String>(
+    'provider_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _addedAtMeta = const VerificationMeta(
     'addedAt',
   );
@@ -2733,6 +2819,9 @@ class $CartItemsTableTable extends CartItemsTable
     sourcePage,
     sourceTitle,
     categoryId,
+    bookingContextId,
+    bookingSource,
+    providerId,
     addedAt,
     dateAdded,
     updatedAt,
@@ -2856,6 +2945,30 @@ class $CartItemsTableTable extends CartItemsTable
         categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
       );
     }
+    if (data.containsKey('booking_context_id')) {
+      context.handle(
+        _bookingContextIdMeta,
+        bookingContextId.isAcceptableOrUnknown(
+          data['booking_context_id']!,
+          _bookingContextIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('booking_source')) {
+      context.handle(
+        _bookingSourceMeta,
+        bookingSource.isAcceptableOrUnknown(
+          data['booking_source']!,
+          _bookingSourceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('provider_id')) {
+      context.handle(
+        _providerIdMeta,
+        providerId.isAcceptableOrUnknown(data['provider_id']!, _providerIdMeta),
+      );
+    }
     if (data.containsKey('added_at')) {
       context.handle(
         _addedAtMeta,
@@ -2943,6 +3056,18 @@ class $CartItemsTableTable extends CartItemsTable
         DriftSqlType.string,
         data['${effectivePrefix}category_id'],
       ),
+      bookingContextId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}booking_context_id'],
+      )!,
+      bookingSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}booking_source'],
+      )!,
+      providerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_id'],
+      ),
       addedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}added_at'],
@@ -2981,6 +3106,9 @@ class CartItemsTableData extends DataClass
   final String? sourcePage;
   final String? sourceTitle;
   final String? categoryId;
+  final String bookingContextId;
+  final String bookingSource;
+  final String? providerId;
   final DateTime addedAt;
   final DateTime? dateAdded;
   final DateTime updatedAt;
@@ -3000,6 +3128,9 @@ class CartItemsTableData extends DataClass
     this.sourcePage,
     this.sourceTitle,
     this.categoryId,
+    required this.bookingContextId,
+    required this.bookingSource,
+    this.providerId,
     required this.addedAt,
     this.dateAdded,
     required this.updatedAt,
@@ -3037,6 +3168,11 @@ class CartItemsTableData extends DataClass
     }
     if (!nullToAbsent || categoryId != null) {
       map['category_id'] = Variable<String>(categoryId);
+    }
+    map['booking_context_id'] = Variable<String>(bookingContextId);
+    map['booking_source'] = Variable<String>(bookingSource);
+    if (!nullToAbsent || providerId != null) {
+      map['provider_id'] = Variable<String>(providerId);
     }
     map['added_at'] = Variable<DateTime>(addedAt);
     if (!nullToAbsent || dateAdded != null) {
@@ -3077,6 +3213,11 @@ class CartItemsTableData extends DataClass
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryId),
+      bookingContextId: Value(bookingContextId),
+      bookingSource: Value(bookingSource),
+      providerId: providerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerId),
       addedAt: Value(addedAt),
       dateAdded: dateAdded == null && nullToAbsent
           ? const Value.absent()
@@ -3106,6 +3247,9 @@ class CartItemsTableData extends DataClass
       sourcePage: serializer.fromJson<String?>(json['sourcePage']),
       sourceTitle: serializer.fromJson<String?>(json['sourceTitle']),
       categoryId: serializer.fromJson<String?>(json['categoryId']),
+      bookingContextId: serializer.fromJson<String>(json['bookingContextId']),
+      bookingSource: serializer.fromJson<String>(json['bookingSource']),
+      providerId: serializer.fromJson<String?>(json['providerId']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
       dateAdded: serializer.fromJson<DateTime?>(json['dateAdded']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -3130,6 +3274,9 @@ class CartItemsTableData extends DataClass
       'sourcePage': serializer.toJson<String?>(sourcePage),
       'sourceTitle': serializer.toJson<String?>(sourceTitle),
       'categoryId': serializer.toJson<String?>(categoryId),
+      'bookingContextId': serializer.toJson<String>(bookingContextId),
+      'bookingSource': serializer.toJson<String>(bookingSource),
+      'providerId': serializer.toJson<String?>(providerId),
       'addedAt': serializer.toJson<DateTime>(addedAt),
       'dateAdded': serializer.toJson<DateTime?>(dateAdded),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -3152,6 +3299,9 @@ class CartItemsTableData extends DataClass
     Value<String?> sourcePage = const Value.absent(),
     Value<String?> sourceTitle = const Value.absent(),
     Value<String?> categoryId = const Value.absent(),
+    String? bookingContextId,
+    String? bookingSource,
+    Value<String?> providerId = const Value.absent(),
     DateTime? addedAt,
     Value<DateTime?> dateAdded = const Value.absent(),
     DateTime? updatedAt,
@@ -3173,6 +3323,9 @@ class CartItemsTableData extends DataClass
     sourcePage: sourcePage.present ? sourcePage.value : this.sourcePage,
     sourceTitle: sourceTitle.present ? sourceTitle.value : this.sourceTitle,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    bookingContextId: bookingContextId ?? this.bookingContextId,
+    bookingSource: bookingSource ?? this.bookingSource,
+    providerId: providerId.present ? providerId.value : this.providerId,
     addedAt: addedAt ?? this.addedAt,
     dateAdded: dateAdded.present ? dateAdded.value : this.dateAdded,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -3206,6 +3359,15 @@ class CartItemsTableData extends DataClass
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
+      bookingContextId: data.bookingContextId.present
+          ? data.bookingContextId.value
+          : this.bookingContextId,
+      bookingSource: data.bookingSource.present
+          ? data.bookingSource.value
+          : this.bookingSource,
+      providerId: data.providerId.present
+          ? data.providerId.value
+          : this.providerId,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
       dateAdded: data.dateAdded.present ? data.dateAdded.value : this.dateAdded,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -3230,6 +3392,9 @@ class CartItemsTableData extends DataClass
           ..write('sourcePage: $sourcePage, ')
           ..write('sourceTitle: $sourceTitle, ')
           ..write('categoryId: $categoryId, ')
+          ..write('bookingContextId: $bookingContextId, ')
+          ..write('bookingSource: $bookingSource, ')
+          ..write('providerId: $providerId, ')
           ..write('addedAt: $addedAt, ')
           ..write('dateAdded: $dateAdded, ')
           ..write('updatedAt: $updatedAt')
@@ -3238,7 +3403,7 @@ class CartItemsTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     title,
     name,
@@ -3254,10 +3419,13 @@ class CartItemsTableData extends DataClass
     sourcePage,
     sourceTitle,
     categoryId,
+    bookingContextId,
+    bookingSource,
+    providerId,
     addedAt,
     dateAdded,
     updatedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3277,6 +3445,9 @@ class CartItemsTableData extends DataClass
           other.sourcePage == this.sourcePage &&
           other.sourceTitle == this.sourceTitle &&
           other.categoryId == this.categoryId &&
+          other.bookingContextId == this.bookingContextId &&
+          other.bookingSource == this.bookingSource &&
+          other.providerId == this.providerId &&
           other.addedAt == this.addedAt &&
           other.dateAdded == this.dateAdded &&
           other.updatedAt == this.updatedAt);
@@ -3298,6 +3469,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
   final Value<String?> sourcePage;
   final Value<String?> sourceTitle;
   final Value<String?> categoryId;
+  final Value<String> bookingContextId;
+  final Value<String> bookingSource;
+  final Value<String?> providerId;
   final Value<DateTime> addedAt;
   final Value<DateTime?> dateAdded;
   final Value<DateTime> updatedAt;
@@ -3318,6 +3492,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     this.sourcePage = const Value.absent(),
     this.sourceTitle = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.bookingContextId = const Value.absent(),
+    this.bookingSource = const Value.absent(),
+    this.providerId = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.dateAdded = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -3339,6 +3516,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     this.sourcePage = const Value.absent(),
     this.sourceTitle = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.bookingContextId = const Value.absent(),
+    this.bookingSource = const Value.absent(),
+    this.providerId = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.dateAdded = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -3363,6 +3543,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     Expression<String>? sourcePage,
     Expression<String>? sourceTitle,
     Expression<String>? categoryId,
+    Expression<String>? bookingContextId,
+    Expression<String>? bookingSource,
+    Expression<String>? providerId,
     Expression<DateTime>? addedAt,
     Expression<DateTime>? dateAdded,
     Expression<DateTime>? updatedAt,
@@ -3384,6 +3567,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
       if (sourcePage != null) 'source_page': sourcePage,
       if (sourceTitle != null) 'source_title': sourceTitle,
       if (categoryId != null) 'category_id': categoryId,
+      if (bookingContextId != null) 'booking_context_id': bookingContextId,
+      if (bookingSource != null) 'booking_source': bookingSource,
+      if (providerId != null) 'provider_id': providerId,
       if (addedAt != null) 'added_at': addedAt,
       if (dateAdded != null) 'date_added': dateAdded,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -3407,6 +3593,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     Value<String?>? sourcePage,
     Value<String?>? sourceTitle,
     Value<String?>? categoryId,
+    Value<String>? bookingContextId,
+    Value<String>? bookingSource,
+    Value<String?>? providerId,
     Value<DateTime>? addedAt,
     Value<DateTime?>? dateAdded,
     Value<DateTime>? updatedAt,
@@ -3428,6 +3617,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
       sourcePage: sourcePage ?? this.sourcePage,
       sourceTitle: sourceTitle ?? this.sourceTitle,
       categoryId: categoryId ?? this.categoryId,
+      bookingContextId: bookingContextId ?? this.bookingContextId,
+      bookingSource: bookingSource ?? this.bookingSource,
+      providerId: providerId ?? this.providerId,
       addedAt: addedAt ?? this.addedAt,
       dateAdded: dateAdded ?? this.dateAdded,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -3483,6 +3675,15 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
     if (categoryId.present) {
       map['category_id'] = Variable<String>(categoryId.value);
     }
+    if (bookingContextId.present) {
+      map['booking_context_id'] = Variable<String>(bookingContextId.value);
+    }
+    if (bookingSource.present) {
+      map['booking_source'] = Variable<String>(bookingSource.value);
+    }
+    if (providerId.present) {
+      map['provider_id'] = Variable<String>(providerId.value);
+    }
     if (addedAt.present) {
       map['added_at'] = Variable<DateTime>(addedAt.value);
     }
@@ -3516,6 +3717,9 @@ class CartItemsTableCompanion extends UpdateCompanion<CartItemsTableData> {
           ..write('sourcePage: $sourcePage, ')
           ..write('sourceTitle: $sourceTitle, ')
           ..write('categoryId: $categoryId, ')
+          ..write('bookingContextId: $bookingContextId, ')
+          ..write('bookingSource: $bookingSource, ')
+          ..write('providerId: $providerId, ')
           ..write('addedAt: $addedAt, ')
           ..write('dateAdded: $dateAdded, ')
           ..write('updatedAt: $updatedAt, ')
@@ -4066,6 +4270,7 @@ typedef $$CategoriesTableTableCreateCompanionBuilder =
       required String categoryId,
       required String categoryName,
       required String imgLink,
+      Value<String?> bannerLink,
       required String serviceCategory,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -4075,6 +4280,7 @@ typedef $$CategoriesTableTableUpdateCompanionBuilder =
       Value<String> categoryId,
       Value<String> categoryName,
       Value<String> imgLink,
+      Value<String?> bannerLink,
       Value<String> serviceCategory,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -4101,6 +4307,11 @@ class $$CategoriesTableTableFilterComposer
 
   ColumnFilters<String> get imgLink => $composableBuilder(
     column: $table.imgLink,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bannerLink => $composableBuilder(
+    column: $table.bannerLink,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4139,6 +4350,11 @@ class $$CategoriesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get bannerLink => $composableBuilder(
+    column: $table.bannerLink,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get serviceCategory => $composableBuilder(
     column: $table.serviceCategory,
     builder: (column) => ColumnOrderings(column),
@@ -4171,6 +4387,11 @@ class $$CategoriesTableTableAnnotationComposer
 
   GeneratedColumn<String> get imgLink =>
       $composableBuilder(column: $table.imgLink, builder: (column) => column);
+
+  GeneratedColumn<String> get bannerLink => $composableBuilder(
+    column: $table.bannerLink,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get serviceCategory => $composableBuilder(
     column: $table.serviceCategory,
@@ -4221,6 +4442,7 @@ class $$CategoriesTableTableTableManager
                 Value<String> categoryId = const Value.absent(),
                 Value<String> categoryName = const Value.absent(),
                 Value<String> imgLink = const Value.absent(),
+                Value<String?> bannerLink = const Value.absent(),
                 Value<String> serviceCategory = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4228,6 +4450,7 @@ class $$CategoriesTableTableTableManager
                 categoryId: categoryId,
                 categoryName: categoryName,
                 imgLink: imgLink,
+                bannerLink: bannerLink,
                 serviceCategory: serviceCategory,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -4237,6 +4460,7 @@ class $$CategoriesTableTableTableManager
                 required String categoryId,
                 required String categoryName,
                 required String imgLink,
+                Value<String?> bannerLink = const Value.absent(),
                 required String serviceCategory,
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4244,6 +4468,7 @@ class $$CategoriesTableTableTableManager
                 categoryId: categoryId,
                 categoryName: categoryName,
                 imgLink: imgLink,
+                bannerLink: bannerLink,
                 serviceCategory: serviceCategory,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -5291,6 +5516,9 @@ typedef $$CartItemsTableTableCreateCompanionBuilder =
       Value<String?> sourcePage,
       Value<String?> sourceTitle,
       Value<String?> categoryId,
+      Value<String> bookingContextId,
+      Value<String> bookingSource,
+      Value<String?> providerId,
       Value<DateTime> addedAt,
       Value<DateTime?> dateAdded,
       Value<DateTime> updatedAt,
@@ -5313,6 +5541,9 @@ typedef $$CartItemsTableTableUpdateCompanionBuilder =
       Value<String?> sourcePage,
       Value<String?> sourceTitle,
       Value<String?> categoryId,
+      Value<String> bookingContextId,
+      Value<String> bookingSource,
+      Value<String?> providerId,
       Value<DateTime> addedAt,
       Value<DateTime?> dateAdded,
       Value<DateTime> updatedAt,
@@ -5400,6 +5631,21 @@ class $$CartItemsTableTableFilterComposer
 
   ColumnFilters<String> get categoryId => $composableBuilder(
     column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bookingContextId => $composableBuilder(
+    column: $table.bookingContextId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bookingSource => $composableBuilder(
+    column: $table.bookingSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get providerId => $composableBuilder(
+    column: $table.providerId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5503,6 +5749,21 @@ class $$CartItemsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get bookingContextId => $composableBuilder(
+    column: $table.bookingContextId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bookingSource => $composableBuilder(
+    column: $table.bookingSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerId => $composableBuilder(
+    column: $table.providerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get addedAt => $composableBuilder(
     column: $table.addedAt,
     builder: (column) => ColumnOrderings(column),
@@ -5585,6 +5846,21 @@ class $$CartItemsTableTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get bookingContextId => $composableBuilder(
+    column: $table.bookingContextId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bookingSource => $composableBuilder(
+    column: $table.bookingSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get providerId => $composableBuilder(
+    column: $table.providerId,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get addedAt =>
       $composableBuilder(column: $table.addedAt, builder: (column) => column);
 
@@ -5647,6 +5923,9 @@ class $$CartItemsTableTableTableManager
                 Value<String?> sourcePage = const Value.absent(),
                 Value<String?> sourceTitle = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
+                Value<String> bookingContextId = const Value.absent(),
+                Value<String> bookingSource = const Value.absent(),
+                Value<String?> providerId = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
                 Value<DateTime?> dateAdded = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -5667,6 +5946,9 @@ class $$CartItemsTableTableTableManager
                 sourcePage: sourcePage,
                 sourceTitle: sourceTitle,
                 categoryId: categoryId,
+                bookingContextId: bookingContextId,
+                bookingSource: bookingSource,
+                providerId: providerId,
                 addedAt: addedAt,
                 dateAdded: dateAdded,
                 updatedAt: updatedAt,
@@ -5689,6 +5971,9 @@ class $$CartItemsTableTableTableManager
                 Value<String?> sourcePage = const Value.absent(),
                 Value<String?> sourceTitle = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
+                Value<String> bookingContextId = const Value.absent(),
+                Value<String> bookingSource = const Value.absent(),
+                Value<String?> providerId = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
                 Value<DateTime?> dateAdded = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -5709,6 +5994,9 @@ class $$CartItemsTableTableTableManager
                 sourcePage: sourcePage,
                 sourceTitle: sourceTitle,
                 categoryId: categoryId,
+                bookingContextId: bookingContextId,
+                bookingSource: bookingSource,
+                providerId: providerId,
                 addedAt: addedAt,
                 dateAdded: dateAdded,
                 updatedAt: updatedAt,

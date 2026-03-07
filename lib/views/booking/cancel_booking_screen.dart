@@ -2,10 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-
+import '../../widgets/discard_changes_sheet.dart';
 import '../../widgets/chayan_header.dart';
 import '../../controllers/booking_controller.dart';
 import 'BookingCancelledScreen.dart';
+import 'bank_selector_popup.dart';
 import '../../models/booking_read_models.dart' show CustomerBooking;
 
 class CancelBookingScreen extends StatefulWidget {
@@ -27,11 +28,13 @@ class CancelBookingScreen extends StatefulWidget {
 }
 
 class _CancelBookingScreenState extends State<CancelBookingScreen> {
+  // UPDATED: Added 'Other'
   final List<String> reasons = const [
     'Need to change time',
     'Booked by mistake',
     'Schedule no longer needed',
     'Provider not required now',
+    'Other', 
   ];
 
   int? selectedIndex;
@@ -76,6 +79,14 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
     return Get.put(BookingController());
   }
 
+  // NEW METHOD: Shared exit logic
+  Future<void> _handleBack() async {
+    final shouldDiscard = await showDiscardChangesSheet(context);
+    if (shouldDiscard && mounted) {
+      Navigator.pop(context, false);
+    }
+  }
+
   TextStyle _subTextStyle([double scaleFactor = 1.0]) {
     return TextStyle(fontSize: 14.sp * scaleFactor, fontFamily: 'Inter', color: const Color(0xFF757575));
   }
@@ -96,47 +107,96 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
     return '${m}m';
   }
 
-  bool get _canSubmit =>
-      bookingId.isNotEmpty && (selectedIndex != null || _issueController.text.trim().isNotEmpty);
+  // UPDATED: Validation logic including "Other"
+  bool get _canSubmit {
+    if (bookingId.isEmpty) return false;
+    if (selectedIndex == null && _issueController.text.trim().isEmpty) return false;
 
-  Future<void> _cancelNow(BuildContext context, [double scaleFactor = 1.0]) async {
-    if (bookingId.isEmpty) {
-      Get.snackbar('Missing booking', 'Booking id not found');
-      return;
+    // If "Other" is selected, the text field must NOT be empty
+    if (selectedIndex != null && reasons[selectedIndex!] == 'Other') {
+      return _issueController.text.trim().isNotEmpty;
     }
-
-    final controller = _ensureBookingController();
-
-    // Compose reason (chip > typed > default)
-    final chipReason = selectedIndex != null ? reasons[selectedIndex!] : '';
-    final typed = _issueController.text.trim();
-    final reason = chipReason.isNotEmpty ? chipReason : (typed.isNotEmpty ? typed : 'Change of plan');
-
-    final ok = await controller.cancelBooking(bookingId: bookingId, reason: reason);
-    if (!mounted) return;
-
-    if (ok) {
-      // Close any popups/overlays if present (defensive)
-      Navigator.of(context, rootNavigator: true).popUntil((route) => route is! PopupRoute);
-
-      // Replace with success screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BookingCancelledScreen(
-            serviceName: serviceName,
-            totalDurationMins: totalDurationMins,
-            bookingDate: bookingDate,
-            customerName: null,
-          ),
-        ),
-      );
-    } else {
-      final msg = controller.error.value.isEmpty ? 'Could not cancel booking' : controller.error.value;
-      Get.snackbar('Failed', msg);
-    }
+    return true;
   }
 
+  // UPDATED: Submission logic handling "Other"
+  // 2. REPLACE your _cancelNow method with this logic:
+Future<void> _cancelNow(BuildContext context, [double scaleFactor = 1.0]) async {
+  if (bookingId.isEmpty) {
+    Get.snackbar('Missing booking', 'Booking id not found');
+    return;
+  }
+
+  final controller = _ensureBookingController();
+  
+  // A. Check for online payment mode
+  final bool isOnlinePayment = widget.booking?.paymentMode?.toUpperCase() == "ONLINE";
+  String? selectedBankId;
+
+  if (isOnlinePayment) {
+    // B. Trigger the Bank Selector (Same style as your Address selector)
+    final selectedBank = await showBankSelectorPopup(context);
+    
+    // If user closes without selecting, stop the cancellation
+    if (selectedBank == null) {
+      Get.snackbar(
+        'Refund Bank Required', 
+        'Please select a bank account to receive your refund.',
+        backgroundColor: Colors.orange[100],
+        colorText: Colors.orange[900]
+      );
+      return; 
+    }
+    selectedBankId = selectedBank.id;
+  }
+
+  // C. Proceed with Cancellation
+  String reasonToSend = '';
+  if (selectedIndex != null) {
+    final selectedReason = reasons[selectedIndex!];
+    reasonToSend = (selectedReason == 'Other') ? _issueController.text.trim() : selectedReason;
+  } else {
+    reasonToSend = _issueController.text.trim();
+  }
+  if (reasonToSend.isEmpty) reasonToSend = 'Change of plan';
+
+  // D. Show Loading Spinner
+  Get.dialog(const Center(child: CircularProgressIndicator(color: Color(0xFFE47830))), barrierDismissible: false);
+
+  final ok = await controller.cancelBooking(bookingId: bookingId, reason: reasonToSend);
+  
+  if (ok) {
+    final bool isOnline = widget.booking?.paymentMode?.toUpperCase() == "ONLINE";
+    // E. Post Refund Details if successful and online
+    if (isOnlinePayment && selectedBankId != null) {
+      await controller.processRefund(
+        bookingId: bookingId, 
+        refundBankId: selectedBankId
+      );
+    }
+
+    Get.back(); // Remove loading dialog
+    
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).popUntil((route) => route is! PopupRoute);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BookingCancelledScreen(
+          serviceName: serviceName,
+          totalDurationMins: totalDurationMins,
+          bookingDate: bookingDate,
+          customerName: null,
+          bookingId: bookingId,
+          isRefundable: isOnline
+        ),
+      ),
+    );
+  } else {
+    Get.back(); // Remove loading dialog
+    // Error is already shown by controller snackbars
+  }
+}
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
@@ -199,10 +259,11 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
         );
       }
 
-      return WillPopScope(
-        onWillPop: () async {
-          Navigator.pop(context, false); // explicit bool, never null
-          return false;
+      return PopScope(
+        canPop: false,
+        onPopInvoked: (bool didPop) async {
+          if (didPop) return;
+          _handleBack(); // UPDATED: Use shared logic
         },
         child: Scaffold(
           backgroundColor: Colors.white,
@@ -210,7 +271,10 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ChayanHeader(title: 'Cancel Booking', onBack: () => Navigator.pop(context, false)),
+                ChayanHeader(
+                  title: 'Cancel Booking', 
+                  onBack: _handleBack // UPDATED: Use shared logic
+                ),
 
                 Expanded(
                   child: SingleChildScrollView(
@@ -253,12 +317,22 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
+Container(
                                     width: 18.w * scaleFactor,
                                     height: 18.h * scaleFactor,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: const Color(0xFF757575)),
+                                      
+                                      // --- UPDATE THIS SECTION ---
+                                      border: Border.all(
+                                        // If this index is selected, make border ORANGE. Otherwise GREY.
+                                        color: selectedIndex == index 
+                                            ? const Color(0xFFE47830) 
+                                            : const Color(0xFF757575),
+                                        width: 1.5, // Optional: slightly thicker for visibility
+                                      ),
+                                      // ---------------------------
+                                      
                                     ),
                                     child: selectedIndex == index
                                         ? Center(
@@ -273,6 +347,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                                           )
                                         : const SizedBox.shrink(),
                                   ),
+                                  
                                   SizedBox(width: 8.w * scaleFactor),
                                   Expanded(
                                     child: Text(
@@ -305,9 +380,14 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                             child: TextField(
                               controller: _issueController,
                               maxLines: 5,
+                              // UPDATED: Trigger rebuild to update button state when typing
+                              onChanged: (_) => setState(() {}), 
                               decoration: InputDecoration(
                                 border: InputBorder.none,
-                                hintText: 'Describe a problem / comment',
+                                // Optional: Change hint if 'Other' selected
+                                hintText: (selectedIndex != null && reasons[selectedIndex!] == 'Other') 
+                                    ? 'Please specify your reason here *' 
+                                    : 'Describe a problem / comment',
                                 hintStyle: TextStyle(
                                   fontSize: 14.sp * scaleFactor,
                                   color: const Color(0xFFABABAB),

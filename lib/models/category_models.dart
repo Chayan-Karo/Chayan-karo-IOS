@@ -31,6 +31,9 @@ class Category {
   
   @JsonKey(name: 'imgLink')
   final String imgLink;
+  // Add this line
+  @JsonKey(name: 'bannerLink')
+  final String? bannerLink;
   
   @JsonKey(name: 'serviceCategory')
   final List<ServiceSubCategory> serviceCategory;
@@ -39,6 +42,7 @@ class Category {
     required this.categoryId,
     required this.categoryName,
     required this.imgLink,
+    this.bannerLink,
     required this.serviceCategory,
   });
 

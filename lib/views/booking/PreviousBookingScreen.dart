@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/chayan_header.dart';
+import 'package:flutter/services.dart'; // <--- Add this import
 
 // NEW: import your read model
 import '../../models/booking_read_models.dart';
@@ -19,6 +20,25 @@ class PreviousBookingScreen extends StatelessWidget {
       return "${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year}";
     } catch (_) {
       return iso;
+    }
+  }
+  // --- NEW: Day Header Helper ---
+  String _displayDayHeader(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tomorrow = today.add(const Duration(days: 1));
+      final dateToCheck = DateTime(dt.year, dt.month, dt.day);
+
+      if (dateToCheck == today) {
+        return 'Today';
+      } else if (dateToCheck == tomorrow) {
+        return 'Tomorrow';
+      }
+      return DateFormat('EEEE').format(dt); // e.g. "Wednesday"
+    } catch (_) {
+      return '—';
     }
   }
 
@@ -44,6 +64,18 @@ class PreviousBookingScreen extends StatelessWidget {
     if (h > 0) return '${h} hrs';
     return '${m} mins';
   }
+  String _paymentModeLabel(CustomerBooking? b) {
+    if (b == null) return 'Payment mode: N/A';
+    final mode = (b.paymentMode ?? '').toUpperCase();
+    switch (mode) {
+      case 'ONLINE':
+        return 'Online payment';
+      case 'CASH':
+        return 'Cash payment';
+      default:
+        return 'Payment mode: N/A';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,8 +88,15 @@ class PreviousBookingScreen extends StatelessWidget {
         final bool isCancelled = statusLower == 'cancelled';
         final bool isCompleted = statusLower == 'completed';
 
+        // --- NEW: Dynamic Title Logic ---
+        String headerTitle = 'Previous Booking';
+        if (isCancelled) headerTitle = 'Cancelled Booking';
+        else if (isCompleted) headerTitle = 'Completed Booking';
+        // --------------------------------
+
         // Top date (keeps your header line style)
         final topDate = _humanDate(booking.bookingDate);
+        final dayHeader = _displayDayHeader(booking.bookingDate);
 
         // Service list cards (dot-leading, like Upcoming)
         final cards = booking.bookingService.map((svc) {
@@ -81,24 +120,39 @@ class PreviousBookingScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ChayanHeader(
-                    title: 'Previous Booking',
+                    title: headerTitle,
                     onBack: () => Navigator.pop(context),
                   ),
 
                   SizedBox(height: 16.h * scaleFactor),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-                    child: Text(
-                      topDate, // dynamic date here
-                      style: TextStyle(
-                        color: const Color(0xFF161616),
-                        fontSize: 18.sp * scaleFactor,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Inter',
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 1. Day Header (Today / Tuesday)
+                        Text(
+                          dayHeader, 
+                          style: TextStyle(
+                            color: const Color(0xFF161616),
+                            fontSize: 18.sp * scaleFactor,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        // 2. Date (12-11-2025)
+                        Text(
+                          topDate,
+                          style: TextStyle(
+                            color: Colors.grey[700], // distinct color
+                            fontSize: 18.sp * scaleFactor,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
                   SizedBox(height: 16.h * scaleFactor),
 
                   // Render each service card
@@ -303,6 +357,34 @@ class PreviousBookingScreen extends StatelessWidget {
                 ],
               ),
             ),
+            // --- INSERT NEW FIELDS HERE ---
+            SizedBox(height: 12.h * scaleFactor), // Add some spacing
+            
+            // 1. Reference Number
+            if (booking.bookingReferenceNumber.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+                child: _detailRow('Reference No.', booking.bookingReferenceNumber, scaleFactor: scaleFactor, isCopyable: true),
+              ),
+
+            // 2. Booking PIN
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+              child: _detailRow('Start PIN', booking.bookingPin.toString().padLeft(4, '0'), scaleFactor: scaleFactor),
+            ),
+
+            // 3. Payment Status
+            if (booking.paymentStatus != null)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+                child: _detailRow('Payment Status', booking.paymentStatus!, scaleFactor: scaleFactor),
+              ),
+
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+              child: Divider(height: 24.h * scaleFactor, color: const Color(0xFFF3F3F3), thickness: 1.5),
+            ),
+            // -----------------------------
 
             _billingRow('Per Service Charge', inr.format(perService), scaleFactor: scaleFactor),
             _billingRow('Platform Fee', inr.format(platformFee), scaleFactor: scaleFactor),
@@ -327,8 +409,16 @@ class PreviousBookingScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Payment mode', style: TextStyle(fontFamily: 'Inter', fontSize: 14.sp * scaleFactor)),
-                  Text('Online', style: TextStyle(fontWeight: FontWeight.w500, fontFamily: 'Inter', fontSize: 14.sp * scaleFactor)),
-                ],
+ Text(
+                                        _paymentModeLabel(
+                                            booking),
+                                        style: TextStyle(
+                                          fontSize: 14.sp *
+                                              scaleFactor,
+                                          fontWeight:
+                                              FontWeight.w500,
+                                        ),
+                                      ),                ],
               ),
             ),
           ],
@@ -431,6 +521,49 @@ class PreviousBookingScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+  // --- NEW HELPER ---
+  Widget _detailRow(String label, String value, {double scaleFactor = 1.0, bool isCopyable = false}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h * scaleFactor),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14.sp * scaleFactor,
+              color: const Color(0xFF757575), // Grey text for label
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Row(
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14.sp * scaleFactor,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              if (isCopyable) ...[
+                SizedBox(width: 8.w * scaleFactor),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    // Optional: Show a snackbar
+                  },
+                  child: Icon(Icons.copy, size: 16.sp * scaleFactor, color: const Color(0xFFE47830)),
+                ),
+              ]
+            ],
+          ),
+        ],
       ),
     );
   }

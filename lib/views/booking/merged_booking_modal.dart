@@ -9,6 +9,7 @@ Future<DateTime?> showMergedBookingModal(
   required String initialDateStr, // "yyyy-MM-dd" or "dd"
   TimeOfDay? initialTime,
   String? minTimeConstraint,
+  DateTime? blockedSlot, // <--- ADD THIS LINE
 }) {
   return showModalBottomSheet<DateTime>(
     context: context,
@@ -21,6 +22,7 @@ Future<DateTime?> showMergedBookingModal(
       initialDateStr: initialDateStr,
       initialTime: initialTime,
       minTimeConstraint: minTimeConstraint,
+      blockedSlot: blockedSlot, // <--- ADD THIS LINE
     ),
   );
 }
@@ -29,12 +31,14 @@ class _MergedBookingSheet extends StatefulWidget {
   final String initialDateStr;
   final TimeOfDay? initialTime;
   final String? minTimeConstraint;
+  final DateTime? blockedSlot; // <--- ADD THIS LINE
 
   const _MergedBookingSheet({
     Key? key,
     required this.initialDateStr,
     this.initialTime,
     this.minTimeConstraint,
+    this.blockedSlot, // <--- ADD THIS LINE
   }) : super(key: key);
 
   @override
@@ -165,8 +169,33 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
       _selectedTime = null; // Reset time when date changes to ensure validity
     });
   }
+// --- ADD THIS HELPER METHOD ---
+  bool _isSlotBlocked(TimeOfDay slot) {
+    if (widget.blockedSlot == null) return false;
 
+    // Check if the currently selected DATE matches the blocked date
+    final bool sameDate = 
+        widget.blockedSlot!.year == _selectedDate.year &&
+        widget.blockedSlot!.month == _selectedDate.month &&
+        widget.blockedSlot!.day == _selectedDate.day;
+
+    if (!sameDate) return false;
+
+    // Check if TIME matches (ignoring seconds)
+    return widget.blockedSlot!.hour == slot.hour && widget.blockedSlot!.minute == slot.minute;
+  }
   void _onTimeTap(TimeOfDay slot) {
+    if (_isSlotBlocked(slot)) {
+      Get.snackbar(
+        'Current Booking',
+        'This is your currently booked slot.',
+         snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[800],
+          duration: const Duration(seconds: 3),
+      );
+      return;
+    }
     // Check Provider Constraint Logic
     if (widget.minTimeConstraint != null && widget.minTimeConstraint!.isNotEmpty) {
       final now = DateTime.now();
@@ -298,9 +327,11 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
                       itemBuilder: (ctx, i) {
                         final slot = _visibleSlots[i];
                         final isSelected = _selectedTime == slot;
+                        final isBlocked = _isSlotBlocked(slot);
                         return _TimeChip(
                           time: slot, 
                           isSelected: isSelected, 
+                          isBlocked: isBlocked, // <--- PASS THIS
                           onTap: () => _onTimeTap(slot),
                           scale: scale,
                         );
@@ -415,25 +446,39 @@ class _DateCard extends StatelessWidget {
 class _TimeChip extends StatelessWidget {
   final TimeOfDay time;
   final bool isSelected;
+  final bool isBlocked; // <--- ADD THIS
   final VoidCallback onTap;
   final double scale;
 
-  const _TimeChip({required this.time, required this.isSelected, required this.onTap, required this.scale});
+  const _TimeChip({required this.time, required this.isSelected, required this.onTap,this.isBlocked = false, required this.scale});
 
   @override
   Widget build(BuildContext context) {
     final dt = DateTime(0, 1, 1, time.hour, time.minute);
     final label = DateFormat('hh:mm a').format(dt);
+    // --- UPDATE COLORS ---
+    final Color bgColor = isBlocked 
+        ? Colors.grey[200]! // Gray background if blocked
+        : (isSelected ? const Color(0xFFFFF0E3) : Colors.white); // Light orange if selected
+    
+    final Color borderColor = isBlocked
+        ? Colors.transparent 
+        : (isSelected ? const Color(0xFFE47830) : Colors.grey[300]!);
+        
+    final Color textColor = isBlocked
+        ? Colors.grey[400]! // Gray text if blocked
+        : (isSelected ? const Color(0xFFE47830) : Colors.black);
+    // ---------------------
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.white,
+          color: bgColor,
           borderRadius: BorderRadius.circular(8.r * scale),
           border: Border.all(
-            color: isSelected ? const Color(0xFFE47830) : Colors.grey[300]!,
+            color: borderColor,
             width: 1,
           ),
         ),
@@ -441,7 +486,8 @@ class _TimeChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13.sp * scale,
             fontWeight: FontWeight.w600,
-            color: Colors.black
+            decoration: isBlocked ? TextDecoration.lineThrough : null, // Optional strikethrough
+            color: textColor
           ),
         ),
       ),

@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../controllers/location_controller.dart';
 import '../../models/location_models.dart';
 import '../../utils/test_extensions.dart';
+import '../../widgets/three_dot_loader.dart';
 
 class ManageAddressScreen extends StatefulWidget {
   const ManageAddressScreen({super.key});
@@ -102,9 +103,12 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                       Expanded(
                         child: Obx(() {
                           if (locationController.isLoadingAddresses.value) {
-                            return const Center(
-                              child: CircularProgressIndicator(color: Color(0xFFE47830)),
-                            );
+                            return Center(
+  child: ThreeDotLoader(
+    color: const Color(0xFFE47830),
+    size: 14,
+  ),
+);
                           }
 
                           if (locationController.error.value.isNotEmpty) {
@@ -318,7 +322,6 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
   }
 
   void _showUpdateAddressBottomSheet(double scaleFactor, CustomerAddress address) {
-    // Build a neat, trimmed header subtitle from your existing fields
     final addressLine1 = address.addressLine1.trim();
     final addressLine2 = address.addressLine2.trim();
     final cityStatePin = '${address.city}, ${address.state} - ${address.postCode}'.trim();
@@ -329,11 +332,25 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
       cityStatePin,
     ].join(', ').trim();
 
-    // Prefill House/Flat with real address parts; landmark empty for now
-    final houseCtrl = TextEditingController(
-      text: [addressLine1, addressLine2].where((s) => s.isNotEmpty).join(', ').trim(),
-    );
-    final landmarkCtrl = TextEditingController(text: '');
+    // Prefill controllers
+    final houseCtrl = TextEditingController(text: addressLine1);
+    final landmarkCtrl = TextEditingController(text: addressLine2);
+
+    // --- LOGIC START: Auto-select current address type ---
+    // 1. We check if address.addressType (from DB) is valid.
+    // 2. We normalize it (trim/capitalize) to match our chip list.
+    // 3. If null or not in list, no chip is selected initially.
+    final List<String> typeOptions = ['Home', 'Work', 'Other'];
+    String? selectedType;
+    
+    if (address.addressType != null) {
+      final normalized = address.addressType!.trim();
+      // Only select if it matches one of our options (case-insensitive)
+      selectedType = typeOptions.firstWhereOrNull(
+        (option) => option.toLowerCase() == normalized.toLowerCase()
+      );
+    }
+    // --- LOGIC END ---
 
     showModalBottomSheet(
       context: context,
@@ -343,161 +360,210 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
         return DraggableScrollableSheet(
           expand: false,
           initialChildSize: 0.55,
-          maxChildSize: 0.75,
+          maxChildSize: 0.8,
           minChildSize: 0.45,
-          builder: (_, controller) {
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20.h * scaleFactor)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  children: [
-                    SizedBox(height: 8.h * scaleFactor),
-                    Container(
-                      width: 40.w * scaleFactor,
-                      height: 4.h * scaleFactor,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2.r * scaleFactor),
-                      ),
-                    ),
-                    SizedBox(height: 16.h * scaleFactor),
-
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: controller,
-                        padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+          builder: (_, scrollController) {
+            return StatefulBuilder(
+              builder: (BuildContext context, StateSetter setModalState) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20.h * scaleFactor)),
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Column(
+                      children: [
+                        SizedBox(height: 8.h * scaleFactor),
+                        Container(
+                          width: 40.w * scaleFactor,
+                          height: 4.h * scaleFactor,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2.r * scaleFactor),
+                          ),
+                        ),
+                        SizedBox(height: 16.h * scaleFactor),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            controller: scrollController,
+                            padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    '${address.city}, ${address.state}',
-                                    style: TextStyle(
-                                      fontSize: 16.sp * scaleFactor,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'Inter',
-                                    ),
+                                Text(
+                                  'Update Address',
+                                  style: TextStyle(
+                                    fontSize: 18.sp * scaleFactor,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Inter',
                                   ),
                                 ),
-                                if (address.id != selectedDefaultId)
-                                  TextButton(
-                                    onPressed: () async {
-                                      await _setAsDefault(address);
-                                      if (context.mounted) Navigator.pop(context);
-                                    },
-                                    style: TextButton.styleFrom(
-                                      side: const BorderSide(color: Color(0xFFE47830)),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(6.r * scaleFactor),
-                                      ),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8.h * scaleFactor,
-                                        vertical: 4.h * scaleFactor,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Set as Default',
-                                      style: TextStyle(
-                                        color: const Color(0xFFE47830),
-                                        fontSize: 12.sp * scaleFactor,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
+                                SizedBox(height: 4.h * scaleFactor),
+                                Text(
+                                  subtitle,
+                                  style: TextStyle(
+                                    fontSize: 13.sp * scaleFactor,
+                                    color: const Color(0xFF757575),
+                                    fontFamily: 'Inter',
+                                    height: 1.4,
                                   ),
+                                ),
+                                SizedBox(height: 24.h * scaleFactor),
+                                _OutlinedIconField(
+                                  scaleFactor: scaleFactor,
+                                  controller: houseCtrl,
+                                  hintText: 'House/Flat Number *',
+                                  testId: 'update_addr_house_input',
+                                  icon: Icons.home_outlined,
+                                ),
+                                SizedBox(height: 16.h * scaleFactor),
+                                _OutlinedIconField(
+                                  scaleFactor: scaleFactor,
+                                  controller: landmarkCtrl,
+                                  hintText: 'Landmark / Area *',
+                                  testId: 'update_addr_landmark_input',
+                                  icon: Icons.location_on_outlined,
+                                ),
+                                SizedBox(height: 24.h * scaleFactor),
+                                Text(
+                                  'Save as',
+                                  style: TextStyle(
+                                    fontSize: 14.sp * scaleFactor,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                SizedBox(height: 12.h * scaleFactor),
+                                Row(
+                                  children: typeOptions.map((type) {
+                                    bool isSelected = selectedType == type;
+                                    return Padding(
+                                      padding: EdgeInsets.only(right: 12.w * scaleFactor),
+                                      child: ChoiceChip(
+                                        label: Text(type),
+                                        selected: isSelected,
+                                        onSelected: (bool selected) {
+                                          setModalState(() {
+                                            selectedType = selected ? type : null;
+                                          });
+                                        },
+                                        selectedColor: const Color(0xFFE47830).withOpacity(0.15),
+                                        backgroundColor: const Color(0xFFF8F6F4),
+                                        labelStyle: TextStyle(
+                                          color: isSelected ? const Color(0xFFE47830) : Colors.grey[600],
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                          fontSize: 14.sp * scaleFactor,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20.r * scaleFactor),
+                                          side: BorderSide(
+                                            color: isSelected ? const Color(0xFFE47830) : Colors.transparent,
+                                          ),
+                                        ),
+                                        showCheckmark: false,
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                                SizedBox(height: 24.h * scaleFactor),
                               ],
                             ),
-                            SizedBox(height: 4.h * scaleFactor),
-                            Text(
-                              subtitle,
-                              style: TextStyle(
-                                fontSize: 13.sp * scaleFactor,
-                                color: const Color(0xFF757575),
-                                fontFamily: 'Inter',
-                                height: 1.4,
-                              ),
-                            ),
-                            SizedBox(height: 24.h * scaleFactor),
-
-                            // House/Flat Number (prefilled from address lines)
-                            _OutlinedIconField(
-                              scaleFactor: scaleFactor,
-                              controller: houseCtrl,
-                              hintText: 'House/Flat Number *',
-                              testId: 'update_addr_house_input', // <--- Added ID
-                              icon: Icons.home_outlined,
-                            ),
-                            SizedBox(height: 16.h * scaleFactor),
-
-                            // Landmark (Optional) – starts blank
-                            _OutlinedIconField(
-                              scaleFactor: scaleFactor,
-                              controller: landmarkCtrl,
-                              hintText: 'Landmark (Optional)',
-                              testId: 'update_addr_landmark_input', // <--- Added ID
-                              icon: Icons.location_on_outlined,
-                            ),
-
-                            SizedBox(height: 16.h * scaleFactor),
-                            // Phone field removed
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
+                        Padding(
+                          padding: EdgeInsets.all(16.w * scaleFactor),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 50.h * scaleFactor,
+                            child: Obx(() {
+                              final isMutating = locationController.isMutatingAddress.value;
+                              return ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFE47830),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.r * scaleFactor),
+                                  ),
+                                ),
+                               onPressed: isMutating ? null : () async {
+  final hNum = houseCtrl.text.trim();
+  final lMark = landmarkCtrl.text.trim();
 
-                    SafeArea(
-                      top: false,
-                      minimum: EdgeInsets.only(
-                        left: 16.w * scaleFactor,
-                        right: 16.w * scaleFactor,
-                        top: 8.h * scaleFactor,
-                        bottom: MediaQuery.of(context).viewPadding.bottom > 0
-                            ? MediaQuery.of(context).viewPadding.bottom
-                            : 8.h * scaleFactor,
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 47.h * scaleFactor,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE47830),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10.r * scaleFactor),
-                            ),
+  if (hNum.isEmpty || lMark.isEmpty) {
+    Get.snackbar(
+      "Required Fields",
+      "Please fill in both House Number and Landmark",
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.orange[50],
+      colorText: Colors.orange[800],
+      margin: EdgeInsets.all(16.w * scaleFactor),
+      borderRadius: 8,
+    );
+    return;
+  }
+
+  // EXECUTE UPDATE API
+  final success = await locationController.updateCustomerAddress(
+    addressId: address.id,
+    locationId: address.locationId ?? "",
+    houseNumber: hNum,
+    landmark: lMark,
+    city: address.city,
+    state: address.state,
+    postCode: address.postCode,
+    addressType: selectedType, // Passing the Home/Work/Other selection
+  );
+
+  if (context.mounted) {
+    if (success) {
+      // 1. Close Bottom Sheet
+      Navigator.pop(context);
+
+      // 2. Custom Success Snackbar
+      Get.snackbar(
+        'Success',
+        'Address updated successfully',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green[100],
+        colorText: Colors.green[800],
+        borderRadius: 8,
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // 3. Custom Error Snackbar
+      Get.snackbar(
+        'Error',
+        locationController.error.value.isNotEmpty 
+            ? locationController.error.value 
+            : 'Failed to update address',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+        borderRadius: 8,
+        icon: const Icon(Icons.error_outline, color: Colors.red),
+      );
+    }
+  }
+},
+                                child: isMutating 
+                                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : const Text('Update address', style: TextStyle(color: Colors.white)),
+                              );
+                            }),
                           ),
-                          onPressed: () {
-                            // Keep as-is for now; no API call here.
-                            Navigator.pop(context);
-                          },
-                          child: Text(
-                            'Update address',
-                            style: TextStyle(
-                              fontFamily: 'SF Pro Display',
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16.sp * scaleFactor,
-                              letterSpacing: 0.3,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ).withId('update_addr_save_btn'),
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         );
       },
     );
   }
-
  void _confirmDelete(double scaleFactor, String addressId) {
     showDialog(
       context: context,

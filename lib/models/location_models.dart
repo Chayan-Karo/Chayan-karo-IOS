@@ -19,6 +19,8 @@ class AddAddressRequest {
   final double lat;
   @JsonKey(name: 'long')
   final double long;
+  @JsonKey(name: 'addressType') // Matches your backend requirement
+  final String? addressType;
 
   AddAddressRequest({
     required this.locationId,
@@ -29,6 +31,7 @@ class AddAddressRequest {
     required this.postCode,
     required this.lat,
     required this.long,
+    this.addressType,
   });
 
   factory AddAddressRequest.fromJson(Map<String, dynamic> json) =>
@@ -83,6 +86,7 @@ class CustomerAddress {
   final String postCode;
   final bool isDefault;
   final String? label;
+  final String? addressType;
   final String? latitude;
   final String? longitude;
   @JsonKey(name: 'locationId')
@@ -97,6 +101,7 @@ class CustomerAddress {
     required this.postCode,
     required this.isDefault,
     this.label,
+    this.addressType, // ➕ ADD THIS LINE
     this.latitude,
     this.longitude,
     this.locationId,
@@ -111,6 +116,7 @@ class CustomerAddress {
     String? postCode,
     bool? isDefault,
     String? label,
+    String? addressType,
     String? latitude,
     String? longitude,
     String? locationId,
@@ -124,6 +130,7 @@ class CustomerAddress {
       postCode: postCode ?? this.postCode,
       isDefault: isDefault ?? this.isDefault,
       label: label ?? this.label,
+      addressType: addressType ?? this.addressType,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       locationId: locationId ?? this.locationId,
@@ -163,6 +170,7 @@ class CachedLocationData {
   final String? state;
   final String? postCode;
   final DateTime savedAt;
+  final String? addressType;
 
   CachedLocationData({
     required this.label,
@@ -174,6 +182,7 @@ class CachedLocationData {
     this.city,
     this.state,
     this.postCode,
+    this.addressType,
     required this.savedAt,
   });
 
@@ -232,14 +241,16 @@ class BaseResponse {
     final result = json['result'] as String?;
     final type = json['type'] as String?;
 
-    // FIX: Infer success if we see "successfully" in the result string
-    // or if the type indicates a delete action.
+    // Improved inference logic
     bool inferredSuccess = rawSuccess ?? false;
     
     if (rawSuccess == null) {
+      // 1. Check if the message says successfully
       if (result != null && result.toLowerCase().contains('successfully')) {
         inferredSuccess = true;
-      } else if (type != null && type.contains('Delete')) {
+      } 
+      // 2. Check if the type matches known success types
+      else if (type != null && (type.contains('Delete') || type.contains('Update'))) {
         inferredSuccess = true;
       }
     }

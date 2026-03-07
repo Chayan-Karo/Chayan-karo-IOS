@@ -17,6 +17,13 @@ import 'dart:io'; // Add this for File
 import '../../models/feedback_req_model.dart'; // Add this import
 import '../../models/search_model.dart'; // Add this import
 import '../../models/most_used_service_model.dart';
+import '../../models/booked_saathi_model.dart';
+import '../../models/saathi_rating_model.dart'; // Add this import
+import '../../models/provider_service_model.dart';
+import '../../models/check_availability_model.dart';
+import '../../models/bank_model.dart'; // Add this import
+import '../../models/bank_response_model.dart';
+import '../../models/banner_model.dart'; // Add this import
 
 
 part 'api_service.g.dart';
@@ -79,6 +86,11 @@ abstract class ApiService {
     @Header("Authorization") String token,
     @Body() Map<String, dynamic> body,
   );
+  @POST('/user/updateCustomerAddress')
+Future<BaseResponse> updateCustomerAddress(
+  @Header('Authorization') String token,
+  @Body() Map<String, dynamic> body,
+);
   // Saathi
  @POST('/user/getServiceProvider')
   Future<SaathiResponse> getServiceProvider(
@@ -93,7 +105,28 @@ Future<LockProviderResponse> lockServiceProvider(
   @Query("serviceProviderId") String serviceProviderId,
   @Query("date") String date, // <--- ADDED THIS
 );
+@GET('/user/getServiceProviderRating')
+  Future<RatingResponse> getProviderRatings(
+    @Header("Authorization") String token,
+    @Query("serviceProviderId") String serviceProviderId,
+  );
 
+  @GET('/user/getServiceProviderBookedByCustomer')
+  Future<BookedSaathiResponse> getBookedServiceProviders(
+    @Header("Authorization") String token,
+  );
+@GET('/user/getServicesByProviderId')
+  Future<ProviderServicesResponse> getServicesByProviderId(
+    @Header("Authorization") String token,
+    @Query("serviceProviderId") String serviceProviderId,
+  );
+  // Inside api_service.dart
+
+@POST('/user/checkServiceProviderAvailability')
+Future<CheckAvailabilityResponse> checkServiceProviderAvailability(
+  @Header("Authorization") String token,
+  @Body() Map<String, dynamic> body,
+);
 
   // Booking (model-based)
   @POST('/user/addBooking')
@@ -169,4 +202,22 @@ Future<CancelBookingEnvelope> cancelBookingRaw(
   Future<MostUsedServiceResponse> getMostUsedServices(
     @Header("Authorization") String token,
   );
+  @POST('/user/addRefundBankDetail')
+Future<void> addRefundBankDetail(
+  @Header("Authorization") String authorization,
+  @Body() Map<String, dynamic> bankBody,
+);
+
+@GET('/user/getRefundBank')
+Future<BankListResponse> getRefundBank(
+  @Header("Authorization") String authorization,
+);
+@POST('/user/refundBookingAmount')
+Future<void> refundBookingAmount(
+  @Header("Authorization") String authorization,
+  @Body() Map<String, dynamic> refundBody,
+);
+
+@GET("/user/getAllSlideBanners")
+Future<BannerResponse> getHomeBanners(@Header("Authorization") String token);
 }

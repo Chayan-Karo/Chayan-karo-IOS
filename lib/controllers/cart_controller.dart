@@ -10,6 +10,8 @@ class CartController extends GetxController {
   /// Use a list to preserve insertion order.
   /// Key is still id, but order comes from this list.
   final RxList<CartItem> _itemsList = <CartItem>[].obs;
+  // ✅ NEW: Separate list for Rebooking Flow (In-Memory Only)
+  final RxList<CartItem> _rebookingItemsList = <CartItem>[].obs;
 
   @override
   void onInit() {
@@ -512,4 +514,78 @@ Future<void> clearCartOnBookingSuccess() async {
     return _itemsList
         .reduce((a, b) => a.price < b.price ? a : b);
   }
+  // ============ REBOOKING FLOW ACTIONS ============
+
+  // ✅ NEW: Add Service specifically to Rebooking Context
+  void addServiceToRebooking(
+    Service service, {
+    required String providerId, // Mandatory for rebooking
+    String? sourcePage,
+  }) {
+    // Check if item exists in REBOOKING list
+    final index = _rebookingItemsList.indexWhere((i) => i.id == service.id);
+
+    if (index != -1) {
+      // Increment quantity in rebooking list
+      final existing = _rebookingItemsList[index];
+      _rebookingItemsList[index] = existing.copyWith(quantity: existing.quantity + 1);
+    } else {
+      // Create new item with REBOOK context
+      final cartItem = service.toCartItem(
+        sourcePage: sourcePage ?? 'rebooking_flow',
+        sourceTitle: 'Rebooking',
+        bookingContextId: 'REBOOK_${DateTime.now().millisecondsSinceEpoch}',
+        bookingSource: 'REBOOK',
+        providerId: providerId,
+      );
+      _rebookingItemsList.add(cartItem);
+    }
+    // Optional: Add simple Get.snackbar feedback here if needed, 
+    // or rely on UI state update.
+  }
+
+  // ✅ NEW: Remove from Rebooking Context
+  void removeServiceFromRebooking(String id) {
+    _rebookingItemsList.removeWhere((item) => item.id == id);
+  }
+
+  // ✅ NEW: Update Quantity in Rebooking Context
+  void updateRebookingQuantity(String id, int quantity) {
+    if (quantity <= 0) {
+      removeServiceFromRebooking(id);
+      return;
+    }
+    final index = _rebookingItemsList.indexWhere((i) => i.id == id);
+    if (index != -1) {
+      _rebookingItemsList[index] = _rebookingItemsList[index].copyWith(quantity: quantity);
+    }
+  }
+
+  // ✅ NEW: Clear Rebooking Context
+  void clearRebookingCart() {
+    _rebookingItemsList.clear();
+  }
+
+  // ============ REBOOKING GETTERS ============
+
+  // ✅ NEW: Public getters for Rebooking UI
+  List<CartItem> get rebookingItems => List.unmodifiable(_rebookingItemsList);
+  bool get isRebookingCartEmpty => _rebookingItemsList.isEmpty;
+  
+  int get rebookingItemCount => 
+      _rebookingItemsList.fold(0, (sum, item) => sum + item.quantity);
+
+  double get rebookingTotalPrice => 
+      _rebookingItemsList.fold(0.0, (sum, item) => sum + item.totalPrice);
+      
+  String get formattedRebookingTotalPrice => '₹${rebookingTotalPrice.toInt()}';
+
+  // ✅ NEW: Get service IDs for API call
+  List<String> get rebookingServiceIds => 
+      _rebookingItemsList.map((e) => e.id).toList();
+
+  // ✅ NEW: Check if specific service is in rebooking cart
+  int getRebookingQuantity(String id) =>
+      _rebookingItemsList.firstWhereOrNull((i) => i.id == id)?.quantity ?? 0;
 }
+

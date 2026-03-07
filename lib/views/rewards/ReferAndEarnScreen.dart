@@ -100,8 +100,17 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
 
   void _showSnack(String msg) {
     if (!mounted) return;
+    
+    // 1. Clear any currently displaying or queued snackbars immediately
+    ScaffoldMessenger.of(context).clearSnackBars();
+    
+    // 2. Show the new one
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 2), // Optional: Keep duration short
+        //behavior: SnackBarBehavior.floating, // Optional: Makes it look more like a toast
+      ),
     );
   }
 

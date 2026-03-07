@@ -16,6 +16,7 @@ AddAddressRequest _$AddAddressRequestFromJson(Map<String, dynamic> json) =>
       postCode: json['postCode'] as String,
       lat: (json['lat'] as num).toDouble(),
       long: (json['long'] as num).toDouble(),
+      addressType: json['addressType'] as String?,
     );
 
 Map<String, dynamic> _$AddAddressRequestToJson(AddAddressRequest instance) =>
@@ -28,6 +29,7 @@ Map<String, dynamic> _$AddAddressRequestToJson(AddAddressRequest instance) =>
       'postCode': instance.postCode,
       'lat': instance.lat,
       'long': instance.long,
+      'addressType': instance.addressType,
     };
 
 AddAddressResponse _$AddAddressResponseFromJson(Map<String, dynamic> json) =>
@@ -56,6 +58,7 @@ CustomerAddress _$CustomerAddressFromJson(Map<String, dynamic> json) =>
       postCode: json['postCode'] as String,
       isDefault: json['isDefault'] as bool,
       label: json['label'] as String?,
+      addressType: json['addressType'] as String?,
       latitude: json['latitude'] as String?,
       longitude: json['longitude'] as String?,
       locationId: json['locationId'] as String?,
@@ -71,6 +74,7 @@ Map<String, dynamic> _$CustomerAddressToJson(CustomerAddress instance) =>
       'postCode': instance.postCode,
       'isDefault': instance.isDefault,
       'label': instance.label,
+      'addressType': instance.addressType,
       'latitude': instance.latitude,
       'longitude': instance.longitude,
       'locationId': instance.locationId,
@@ -100,6 +104,7 @@ CachedLocationData _$CachedLocationDataFromJson(Map<String, dynamic> json) =>
       city: json['city'] as String?,
       state: json['state'] as String?,
       postCode: json['postCode'] as String?,
+      addressType: json['addressType'] as String?,
       savedAt: DateTime.parse(json['savedAt'] as String),
     );
 
@@ -115,6 +120,7 @@ Map<String, dynamic> _$CachedLocationDataToJson(CachedLocationData instance) =>
       'state': instance.state,
       'postCode': instance.postCode,
       'savedAt': instance.savedAt.toIso8601String(),
+      'addressType': instance.addressType,
     };
 
 ServiceLocation _$ServiceLocationFromJson(Map<String, dynamic> json) =>

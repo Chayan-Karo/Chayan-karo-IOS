@@ -18,6 +18,8 @@ import 'widgets/service_area_info_screen.dart';
 import 'views/booking/PaymentSuccess.dart';
 import 'views/booking/payment_failed_screen.dart';
 import 'views/profile/EditProfileScreen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'services/notification_service.dart';
 
 // Dependencies
 import 'di/app_binding.dart';
@@ -26,6 +28,8 @@ import 'data/repository/category_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await NotificationService().init();
 
   // Lock to portrait
   await SystemChrome.setPreferredOrientations(

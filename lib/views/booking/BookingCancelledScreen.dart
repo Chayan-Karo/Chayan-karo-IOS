@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../home/home_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class BookingCancelledScreen extends StatelessWidget {
   final String serviceName;
   final int totalDurationMins;
   final String bookingDate;     // yyyy-MM-dd
   final String? customerName;   // optional: e.g., "John Kevin"
+  final String? bookingId;      // <--- 1. ADD THIS FIELD
+  final bool isRefundable; // <--- 1. ADD THIS FIELD
 
   const BookingCancelledScreen({
     super.key,
@@ -16,6 +19,8 @@ class BookingCancelledScreen extends StatelessWidget {
     required this.totalDurationMins,
     required this.bookingDate,
     this.customerName,
+    this.bookingId,             // <--- 2. ADD THIS TO CONSTRUCTOR
+    this.isRefundable = false, // <--- 2. ADD TO CONSTRUCTOR WITH DEFAULT
   });
 
   String _humanizeDuration(int mins) {
@@ -52,30 +57,93 @@ class BookingCancelledScreen extends StatelessWidget {
             children: [
               SizedBox(height: 80.h * scaleFactor),
 
-              // Icon-free status badge
-              Container(
-                width: 72.w * scaleFactor,
-                height: 72.h * scaleFactor,
-                decoration: BoxDecoration(
-                  color: const Color(0x1AF54343), // light red tint
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFF54343), width: 2 * scaleFactor),
-                ),
-                child: Center(
-                  child: Icon(Icons.close_rounded, color: const Color(0xFFF54343), size: 36 * scaleFactor),
-                ),
+     // 1. Success Icon (Green Tick - No Box Decoration)
+              SvgPicture.asset(
+                'assets/icons/gtick.svg', 
+                width: 100.w * scaleFactor,
+                height: 100.h * scaleFactor,
               ),
 
               SizedBox(height: 16.h * scaleFactor),
+
+              // 2. Status Title
               Text(
-                'Booking Cancelled!',
+                'Booking Cancelled Successfully!',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFFF54343),
+                  color: const Color(0xFF27AE60), // Green Color
                   fontSize: 20.sp * scaleFactor,
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              // --- ADD THIS REFUND BLOCK HERE ---
+              if (isRefundable) ...[
+                SizedBox(height: 16.h * scaleFactor),
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
+                  padding: EdgeInsets.all(12.r * scaleFactor),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3F2FD), // Light Blue
+                    borderRadius: BorderRadius.circular(12 * scaleFactor),
+                    border: Border.all(color: const Color(0xFFBBDEFB)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Color(0xFF1976D2)),
+                      SizedBox(width: 12.w * scaleFactor),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Refund Initiated',
+                              style: TextStyle(
+                                fontSize: 14.sp * scaleFactor,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1976D2),
+                              ),
+                            ),
+                            Text(
+                              'Payment will be sent to your bank within 5 working days.',
+                              style: TextStyle(
+                                fontSize: 12.sp * scaleFactor,
+                                color: const Color(0xFF1976D2),
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // ---------------------------------
+
+              // 3. Show Booking ID (Pill Style)
+              if (bookingId != null && bookingId!.isNotEmpty) ...[
+                SizedBox(height: 12.h * scaleFactor),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w * scaleFactor,
+                    vertical: 6.h * scaleFactor,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFFAF1), // Light Green bg
+                    borderRadius: BorderRadius.circular(20 * scaleFactor),
+                    border: Border.all(color: const Color(0xFFD5F2DA)),
+                  ),
+                  child: Text(
+                    'ID: $bookingId',
+                    style: TextStyle(
+                      fontSize: 13.sp * scaleFactor,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF2F7F48), // Dark Green text
+                    ),
+                  ),
+                ),
+              ],
 
               Padding(
                 padding: EdgeInsets.symmetric(
@@ -155,53 +223,61 @@ class BookingCancelledScreen extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      SizedBox(width: 16.w * scaleFactor),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            serviceName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14.sp * scaleFactor,
-                              fontFamily: 'Inter',
-                              color: const Color(0xFF161616),
+                     SizedBox(width: 16.w * scaleFactor),
+                      // FIX: Wrap Column in Expanded to prevent overflow
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              serviceName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14.sp * scaleFactor,
+                                fontFamily: 'Inter',
+                                color: const Color(0xFF161616),
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 6.h * scaleFactor),
-                          Row(
-                            children: [
-                              _dot(scaleFactor),
-                              SizedBox(width: 6.w * scaleFactor),
-                              Text(
-                                _humanizeDuration(totalDurationMins),
-                                style: TextStyle(
-                                  fontSize: 14.sp * scaleFactor,
-                                  color: const Color(0xFF757575),
-                                  fontFamily: 'Inter',
+                            SizedBox(height: 6.h * scaleFactor),
+                            Row(
+                              children: [
+                                _dot(scaleFactor),
+                                SizedBox(width: 6.w * scaleFactor),
+                                Text(
+                                  _humanizeDuration(totalDurationMins),
+                                  style: TextStyle(
+                                    fontSize: 14.sp * scaleFactor,
+                                    color: const Color(0xFF757575),
+                                    fontFamily: 'Inter',
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 6.h * scaleFactor),
-                          Row(
-                            children: [
-                              _dot(scaleFactor),
-                              SizedBox(width: 6.w * scaleFactor),
-                              Text(
-                                'Thanks for informing us!',
-                                style: TextStyle(
-                                  fontSize: 14.sp * scaleFactor,
-                                  color: const Color(0xFF757575),
-                                  fontFamily: 'Inter',
+                              ],
+                            ),
+                            SizedBox(height: 6.h * scaleFactor),
+                            Row(
+                              children: [
+                                _dot(scaleFactor),
+                                SizedBox(width: 6.w * scaleFactor),
+                                // Wrap this text in Flexible just in case
+                                Flexible(
+                                  child: Text(
+                                    'Thanks for informing us!',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14.sp * scaleFactor,
+                                      color: const Color(0xFF757575),
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       )
                     ],
                   ),

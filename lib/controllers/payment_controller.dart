@@ -22,8 +22,8 @@ class PaymentController extends GetxController {
   String? currentReceipt;
 
   // REQUIRED: put your Test/Live key id here (never secret on client)
-  static const String _razorpayKeyId = 'rzp_test_RRgyDlYscS5byz'; 
-  //static const String _razorpayKeyId = 'rzp_live_RhxSMhLgNrnI7m'; 
+  //static const String _razorpayKeyId = 'rzp_test_RRgyDlYscS5byz'; 
+  static const String _razorpayKeyId = 'rzp_live_RhxSMhLgNrnI7m'; 
 
 
   // Prefill fields

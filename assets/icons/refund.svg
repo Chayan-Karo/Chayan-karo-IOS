@@ -1,0 +1,21 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <g stroke="#F28C28" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+
+    <!-- Bank Roof -->
+    <path d="M24 48L64 28L104 48"/>
+
+    <!-- Bank Base -->
+    <rect x="32" y="48" width="64" height="44"/>
+
+    <!-- Pillars -->
+    <line x1="48" y1="48" x2="48" y2="92"/>
+    <line x1="64" y1="48" x2="64" y2="92"/>
+    <line x1="80" y1="48" x2="80" y2="92"/>
+
+    <!-- Refund Arrow -->
+    <path d="M64 10V36"/>
+    <path d="M52 24L64 36L76 24"/>
+
+  </g>
+</svg>

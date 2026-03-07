@@ -19,6 +19,7 @@ import '../../utils/test_extensions.dart';
 import '../../controllers/location_controller.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/category_controller.dart';
+import 'financial_details_screen.dart';
 
 // Widgets & Controllers
 import '../../widgets/custom_bottom_nav_bar.dart';
@@ -48,8 +49,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _profileController = Get.put(ProfileController());
   }
 
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
+  void _onItemTapped(BuildContext context, int index) {
+    if (index == 4) return;
     switch (index) {
       case 0:
         Get.offAll(() => PreviousChayanSathiScreen());
@@ -406,16 +407,23 @@ Future<void> _handleLogout() async {
                     buildListItem('assets/icons/location.svg', "Manage Address", scaleFactor,testId: 'profile_item_address', onTap: () {
                       Get.to(() => const ManageAddressScreen());
                     }),
+                    buildListItem('assets/icons/refund.svg', "Refund Bank Account", scaleFactor,testId: 'profile_item_edit', onTap: () {
+                      // Pass customer data to edit screen
+                      Get.to(() =>FinancialDetailsScreen ());
+                    }),
                     buildListItem('assets/icons/rate.svg', "Rate us", scaleFactor,testId: 'profile_item_rate', onTap: () {
                       Get.to(() => RatingScreen());
-                    }),
-                    buildListItem('assets/icons/about.svg', "About Chayan karo Services", scaleFactor,testId: 'profile_item_about', onTap: () {
-                      Get.to(() => AboutChaynkaroServicesScreen());
                     }),
                     buildListItem('assets/icons/edit.svg', "Edit Profile", scaleFactor,testId: 'profile_item_edit', onTap: () {
                       // Pass customer data to edit screen
                       Get.toNamed('/edit-profile', arguments: _profileController.customer);
                     }),
+
+                    buildListItem('assets/icons/about.svg', "About Chayan karo Services", scaleFactor,testId: 'profile_item_about', onTap: () {
+                      Get.to(() => AboutChaynkaroServicesScreen());
+                    }),
+                    
+
                     
                     buildListItem(
                       'assets/icons/logout.svg', 
@@ -479,9 +487,9 @@ Future<void> _handleLogout() async {
             ],
           ),
           bottomNavigationBar: CustomBottomNavBar(
-            selectedIndex: _selectedIndex,
-            onItemTapped: _onItemTapped,
-          ),
+        selectedIndex: 4, // Hardcoded 4
+        onItemTapped: (index) => _onItemTapped(context, index), // Correct call
+      ),
         );
       },
     );

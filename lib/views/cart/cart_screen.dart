@@ -30,6 +30,7 @@ class _CartScreenState extends State<CartScreen> {
   final CartController cartController = Get.find<CartController>();
   final int _selectedIndex = -2;
   bool _isLoading = false;
+  bool _isNavigatingBack = false;
   String? _expandedServiceId;
 
 
@@ -65,7 +66,7 @@ class _CartScreenState extends State<CartScreen> {
     if (isIncrement) {
       final int currentQty = cartController.getQuantity(itemId);
       // Strictly stop if limit reached. No Snackbar.
-      if (currentQty >= 3) {
+      if (currentQty >= 30) {
         return; 
       }
     }
@@ -135,8 +136,11 @@ class _CartScreenState extends State<CartScreen> {
                           ),
                           child: ChayanHeader(
                             title: 'Cart',
-                            onBack: () => Navigator.pop(context),
-                          ),
+onBack: () {
+                              if (_isNavigatingBack) return;
+                              _isNavigatingBack = true;
+                              Navigator.pop(context);
+                            },                          ),
                         ),
                         Expanded(
                           child: Obx(() {
@@ -312,7 +316,7 @@ Widget _buildCartItemCard(
       BuildContext context, CartItem cartItem, double scaleFactor) {
     
     // Determine if max limit is reached
-    final bool isMaxLimit = cartItem.quantity >= 3;
+    final bool isMaxLimit = cartItem.quantity >= 30;
 
     return Container(
       margin: EdgeInsets.symmetric(
@@ -544,138 +548,112 @@ Widget _buildCartItemCard(
     );
   }
 
-  Widget _buildCartSummary(BuildContext context, double scaleFactor) {
-    return Container(
-      padding: EdgeInsets.all(16.w * scaleFactor),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6 * scaleFactor,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Obx(() => Text(
-                        cartController.formattedItemCount,
-                        style: TextStyle(
-                          fontSize: 14.sp * scaleFactor,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'SF Pro',
-                          color: Colors.black87,
-                        ),
-                      )),
-                  SizedBox(height: 2.h * scaleFactor),
-                  Obx(() {
-                    final groupedItems =
-                        cartController.getItemsGroupedBySource();
-                    return Text(
-                      'From ${groupedItems.length} ${groupedItems.length == 1 ? 'source' : 'sources'}',
+ Widget _buildCartSummary(BuildContext context, double scaleFactor) {
+  return Container(
+    padding: EdgeInsets.all(16.w * scaleFactor),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 6 * scaleFactor,
+          offset: const Offset(0, -2),
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Obx(() => Text(
+                      cartController.formattedItemCount,
                       style: TextStyle(
-                        fontSize: 12.sp * scaleFactor,
-                        color: Colors.grey[600],
+                        fontSize: 14.sp * scaleFactor,
+                        fontWeight: FontWeight.w600,
                         fontFamily: 'SF Pro',
+                        color: Colors.black87,
                       ),
-                    );
-                  }),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Total',
+                    )),
+                SizedBox(height: 2.h * scaleFactor),
+                Obx(() {
+                  final groupedItems =
+                      cartController.getItemsGroupedBySource();
+                  return Text(
+                    'From ${groupedItems.length} ${groupedItems.length == 1 ? 'source' : 'sources'}',
                     style: TextStyle(
                       fontSize: 12.sp * scaleFactor,
                       color: Colors.grey[600],
                       fontFamily: 'SF Pro',
                     ),
+                  );
+                }),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'Total',
+                  style: TextStyle(
+                    fontSize: 12.sp * scaleFactor,
+                    color: Colors.grey[600],
+                    fontFamily: 'SF Pro',
                   ),
-                  Obx(() => Text(
-                        cartController.formattedTotalPrice,
-                        style: TextStyle(
-                          fontSize: 22.sp * scaleFactor,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'SF Pro',
-                          color: const Color(0xFFE47830),
-                        ),
-                      )),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 16.h * scaleFactor),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _showClearCartDialog(context),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 14.h * scaleFactor),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[400]!),
-                      borderRadius: BorderRadius.circular(10 * scaleFactor),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Clear Cart',
+                ),
+                Obx(() => Text(
+                      cartController.formattedTotalPrice,
                       style: TextStyle(
-                        fontSize: 16.sp * scaleFactor,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'SF Pro',
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                ).withId('cart_clear_btn'),
-              ),
-              SizedBox(width: 16.w * scaleFactor),
-              Expanded(
-                flex: 2,
-                child: GestureDetector(
-                  onTap: () => _proceedToCheckout(context),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 14.h * scaleFactor),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE47830),
-                      borderRadius: BorderRadius.circular(10 * scaleFactor),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFE47830).withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Proceed to Checkout',
-                      style: TextStyle(
-                        fontSize: 16.sp * scaleFactor,
+                        fontSize: 22.sp * scaleFactor,
                         fontWeight: FontWeight.w700,
                         fontFamily: 'SF Pro',
-                        color: Colors.white,
+                        color: const Color(0xFFE47830),
                       ),
-                    ),
-                  ),
-                ).withId('cart_checkout_btn'),
+                    )),
+              ],
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h * scaleFactor),
+        
+        // --- UPDATED BUTTON SECTION ---
+        // Removed Row and Clear Cart button. 
+        // Proceed button now takes full width.
+        GestureDetector(
+          onTap: () => _proceedToCheckout(context),
+          child: Container(
+            width: double.infinity, // Ensures button is centered and full width
+            padding: EdgeInsets.symmetric(vertical: 14.h * scaleFactor),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE47830),
+              borderRadius: BorderRadius.circular(10 * scaleFactor),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE47830).withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              'Proceed to Checkout',
+              style: TextStyle(
+                fontSize: 16.sp * scaleFactor,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'SF Pro',
+                color: Colors.white,
               ),
-            ],
+            ),
           ),
-        ],
-      ),
-    );
-  }
-
+        ).withId('cart_checkout_btn'),
+      ],
+    ),
+  );
+}
   void _showClearCartDialog(BuildContext context) {
     showDialog(
       context: context,

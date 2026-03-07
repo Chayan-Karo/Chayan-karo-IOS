@@ -52,6 +52,7 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
     super.initState();
     serviceController = Get.find<ServiceController>();
     cartController = Get.find<CartController>();
+    
 
 // 2. ADD HIGHLIGHT INITIALIZATION LOGIC
     _activeHighlightId = widget.highlightServiceId;
@@ -70,7 +71,8 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
     for (var serviceCategory in widget.category.serviceCategory) {
       _serviceCategoryKeys[serviceCategory.serviceCategoryId] = GlobalKey();
     }
-
+    
+     _precacheBanner();
     _loadAllServices();
   }
 
@@ -83,7 +85,20 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
       _scrollToServiceCategory(widget.scrollToServiceCategoryId!);
     }
   }
+void _precacheBanner() {
+  // Use post frame callback to ensure context is ready for precacheImage
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!mounted) return;
 
+    final String? imageUrl = (widget.category.bannerLink != null && widget.category.bannerLink!.isNotEmpty)
+        ? widget.category.bannerLink
+        : widget.category.imgLink;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      precacheImage(CachedNetworkImageProvider(imageUrl), context);
+    }
+  });
+}
  void _loadServicesForCategory(String serviceCategoryId) async {
     _loadingByCategory[serviceCategoryId] = true;
     _errorByCategory[serviceCategoryId] = false;
@@ -133,6 +148,7 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
       _loadingByCategory[serviceCategoryId] = false;
     }
   }
+  
 
   void _scrollToServiceCategory(String serviceCategoryId) {
     Future.delayed(Duration(milliseconds: 500), () {
@@ -184,7 +200,7 @@ void _addToCart(Service service) {
 
     // 2. Check Max Limit
     final currentQty = cartController.getQuantity(serviceId);
-    if (currentQty >= 3) {
+    if (currentQty >= 30) {
       HapticFeedback.mediumImpact();
       return;
     }
@@ -608,6 +624,7 @@ Widget _buildTopBanner(double scaleFactor) {
       child: Stack(
         children: [
           buildBannerImage(scaleFactor),
+          // Gradient Overlay
           Container(
             width: double.infinity,
             height: 160.h * scaleFactor,
@@ -622,67 +639,57 @@ Widget _buildTopBanner(double scaleFactor) {
               ),
             ),
           ),
-        /*  Positioned(
-            bottom: 12.r * scaleFactor,
-            left: 12.r * scaleFactor,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.h * scaleFactor,
-                vertical: 6.h * scaleFactor,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(20 * scaleFactor),
-              ),
-              child: Text(
-                widget.category.categoryName,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14.sp * scaleFactor,
-                ),
-              ),
-            ),
-          ), */
         ],
       ),
     ),
   );
 }
 
-String _bannerForCategory(String name) {
-  final n = name.trim().toLowerCase();
-  if (n.contains('female') && n.contains('hair') && n.contains('makeup')) {
-    return 'assets/female_hair_and_makeup.png'; // female hair & makeup
-  }
-  if (n.contains('female') && n.contains('spa')) {
-    return 'assets/female_spa.png'; // female spa
-  }
-  if (n.contains('female') && (n.contains('salon') || n.contains('saloon'))) {
-    return 'assets/femalesalon.png'; // female salon/saloon
-  }
-  if (n.contains('clean')) {
-    return 'assets/cleaning.png'; // cleaning
-  }
-  return 'assets/ms9.webp'; // fallback
-}
-
 Widget buildBannerImage(double scaleFactor) {
-  final asset = _bannerForCategory(widget.category.categoryName);
-  return Image.asset(
-    asset,
+  String? imageUrl;
+  
+  if (widget.category.bannerLink != null && widget.category.bannerLink!.trim().isNotEmpty) {
+    imageUrl = widget.category.bannerLink;
+  } else if (widget.category.imgLink.isNotEmpty) {
+    imageUrl = widget.category.imgLink;
+  }
+
+  if (imageUrl == null || imageUrl.isEmpty) {
+    return _buildErrorPlaceholder(scaleFactor);
+  }
+
+  return CachedNetworkImage(
+    imageUrl: imageUrl,
     width: double.infinity,
     height: 160.h * scaleFactor,
     fit: BoxFit.cover,
-    errorBuilder: (context, error, stack) => Container(
+    key: ValueKey(imageUrl), 
+    // ✨ REMOVED: CircularProgressIndicator
+    // ✨ ADDED: A simple colored container that matches your UI background
+    placeholder: (context, url) => Container(
       width: double.infinity,
       height: 160.h * scaleFactor,
-      color: Colors.grey[200],
-      child: Icon(Icons.category, size: 48 * scaleFactor, color: const Color(0xFFFF6F00)),
+      color: const Color(0xFFFFEEE0).withOpacity(0.5), // Matches your header color
     ),
+    // ✨ OPTIMIZATION: Faster transition durations
+    fadeInDuration: const Duration(milliseconds: 100),
+    fadeOutDuration: Duration.zero,
+    errorWidget: (context, url, error) => _buildErrorPlaceholder(scaleFactor),
   );
 }
 
+Widget _buildErrorPlaceholder(double scaleFactor) {
+  return Container(
+    width: double.infinity,
+    height: 160.h * scaleFactor,
+    color: Colors.grey[200],
+    child: Icon(
+      Icons.image_not_supported_outlined,
+      size: 40 * scaleFactor,
+      color: Colors.grey[400],
+    ),
+  );
+}
 Widget _buildCategoryInfoBlock(double scaleFactor) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
@@ -1398,7 +1405,7 @@ Widget _buildQuantitySelector(Service service, double scaleFactor) {
 
       // Is the animation "active"?
       final isAnimating = _loadingServiceIds.contains(service.id);
-      final isMaxLimitReached = quantity >= 3;
+      final isMaxLimitReached = quantity >= 30;
       final showCounter = quantity > 0;
 
       // Decoration for the Counter (White bg, shadow, rounded corners)

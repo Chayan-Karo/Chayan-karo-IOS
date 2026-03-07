@@ -38,6 +38,7 @@ dependencies:
   shimmer: ^3.0.0
   cached_network_image: ^3.3.1
   flutter_cache_manager: ^3.3.1
+  carousel_slider: ^5.0.0
 
 
 
@@ -74,6 +75,10 @@ dependencies:
   # JSON Serialization
   json_annotation: ^4.9.0
   image_cropper: ^11.0.0
+  firebase_core: ^2.25.0
+  firebase_messaging: ^14.7.0
+  flutter_local_notifications: ^19.5.0
+  
 
 dev_dependencies:
   flutter_test:
@@ -162,11 +167,13 @@ flutter:
     - assets/icons/coins.svg
     - assets/icons/help.svg
     - assets/icons/police.svg
+    - assets/icons/refund.svg
     - assets/icons/med.svg
     - assets/icons/fire.svg
     - assets/userprofile.webp
     - assets/icons/location.svg
     - assets/icons/refer.svg
+    - assets/icons/review.svg
     - assets/icons/gtick.svg
     - assets/icons/paytm.svg
     - assets/icons/phonepe.svg

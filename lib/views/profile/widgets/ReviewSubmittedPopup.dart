@@ -43,11 +43,12 @@ class ReviewSubmittedPopup extends StatelessWidget {
                 ),
                 SizedBox(height: 12.h),
                 Text(
-                  'Thank You For your Feedback. Your Review has been Sent To the App Successfully.',
+                  'Thank you for your feedback! Your review has been submitted successfully.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15.sp,
                     color: Colors.black.withOpacity(0.6),
+                    height: 1.4, // Added line height for better readability
                   ),
                 ),
                 SizedBox(height: 24.h),

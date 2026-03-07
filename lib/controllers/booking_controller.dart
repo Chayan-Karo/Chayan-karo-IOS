@@ -14,10 +14,46 @@ import 'booking_read_controller.dart';         // to find and refresh the list
 class BookingController extends GetxController {
   final BookingRepository _repo;
   BookingController({BookingRepository? repo}) : _repo = repo ?? BookingRepository();
-
+final RxBool isRefunding = false.obs;
   final RxBool isPlacing = false.obs;
   final RxString error = ''.obs;
+// --- NEW: Network Error Helpers ---
+  bool _isNetworkError(String msg) {
+    final m = msg.toLowerCase();
+    return m.contains('connectionerror') ||
+        m.contains('connection timeout') ||
+        m.contains('socketexception') ||
+        m.contains('failed host lookup') ||
+        m.contains('network is unreachable');
+  }
 
+  void _showNetworkErrorSnackbar() {
+    if (Get.isSnackbarOpen) return; // Prevent duplicate snackbars
+    Get.snackbar(
+      'Connection Error',
+      'No internet connection or server is unreachable. Please check your settings.',
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.redAccent,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 4),
+      icon: const Icon(Icons.wifi_off, color: Colors.white),
+    );
+  }
+
+  void _showErrorSnackbar(String title, String message) {
+    if (Get.isSnackbarOpen) return;
+    Get.snackbar(
+      title,
+      message.replaceFirst('Exception: ', ''), // Clean up common Dart error prefix
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.redAccent,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+      icon: const Icon(Icons.error_outline, color: Colors.white),
+      duration: const Duration(seconds: 3),
+    );
+  }
  // lib/controllers/booking_controller.dart
 
 Future<AddBookingResponse> placeBooking({
@@ -59,41 +95,51 @@ Future<AddBookingResponse> placeBooking({
     } catch (_) {}
 
     return res;
-  } catch (e) {
-    final msg = e.toString();
-    error.value = msg;
+} catch (e) {
+      final msg = e.toString();
+      error.value = msg;
 
-    final isAlready =
-        msg.contains('Booking all ready exist') ||
-        msg.contains('already exist') ||
-        msg.contains('already booked');
+      // 1. CHECK FOR NETWORK ERROR (New)
+      if (_isNetworkError(msg)) {
+      //  _showNetworkErrorSnackbar();
+        // Return a safe error response so UI doesn't crash
+        return AddBookingResponse(
+          type: 'Error',
+          result: AddBookingResult(
+            message: 'Network error. Please check your internet connection.',
+            bookingId: null,
+          ),
+        );
+      }
 
-    // DO NOT show any snackbar here.
-    // Just return a response object and let the UI decide.
+      // 2. CHECK FOR LOGIC ERRORS (Already Booked)
+      final isAlready =
+          msg.contains('Booking all ready exist') ||
+          msg.contains('already exist') ||
+          msg.contains('already booked');
 
-    if (isAlready) {
-      // Normalized friendly message that UI will use
+      if (isAlready) {
+        return AddBookingResponse(
+          type: 'Error',
+          result: AddBookingResult(
+            message:
+                'This provider is already booked for this time slot. Please choose another slot or provider.',
+            bookingId: null,
+          ),
+        );
+      }
+
+      // 3. GENERIC ERROR
       return AddBookingResponse(
         type: 'Error',
         result: AddBookingResult(
-          message:
-              'This provider is already booked for this time slot. Please choose another slot or provider.',
+          message: msg.replaceFirst('Exception: ', ''),
           bookingId: null,
         ),
       );
+    } finally {
+      isPlacing.value = false;
     }
-
-    // Other errors: generic message for UI
-    return AddBookingResponse(
-      type: 'Error',
-      result: AddBookingResult(
-        message: msg.replaceFirst('Exception: ', ''),
-        bookingId: null,
-      ),
-    );
-  } finally {
-    isPlacing.value = false;
-  }
 }
 
 
@@ -195,14 +241,14 @@ Future<AddBookingResponse> placeBooking({
 
       return ok;
     } catch (e) {
-      error.value = e.toString();
-      Get.snackbar(
-        'Reschedule failed',
-        error.value.replaceFirst('Exception: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+final msg = e.toString();
+      error.value = msg;      
+      // UPDATED: Check for network error specific to reschedule
+      if (_isNetworkError(msg)) {
+        _showNetworkErrorSnackbar();
+      } else {
+        _showErrorSnackbar('Reschedule Failed', msg);
+      }
       return false;
     } finally {
       isRescheduling.value = false;
@@ -292,14 +338,15 @@ Future<AddBookingResponse> placeBooking({
 
       return ok;
     } catch (e) {
-      error.value = e.toString();
-      Get.snackbar(
-        'Cancel failed',
-        error.value.replaceFirst('Exception: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      final msg = e.toString();
+      error.value = msg;
+
+      // UPDATED: Check for network error specific to cancel
+      if (_isNetworkError(msg)) {
+        _showNetworkErrorSnackbar();
+      } else {
+        _showErrorSnackbar('Cancellation Failed', msg);
+      }
       return false;
     } finally {
       isCancelling.value = false;
@@ -313,4 +360,32 @@ Future<AddBookingResponse> placeBooking({
   }) async {
     return cancelBooking(bookingId: bookingId, reason: reason);
   }
+  // 2. Add the refund method
+Future<bool> processRefund({
+  required String bookingId,
+  required String refundBankId,
+}) async {
+  try {
+    isRefunding.value = true;
+    
+    final payload = {
+      "bookingId": bookingId.trim(),
+      "refundBankId": refundBankId.trim(),
+    };
+
+    await _repo.refundBookingAmount(payload);
+    return true;
+  } catch (e) {
+    final msg = e.toString();
+    // Handle errors similar to cancel/reschedule
+    if (_isNetworkError(msg)) {
+      _showNetworkErrorSnackbar();
+    } else {
+      _showErrorSnackbar('Refund Failed', 'We couldn\'t process your refund request. Please contact support.');
+    }
+    return false;
+  } finally {
+    isRefunding.value = false;
+  }
+}
 }

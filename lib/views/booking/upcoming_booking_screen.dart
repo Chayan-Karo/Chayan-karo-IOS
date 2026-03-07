@@ -145,6 +145,10 @@ class UpcomingBookingScreen extends StatelessWidget {
         final services = booking?.bookingService ?? [];
         final address = booking?.customerAddress;
         final provider = booking?.serviceProvider;
+        // --- FIX: Check for In Progress Status ---
+        final status = (booking?.status ?? '').toLowerCase();
+        final bool isInProgress = status.contains('progress');
+        // -----------------------------------------
 
         // Pricing: forward-calculated billing
         final num grand = hasData
@@ -329,6 +333,34 @@ class UpcomingBookingScreen extends StatelessWidget {
                                 SizedBox(
                                     height:
                                         16.h * scaleFactor),
+                                        // --- NEW LINES START HERE ---
+                                // 1. Booking Reference Number
+                                if (booking?.bookingReferenceNumber != null)
+                                  _detailRow(
+                                    'Reference No.', 
+                                    booking!.bookingReferenceNumber, 
+                                    scaleFactor: scaleFactor,
+                                    isCopyable: true, // Allow copying ref number
+                                  ),
+                                
+                                // 2. Booking PIN
+                                if (booking?.bookingPin != null)
+                                  _detailRow(
+                                    'Start PIN', 
+                                    booking!.bookingPin.toString().padLeft(4, '0'), 
+                                    scaleFactor: scaleFactor
+                                  ),
+
+                                // 3. Payment Status (Paid/Unpaid)
+                                if (booking?.paymentStatus != null)
+                                  _detailRow(
+                                    'Payment Status', 
+                                    booking!.paymentStatus ?? 'N/A', 
+                                    scaleFactor: scaleFactor
+                                  ),
+                                
+                                Divider(height: 24.h * scaleFactor, color: const Color(0xFFEBEBEB)),
+                                // --- NEW LINES END HERE ---
                                 _billingRow(
                                   'Per Service Charge',
                                   inr.format(perService),
@@ -425,6 +457,7 @@ class UpcomingBookingScreen extends StatelessWidget {
                   ),
 
                   // Fixed Bottom Buttons
+                  if (!isInProgress)
                   SafeArea(
                     top: false,
                     child: Container(
@@ -521,6 +554,11 @@ class UpcomingBookingScreen extends StatelessWidget {
                                         totalDuration: 60,
                                         categoryId: '',
                                         serviceId: '',
+                                        // ADD THESE TWO LINES (Pass dummy current time for fallback)
+          currentDate: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+          currentTime: DateFormat('HH:mm').format(DateTime.now()),
+        
+                                        
                                       ),
                                     ),
                                   );
@@ -552,6 +590,19 @@ class UpcomingBookingScreen extends StatelessWidget {
                                             .first
                                             .serviceId
                                         : '';
+                                final DateTime? validDt = _getValidDateTime(b);
+  
+  // Format: "yyyy-MM-dd" (Required for dayToken)
+  final String dateParam = validDt != null 
+      ? DateFormat('yyyy-MM-dd').format(validDt) 
+      : ''; 
+
+  // Format: "HH:mm" (Required for preferredTime parser)
+  String timeParam = b.bookingTime;
+  if (timeParam.isEmpty && validDt != null) {
+    // If string is empty, fallback to extracting from DateTime
+    timeParam = DateFormat('HH:mm').format(validDt);
+  }        
 
                                 await Navigator.push(
                                   context,
@@ -563,6 +614,8 @@ class UpcomingBookingScreen extends StatelessWidget {
                                       totalDuration: duration,
                                       categoryId: categoryId,
                                       serviceId: serviceId,
+                                      currentDate: dateParam, 
+                                      currentTime: timeParam,
                                     ),
                                   ),
                                 );
@@ -845,6 +898,47 @@ class UpcomingBookingScreen extends StatelessWidget {
             'assets/icons/user.svg',
             providerText,
             scaleFactor,
+          ),
+        ],
+      ),
+    );
+  }
+  // Helper for displaying PIN, Ref No, etc. inside the billing box or separate card
+  Widget _detailRow(String label, String value, {double scaleFactor = 1.0, bool isCopyable = false}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h * scaleFactor),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14.sp * scaleFactor,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Row(
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14.sp * scaleFactor,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              if (isCopyable) ...[
+                SizedBox(width: 8.w * scaleFactor),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    // Optional: Show a toast/snackbar
+                  },
+                  child: Icon(Icons.copy, size: 16.sp * scaleFactor, color: const Color(0xFFE47830)),
+                ),
+              ]
+            ],
           ),
         ],
       ),

@@ -1,7 +1,8 @@
 // lib/core/bindings/app_binding.dart
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
-
+import '../controllers/financial_controller.dart';
+import '../data/repository/financial_repository.dart';
 // Controllers
 import '../../controllers/male_salon_controller.dart';
 import '../../controllers/home_controller.dart';
@@ -28,7 +29,8 @@ import '../../data/repository/home_repository.dart';
 import '../../data/repository/auth_repository.dart';
 import '../../data/repository/profile_repository.dart';
 import '../../data/repository/location_repository.dart';
-
+import '../../data/repository/banner_repository.dart';
+import '../controllers/banner_controller.dart';
 // NEW
 import '../../data/repository/booking_repository.dart';
 
@@ -104,6 +106,17 @@ class AppBinding extends Bindings {
       fenix: true,
     );
     print('✅ BookingRepository registered (lazy)');
+    Get.lazyPut<FinancialRepository>(
+    () => FinancialRepository(
+      database: Get.find<AppDatabase>(),
+    ),
+    fenix: true,
+  );
+  print('✅ FinancialRepository registered (lazy)');
+  Get.lazyPut<BannerRepository>(
+      () => BannerRepository(),
+      fenix: true,
+    );
   }
 
   void _registerControllers() {
@@ -155,6 +168,15 @@ class AppBinding extends Bindings {
     // Optional: list reader if your cancel/reschedule triggers refresh
     Get.lazyPut<BookingReadController>(() => BookingReadController(), fenix: true);
     print('✅ BookingReadController registered (lazy)');
+    Get.lazyPut<FinancialController>(
+    () => FinancialController(),
+    fenix: true,
+  );
+  print('✅ FinancialController registered (lazy)');
+ Get.lazyPut<BannerController>(
+      () => BannerController(), 
+      fenix: true,
+    );
   }
 
   void _debugRegisteredDependencies() {
