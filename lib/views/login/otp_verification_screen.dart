@@ -83,7 +83,61 @@ leading: IconButton(
                 SizedBox(height: 16.h * scaleFactor),
 
                 // --- ERROR CONTAINER REMOVED HERE ---
-                // The error is now shown via Get.snackbar in the controller.
+  // 1. Spacing after OTP fields
+SizedBox(height: 16.h * scaleFactor),
+
+// 2. Conditional Referral Field + Dynamic Bottom Spacing
+Obx(() {
+  if (controller.isExistingUser) {
+    // If user exists, we only provide a small standard gap
+    return SizedBox(height: 8.h * scaleFactor);
+  }
+  
+  return Column(
+    children: [
+      Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w * scaleFactor),
+        child: TextField(
+          controller: controller.referralController,
+          style: TextStyle(fontSize: 16.sp * scaleFactor),
+          decoration: InputDecoration(
+            hintText: "Referral Code (Optional)",
+            hintStyle: TextStyle(
+              fontSize: 14.sp * scaleFactor, 
+              color: Colors.grey,
+              fontFamily: 'SFProRegular'
+            ),
+            prefixIcon: Icon(
+              Icons.card_giftcard, 
+              color: const Color(0xFFFF6F00),
+              size: 20.w * scaleFactor,
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              vertical: 15.h * scaleFactor, 
+              horizontal: 15.w * scaleFactor
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r * scaleFactor),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r * scaleFactor),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r * scaleFactor),
+              borderSide: const BorderSide(color: Color(0xFFFF6F00)),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+          ),
+        ),
+      ),
+      // ✨ Dynamic padding added BELOW the referral field
+      SizedBox(height: 20.h * scaleFactor), 
+    ],
+  );
+}),
 
                 // Resend OTP / Timer
                 Obx(() => !controller.canResend
@@ -221,6 +275,7 @@ leading: IconButton(
           ).withId('otp_input_$index'),
           ),
         );
+        
       }),
     );
   }

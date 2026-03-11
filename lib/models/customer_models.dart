@@ -22,6 +22,8 @@ class CustomerResponse {
 class Customer {
   final String id;
   final String mobileNo;
+  @JsonKey(name: 'referralCode')
+  final String? referralCode;
   final String? emailId;
   final String? firstName;
   final String? middleName;
@@ -41,6 +43,7 @@ class Customer {
   const Customer({
     required this.id,
     required this.mobileNo,
+    this.referralCode,
     this.emailId,
     this.firstName,
     this.middleName,

@@ -107,4 +107,54 @@ class FinancialController extends GetxController {
     isLoading(false);
   }
 }
+Future<bool> updateBankDetails({
+  required String bankId,
+  required String bank,
+  required String acc,
+  required String ifsc,
+  required String upi,
+}) async {
+  try {
+    isLoading(true);
+    final body = {
+      "bankId": bankId, // Required for update
+      "bankName": bank,
+      "accountNumber": acc,
+      "ifscCode": ifsc,
+      "upiId": upi
+    };
+
+    await _repository.updateBankDetails(body);
+    await fetchFinancialDetails(); // Refresh the list
+    return true;
+  } catch (e) {
+    _handleError(e); // Use your existing snackbar error logic
+    return false;
+  } finally {
+    isLoading(false);
+  }
+}
+
+  void _handleError(dynamic e) {
+    String errorMsg = e.toString();
+    
+    if (errorMsg.contains("Failed host lookup") || errorMsg.contains("SocketException")) {
+      Get.snackbar(
+        "Connection Error", 
+        "Please check your internet connection.",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        icon: const Icon(Icons.wifi_off, color: Colors.white),
+      );
+    } else {
+      Get.snackbar(
+        "Operation Failed", 
+        "Something went wrong. Please try again later.",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+      );
+    }
+}
 }

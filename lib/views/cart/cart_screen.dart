@@ -777,6 +777,21 @@ Widget _buildCartItemCard(
 
   void _proceedToCheckout(BuildContext context) async {
     final groupedItems = cartController.getItemsGroupedBySource();
+    // 1. Restriction: Minimum Order Value Check
+    if (cartController.totalPrice < 99) {
+      Get.snackbar(
+        'Minimum Order Required',
+        'You cannot purchase below ₹99. Please add more items to your cart.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green[100],
+        colorText: Colors.green[900],
+        icon: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+        margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
 
     if (groupedItems.length > 1) {
       Get.snackbar(

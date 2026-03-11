@@ -151,22 +151,33 @@ class UpcomingBookingScreen extends StatelessWidget {
         // -----------------------------------------
 
         // Pricing: forward-calculated billing
-        final num grand = hasData
-            ? services.fold<num>(0, (s, e) => s + e.discountPrice)
-            : 0;
-        final int bookingInt =
-            (grand is num ? grand.toInt() : 0); // using `grand` as service sum
-        final int platformFee =
-            (bookingInt * 0.20).round(); // 20% platform
-        final int perService =
-            (bookingInt * 0.80).round(); // 80% to provider
-        final int gstOnPlatform =
-            (platformFee * 0.18).round(); // 18% GST on platform fee
-        final int total =
-            perService + platformFee + gstOnPlatform; // Grand payable
-        final inr = NumberFormat.currency(
-            locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+       // --- Updated Financial Logic ---
+final bool hasAmountData = booking?.bookingAmount != null;
 
+// 1. Actual Amount: The 100% item total (Price after item-level discount, before coupon)
+final double actualAmount = hasAmountData 
+    ? booking!.bookingAmount!.actualAmount.toDouble() 
+    : services.fold<double>(0, (s, e) => s + e.discountPrice.toDouble());
+
+// 2. Platform Fee: 20% of the actual amount
+final double platformFee = hasAmountData 
+    ? booking!.bookingAmount!.plateFormFee.toDouble() 
+    : (actualAmount * 0.20);
+
+// 3. Provider Share: 80% of the actual amount (For display/internal logic)
+final int perService = (actualAmount * 0.80).round();
+
+// 4. GST: 18% applied ONLY on the 20% platform fee
+final int gstOnPlatform = hasAmountData 
+    ? booking!.bookingAmount!.gstAmount.toInt() 
+    : (platformFee * 0.18).round();
+
+// 5. Total: (Actual Amount + GST) 
+// Note: If you stored a global coupon discount in the DB, you would subtract it here.
+final int total = (actualAmount + gstOnPlatform).round();
+
+final inr = NumberFormat.currency(
+    locale: 'en_IN', symbol: '₹', decimalDigits: 0);
         final String dateHeader =
             hasData ? _displayDate(booking!) : 'Nov, Tuesday';
         final String dayHeader =
@@ -361,31 +372,24 @@ class UpcomingBookingScreen extends StatelessWidget {
                                 
                                 Divider(height: 24.h * scaleFactor, color: const Color(0xFFEBEBEB)),
                                 // --- NEW LINES END HERE ---
-                                _billingRow(
-                                  'Per Service Charge',
-                                  inr.format(perService),
-                                  scaleFactor: scaleFactor,
-                                ),
-                                _billingRow(
-                                  'Platform Fee',
-                                  inr.format(platformFee),
-                                  scaleFactor: scaleFactor,
-                                ),
-                                _billingRow(
-                                  'GST on Platform (18%)',
-                                  inr.format(gstOnPlatform),
-                                  valueColor: Colors.black87,
-                                  scaleFactor: scaleFactor,
-                                ),
-                                Divider(
-                                  height: 30.h * scaleFactor,
-                                ),
-                                _billingRow(
-                                  'Total',
-                                  inr.format(total),
-                                  isBold: true,
-                                  scaleFactor: scaleFactor,
-                                ),
+                               _billingRow(
+  'Item Total', // Changed label for clarity
+  inr.format(actualAmount),
+  scaleFactor: scaleFactor,
+),
+_billingRow(
+  'Taxes & Fees (GST)', 
+  inr.format(gstOnPlatform),
+  valueColor: Colors.black87,
+  scaleFactor: scaleFactor,
+),
+Divider(height: 30.h * scaleFactor),
+_billingRow(
+  'Total Amount',
+  inr.format(total),
+  isBold: true,
+  scaleFactor: scaleFactor,
+),
                                 SizedBox(
                                     height:
                                         16.h * scaleFactor),

@@ -642,33 +642,24 @@ Widget _buildEmptyState(BuildContext context, double scaleFactor, {
                 }
 
                 // 2. Error Handling (Network Check)
-                if (readCtrl.error.isNotEmpty) {
+               if (readCtrl.error.isNotEmpty) {
                   final err = readCtrl.error.value.toLowerCase();
-                  // Check for common network error keywords
-                  if (err.contains('socketexception') ||
-                      err.contains('connection timeout') ||
-                      err.contains('handshakeexception') || 
-                      err.contains('network is unreachable')) {
+                  
+                  // If it's a network error or a code crash (like the Null cast error), 
+                  // show the No Internet UI or a Friendly "Something went wrong"
+                  if (err.contains('socket') || err.contains('timeout') ) {
                     return NoInternetScreen(onRetry: _fetchUpcoming);
                   }
                   
-                  // Generic Error
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Something went wrong', style: TextStyle(fontWeight: FontWeight.bold)),
-                          SizedBox(height: 8),
-                          Text(readCtrl.error.value, textAlign: TextAlign.center),
-                          TextButton(onPressed: _fetchUpcoming, child: Text("Try Again"))
-                        ],
-                      ),
-                    ),
+                  // Clean fallback for any other error
+                  return _buildEmptyState(
+                    context, 
+                    scaleFactor, 
+                    title: "System Update",
+                    message: "We're refreshing your bookings. Please try again in a moment.",
+                    isPrevious: !showUpcoming
                   );
                 }
-
                 // Base dataset by tab
                 final base = showUpcoming ? readCtrl.upcoming : readCtrl.previous;
 

@@ -62,10 +62,17 @@ class VerifyOtpRequest {
   
   @JsonKey(name: 'otp')
   final String otp;
+  @JsonKey(name: 'fcmToken') // Added
+  final String? fcmToken;
+
+  @JsonKey(name: 'referralCode') // Added
+  final String? referralCode;
 
   const VerifyOtpRequest({
     required this.mobileNo,
     required this.otp,
+    this.fcmToken,
+    this.referralCode = "",
   });
 
   factory VerifyOtpRequest.fromJson(Map<String, dynamic> json) =>

@@ -10,6 +10,7 @@ Future<DateTime?> showMergedBookingModal(
   TimeOfDay? initialTime,
   String? minTimeConstraint,
   DateTime? blockedSlot, // <--- ADD THIS LINE
+  int currentBookingDuration = 0, // ✅ Add this
 }) {
   return showModalBottomSheet<DateTime>(
     context: context,
@@ -23,6 +24,7 @@ Future<DateTime?> showMergedBookingModal(
       initialTime: initialTime,
       minTimeConstraint: minTimeConstraint,
       blockedSlot: blockedSlot, // <--- ADD THIS LINE
+      currentBookingDuration: currentBookingDuration, // ✅ Pass it here
     ),
   );
 }
@@ -32,6 +34,7 @@ class _MergedBookingSheet extends StatefulWidget {
   final TimeOfDay? initialTime;
   final String? minTimeConstraint;
   final DateTime? blockedSlot; // <--- ADD THIS LINE
+  final int currentBookingDuration; // ✅ Add this
 
   const _MergedBookingSheet({
     Key? key,
@@ -39,6 +42,7 @@ class _MergedBookingSheet extends StatefulWidget {
     this.initialTime,
     this.minTimeConstraint,
     this.blockedSlot, // <--- ADD THIS LINE
+    this.currentBookingDuration = 0, // ✅ Add this with default value
   }) : super(key: key);
 
   @override
@@ -359,16 +363,34 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
                       onPressed: _selectedTime == null 
                         ? null 
                         : () {
-                            // Merge Date and Time into one DateTime object
-                            final finalDateTime = DateTime(
-                              _selectedDate.year,
-                              _selectedDate.month,
-                              _selectedDate.day,
-                              _selectedTime!.hour,
-                              _selectedTime!.minute,
-                            );
-                            Navigator.pop(context, finalDateTime);
-                          },
+                            // 1. Calculate the end time of the booking
+      final int startMinutes = _selectedTime!.hour * 60 + _selectedTime!.minute;
+      final int endMinutes = startMinutes + widget.currentBookingDuration;
+      
+      // 2. Check if it exceeds 7:00 PM (19 * 60 = 1140 minutes)
+      const int cutoffMinutes = 19 * 60; 
+
+      if (endMinutes > cutoffMinutes) {
+        Get.snackbar(
+          'Booking Duration Exceeds', 
+          'The total duration exceeds service hours (7 PM). Please select an earlier slot.',
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900],
+          snackPosition: SnackPosition.TOP,
+        );
+        return; // ⛔ Prevent navigation/closing
+      }
+
+      // 3. If valid, merge and return
+      final finalDateTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime!.hour,
+        _selectedTime!.minute,
+      );
+      Navigator.pop(context, finalDateTime);
+    },
                       child: Text('Proceed to checkout', 
                         style: TextStyle(
                           fontSize: 16.sp * scale, 

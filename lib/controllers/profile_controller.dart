@@ -189,6 +189,7 @@ class ProfileController extends GetxController {
   String get userPhone => _customer.value?.mobileNo ?? '';
   double get userRating => _customer.value?.averageRating ?? 0.0;
   
+  
   // Correctly points to imageUrl
   String? get userImage => _customer.value?.imageUrl;
 

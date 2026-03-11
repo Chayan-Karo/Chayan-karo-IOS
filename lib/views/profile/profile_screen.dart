@@ -407,7 +407,7 @@ Future<void> _handleLogout() async {
                     buildListItem('assets/icons/location.svg', "Manage Address", scaleFactor,testId: 'profile_item_address', onTap: () {
                       Get.to(() => const ManageAddressScreen());
                     }),
-                    buildListItem('assets/icons/refund.svg', "Refund Bank Account", scaleFactor,testId: 'profile_item_edit', onTap: () {
+                    buildListItem('assets/icons/refund.svg', "Bank Account Details", scaleFactor,testId: 'profile_item_edit', onTap: () {
                       // Pass customer data to edit screen
                       Get.to(() =>FinancialDetailsScreen ());
                     }),

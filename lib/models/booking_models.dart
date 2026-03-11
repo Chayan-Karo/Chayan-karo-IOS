@@ -21,6 +21,23 @@ class BookingServiceItem {
   factory BookingServiceItem.fromJson(Map<String, dynamic> json) => _$BookingServiceItemFromJson(json);
   Map<String, dynamic> toJson() => _$BookingServiceItemToJson(this);
 }
+@JsonSerializable()
+class BookingAmount {
+  final num actualAmount;
+  final num plateFormFee;
+  final num gstAmount;
+  final num gstPercentage;
+
+  BookingAmount({
+    required this.actualAmount,
+    required this.plateFormFee,
+    required this.gstAmount,
+    required this.gstPercentage,
+  });
+
+  factory BookingAmount.fromJson(Map<String, dynamic> json) => _$BookingAmountFromJson(json);
+  Map<String, dynamic> toJson() => _$BookingAmountToJson(this);
+}
 
 @JsonSerializable()
 class AddBookingRequest {
@@ -30,6 +47,8 @@ class AddBookingRequest {
   final String bookingTime;  // "HH:mm"
   final String bookingDate;  // "yyyy-MM-dd"
   final String paymentMode;  // "CASH" | "ONLINE"
+  final String? couponId; // ✅ Nullable couponId
+  final BookingAmount bookingAmount; // <--- NEW FIELD
   final List<BookingServiceItem> bookingService;
 
   AddBookingRequest({
@@ -39,6 +58,8 @@ class AddBookingRequest {
     required this.bookingTime,
     required this.bookingDate,
     required this.paymentMode,
+    this.couponId,
+    required this.bookingAmount, // <--- NEW FIELD
     required this.bookingService,
   });
 

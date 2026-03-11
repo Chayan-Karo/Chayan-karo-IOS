@@ -6,11 +6,27 @@ part of 'booking_read_models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+BookingAmount _$BookingAmountFromJson(Map<String, dynamic> json) =>
+    BookingAmount(
+      actualAmount: json['actualAmount'] as num,
+      plateFormFee: json['plateFormFee'] as num,
+      gstAmount: json['gstAmount'] as num,
+      gstPercentage: json['gstPercentage'] as num,
+    );
+
+Map<String, dynamic> _$BookingAmountToJson(BookingAmount instance) =>
+    <String, dynamic>{
+      'actualAmount': instance.actualAmount,
+      'plateFormFee': instance.plateFormFee,
+      'gstAmount': instance.gstAmount,
+      'gstPercentage': instance.gstPercentage,
+    };
+
 CustomerInfo _$CustomerInfoFromJson(Map<String, dynamic> json) => CustomerInfo(
   id: json['id'] as String,
   mobileNo: json['mobileNo'] as String,
   emailId: json['emailId'] as String?,
-  firstName: json['firstName'] as String,
+  firstName: json['firstName'] as String?,
   middleName: json['middleName'] as String?,
   lastName: json['lastName'] as String,
   gender: json['gender'] as String?,
@@ -34,6 +50,7 @@ AddressInfo _$AddressInfoFromJson(Map<String, dynamic> json) => AddressInfo(
   city: json['city'] as String,
   state: json['state'] as String,
   postCode: json['postCode'] as String,
+  addressType: json['addressType'] as String?,
   geoBoundary: json['geoBoundary'] as String?,
 );
 
@@ -45,6 +62,7 @@ Map<String, dynamic> _$AddressInfoToJson(AddressInfo instance) =>
       'city': instance.city,
       'state': instance.state,
       'postCode': instance.postCode,
+      'addressType': instance.addressType,
       'geoBoundary': instance.geoBoundary,
     };
 
@@ -53,9 +71,9 @@ ServiceProviderInfo _$ServiceProviderInfoFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       mobileNo: json['mobileNo'] as String,
       emailId: json['emailId'] as String?,
-      firstName: json['firstName'] as String,
+      firstName: json['firstName'] as String?,
       middleName: json['middleName'] as String?,
-      lastName: json['lastName'] as String,
+      lastName: json['lastName'] as String?,
       gender: json['gender'] as String?,
     );
 
@@ -82,6 +100,7 @@ BookingServiceRead _$BookingServiceReadFromJson(Map<String, dynamic> json) =>
       discountPercentage: (json['discountPercentage'] as num).toInt(),
       price: json['price'] as num,
       discountPrice: json['discountPrice'] as num,
+      serviceDuration: (json['serviceDuration'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$BookingServiceReadToJson(BookingServiceRead instance) =>
@@ -95,6 +114,7 @@ Map<String, dynamic> _$BookingServiceReadToJson(BookingServiceRead instance) =>
       'discountPercentage': instance.discountPercentage,
       'price': instance.price,
       'discountPrice': instance.discountPrice,
+      'serviceDuration': instance.serviceDuration,
     };
 
 CustomerBooking _$CustomerBookingFromJson(Map<String, dynamic> json) =>
@@ -111,6 +131,11 @@ CustomerBooking _$CustomerBookingFromJson(Map<String, dynamic> json) =>
       bookingPin: (json['bookingPin'] as num).toInt(),
       paymentMode: json['paymentMode'] as String?,
       paymentStatus: json['paymentStatus'] as String?,
+      bookingAmount: json['bookingAmount'] == null
+          ? null
+          : BookingAmount.fromJson(
+              json['bookingAmount'] as Map<String, dynamic>,
+            ),
       feedbackSubmitted: json['feedbackSubmitted'] as bool? ?? false,
       bookingService: (json['bookingService'] as List<dynamic>)
           .map((e) => BookingServiceRead.fromJson(e as Map<String, dynamic>))
@@ -141,6 +166,7 @@ Map<String, dynamic> _$CustomerBookingToJson(CustomerBooking instance) =>
       'bookingPin': instance.bookingPin,
       'paymentMode': instance.paymentMode,
       'paymentStatus': instance.paymentStatus,
+      'bookingAmount': instance.bookingAmount,
       'feedbackSubmitted': instance.feedbackSubmitted,
       'bookingService': instance.bookingService,
       'customerDetails': instance.customerDetails,

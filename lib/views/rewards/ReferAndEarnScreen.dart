@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
+import 'package:get/get.dart';
+import '../../controllers/profile_controller.dart'; // Adjust path
 import '../home/home_screen.dart';
 import '../booking/booking_screen.dart';
 import '../profile/profile_screen.dart';
@@ -23,6 +24,8 @@ class ReferAndEarnScreen extends StatefulWidget {
 
 class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
   int _selectedIndex = 3;
+  final ProfileController _profileController = Get.find<ProfileController>();
+  String get _referralCode => _profileController.customer?.referralCode ?? "CHAYAN10";
 
   // Constants
   static const String _playStoreUrl =
@@ -57,14 +60,14 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
         break;
     }
   }
-
-  // Refined share message
   String get _referMessage =>
-      'Hi! I use the Chayan Karo app to book trusted home services '
-      ',including cleaning and female salon services at home.\n\n'
-      'You can download it from Google Play:\n$_playStoreUrl\n\n'
-      'Install the app, explore the services and book directly from your phone.';
-
+      'Hi! I use the Chayan Karo app for home services like cleaning and salon.\n\n'
+      'Download now: $_playStoreUrl\n\n'
+      'Use my Referral Code: $_referralCode to get started!';
+      Future<void> _copyReferralCode() async {
+    await Clipboard.setData(ClipboardData(text: _referralCode));
+    _showSnack('Referral code copied!');
+  }
   // WhatsApp: open chat chooser with prefilled message
   Future<void> _openWhatsApp() async {
     final encodedText = Uri.encodeComponent(_referMessage);
@@ -250,6 +253,59 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                                 ),
                                 SizedBox(height: 24.h * scaleFactor),
                                 Padding(
+  padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+  child: Container(
+    width: double.infinity,
+    padding: EdgeInsets.all(20.r * scaleFactor),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12.r * scaleFactor),
+      border: Border.all(color: const Color(0xFFFF6E00), width: 1),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 5),
+        )
+      ],
+    ),
+    child: Column(
+      children: [
+        Text(
+          'Your Referral Code',
+          style: TextStyle(
+            fontSize: 14.sp * scaleFactor,
+            color: Colors.grey[600],
+            fontFamily: 'SFProRegular',
+          ),
+        ),
+        SizedBox(height: 10.h * scaleFactor),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _referralCode,
+              style: TextStyle(
+                fontSize: 24.sp * scaleFactor,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+                color: const Color(0xFFFF6E00),
+              ),
+            ),
+            SizedBox(width: 15.w * scaleFactor),
+            IconButton(
+              onPressed: _copyReferralCode,
+              icon: Icon(Icons.copy, color: Colors.grey[700]),
+              tooltip: 'Copy Code',
+            ),
+          ],
+        ),
+      ],
+    ),
+  ),
+),
+SizedBox(height: 24.h * scaleFactor),
+                                Padding(
                                   padding: EdgeInsets.symmetric(
                                       horizontal: 16.w * scaleFactor),
                                   child: Container(
@@ -260,6 +316,7 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
                                       borderRadius:
                                           BorderRadius.circular(10.r * scaleFactor),
                                     ),
+                                    
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [

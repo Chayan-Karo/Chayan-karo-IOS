@@ -130,6 +130,11 @@ class _FinancialDetailsScreenState extends State<FinancialDetailsScreen> {
                       ),
                     ),
                     const Icon(Icons.verified, color: Colors.green, size: 20),
+                    SizedBox(width: 8.w),
+IconButton(
+  icon: Icon(Icons.edit_outlined, color: Colors.grey, size: 20 * scaleFactor),
+  onPressed: () => _showAddBankSheet(scaleFactor, existingBank: bank), // Pass existing data
+),
                   ],
                 ),
               );
@@ -159,14 +164,16 @@ class _FinancialDetailsScreenState extends State<FinancialDetailsScreen> {
   }
 
   // --- MODAL BOTTOM SHEET FOR ADDING BANK ---
-  void _showAddBankSheet(double scaleFactor) {
-    final formKey = GlobalKey<FormState>();
-    final bankNameCtrl = TextEditingController();
-    final accNumCtrl = TextEditingController();
-    final reAccNumCtrl = TextEditingController();
-    final ifscCtrl = TextEditingController();
-    final upiCtrl = TextEditingController();
+  void _showAddBankSheet(double scaleFactor,{BankDetail? existingBank}) {
+    
+    final bool isEdit = existingBank != null; // Helper to check mode
 
+    final formKey = GlobalKey<FormState>();
+    final bankNameCtrl = TextEditingController(text: existingBank?.bankName);
+  final accNumCtrl = TextEditingController(text: existingBank?.accountNumber);
+  final reAccNumCtrl = TextEditingController(text: existingBank?.accountNumber);
+  final ifscCtrl = TextEditingController(text: existingBank?.ifscCode);
+  final upiCtrl = TextEditingController(text: existingBank?.upiId);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -274,21 +281,39 @@ class _FinancialDetailsScreenState extends State<FinancialDetailsScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                         elevation: 0,
                       ),
-                      onPressed: () async {
-                        if (formKey.currentState!.validate()) {
-                          bool success = await _fController.saveBankDetails(
-                            bankNameCtrl.text.trim(),
-                            accNumCtrl.text.trim(),
-                            ifscCtrl.text.trim().toUpperCase(),
-                            upiCtrl.text.trim(),
-                          );
-                          if (success && mounted) {
-                            Navigator.pop(context);
-                            Get.snackbar("Success", "Bank details added successfully", 
-                              backgroundColor: Colors.green[100], colorText: Colors.green[800]);
-                          }
-                        }
-                      },
+                    onPressed: () async {
+  if (formKey.currentState!.validate()) {
+    bool success;
+    if (isEdit) {
+      // ✅ CALL UPDATE LOGIC
+      success = await _fController.updateBankDetails(
+        bankId: existingBank.id!, // Pass the ID for the update
+        bank: bankNameCtrl.text.trim(),
+        acc: accNumCtrl.text.trim(),
+        ifsc: ifscCtrl.text.trim().toUpperCase(),
+        upi: upiCtrl.text.trim(),
+      );
+    } else {
+      // CALL SAVE LOGIC (Existing)
+      success = await _fController.saveBankDetails(
+        bankNameCtrl.text.trim(),
+        accNumCtrl.text.trim(),
+        ifscCtrl.text.trim().toUpperCase(),
+        upiCtrl.text.trim(),
+      );
+    }
+
+    if (success && mounted) {
+      Navigator.pop(context);
+      Get.snackbar(
+        "Success", 
+        isEdit ? "Bank details updated" : "Bank details added",
+        backgroundColor: Colors.green[100], 
+        colorText: Colors.green[800]
+      );
+    }
+  }
+},
                       child: const Text("Save Account", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),

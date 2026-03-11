@@ -24,7 +24,7 @@ import '../../models/check_availability_model.dart';
 import '../../models/bank_model.dart'; // Add this import
 import '../../models/bank_response_model.dart';
 import '../../models/banner_model.dart'; // Add this import
-
+import '../../models/coupon_models.dart'; // Add this import
 
 part 'api_service.g.dart';
 
@@ -217,7 +217,23 @@ Future<void> refundBookingAmount(
   @Header("Authorization") String authorization,
   @Body() Map<String, dynamic> refundBody,
 );
+@POST('/user/updateRefundBankDetail') 
+Future<void> updateRefundBankDetail(
+  @Header('Authorization') String token, 
+  @Body() Map<String, dynamic> body
+);
 
 @GET("/user/getAllSlideBanners")
 Future<BannerResponse> getHomeBanners(@Header("Authorization") String token);
+@GET('/user/getAllCoupons')
+Future<CouponResponse> getAllCoupons(
+  @Header("Authorization") String token,
+  @Query("categoryId") String categoryId,
+);
+
+@POST('/user/validateCoupon')
+Future<ValidateCouponResponse> validateCoupon(
+  @Header("Authorization") String token,
+  @Body() Map<String, dynamic> body,
+);
 }

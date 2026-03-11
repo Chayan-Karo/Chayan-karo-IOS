@@ -4,11 +4,31 @@ import 'package:json_annotation/json_annotation.dart';
 part 'booking_read_models.g.dart';
 
 @JsonSerializable()
+class BookingAmount {
+  final num actualAmount;
+  final num plateFormFee;
+  final num gstAmount;
+  final num gstPercentage;
+
+  BookingAmount({
+    required this.actualAmount,
+    required this.plateFormFee,
+    required this.gstAmount,
+    required this.gstPercentage,
+  });
+
+  factory BookingAmount.fromJson(Map<String, dynamic> json) =>
+      _$BookingAmountFromJson(json);
+
+  Map<String, dynamic> toJson() => _$BookingAmountToJson(this);
+}
+
+@JsonSerializable()
 class CustomerInfo {
   final String id;
   final String mobileNo;
   final String? emailId;
-  final String firstName;
+  final String? firstName;
   final String? middleName;
   final String lastName;
   final String? gender;
@@ -17,7 +37,7 @@ class CustomerInfo {
     required this.id,
     required this.mobileNo,
     this.emailId,
-    required this.firstName,
+    this.firstName,
     this.middleName,
     required this.lastName,
     this.gender,
@@ -37,6 +57,8 @@ class AddressInfo {
   final String city;
   final String state;
   final String postCode;
+  final String? addressType;
+
   final String? geoBoundary;
 
   AddressInfo({
@@ -46,6 +68,8 @@ class AddressInfo {
     required this.city,
     required this.state,
     required this.postCode,
+    this.addressType,
+
     this.geoBoundary,
   });
 
@@ -60,18 +84,18 @@ class ServiceProviderInfo {
   final String id;
   final String mobileNo;
   final String? emailId;
-  final String firstName;
+  final String? firstName;
   final String? middleName;
-  final String lastName;
+  final String? lastName;
   final String? gender;
 
   ServiceProviderInfo({
     required this.id,
     required this.mobileNo,
     this.emailId,
-    required this.firstName,
+    this.firstName,
     this.middleName,
-    required this.lastName,
+    this.lastName,
     this.gender,
   });
 
@@ -92,6 +116,7 @@ class BookingServiceRead {
   final int discountPercentage;
   final num price;
   final num discountPrice;
+  final int? serviceDuration;
 
   BookingServiceRead({
     required this.id,
@@ -103,6 +128,8 @@ class BookingServiceRead {
     required this.discountPercentage,
     required this.price,
     required this.discountPrice,
+    this.serviceDuration,
+
   });
 
   factory BookingServiceRead.fromJson(Map<String, dynamic> json) =>
@@ -127,6 +154,7 @@ class CustomerBooking {
   // NEW FIELDS from backend
   final String? paymentMode;   // "ONLINE", "CASH"
   final String? paymentStatus; // "Paid", "UnPaid"
+  final BookingAmount? bookingAmount;
   @JsonKey(defaultValue: false)
   final bool feedbackSubmitted;
 
@@ -151,6 +179,7 @@ class CustomerBooking {
     required this.bookingPin,
     this.paymentMode,
     this.paymentStatus,
+    this.bookingAmount, // ✅ ADD THIS
     this.feedbackSubmitted = false, // ✅
     required this.bookingService,
     required this.customerDetails,

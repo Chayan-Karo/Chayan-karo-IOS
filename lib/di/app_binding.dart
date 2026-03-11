@@ -18,7 +18,8 @@ import '../../controllers/service_controller.dart';
 import '../../controllers/location_controller.dart';
 import '../../controllers/saathi_controller.dart';
 import '../../controllers/payment_controller.dart';
-
+import '../controllers/coupon_controller.dart';
+import '../data/repository/coupon_repository.dart';
 // NEW
 import '../../controllers/booking_controller.dart';
 import '../../controllers/booking_read_controller.dart'; // if you have a list reader
@@ -117,6 +118,13 @@ class AppBinding extends Bindings {
       () => BannerRepository(),
       fenix: true,
     );
+    Get.lazyPut<CouponRepository>(
+  () => CouponRepository(
+    database: Get.find<AppDatabase>(), // Using Find as requested
+  ),
+  fenix: true,
+);
+print('✅ CouponRepository registered (lazy)');
   }
 
   void _registerControllers() {
@@ -177,6 +185,13 @@ class AppBinding extends Bindings {
       () => BannerController(), 
       fenix: true,
     );
+   Get.lazyPut<CouponController>(
+  () => CouponController(
+    repo: Get.find<CouponRepository>(), // Inject repo into controller
+  ),
+  fenix: true,
+);
+print('✅ CouponController registered (lazy)');
   }
 
   void _debugRegisteredDependencies() {

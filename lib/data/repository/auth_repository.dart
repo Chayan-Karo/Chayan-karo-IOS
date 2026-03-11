@@ -47,21 +47,25 @@ class AuthRepository {
   }
 
   Future<AuthResponse> verifyOtp({
-    required String phoneNumber,
-    required String otp,
-  }) async {
-    try {
-      final request = VerifyOtpRequest(
-        mobileNo: phoneNumber,
-        otp: otp,
-      );
-      print('📤 Verifying OTP request: ${request.toJson()}');
-      return await _networkClient.apiService.verifyOtp(request);
-    } catch (e) {
-      print('❌ Auth Repository - Verify OTP Error: $e');
-      rethrow;
-    }
+  required String phoneNumber,
+  required String otp,
+  String? fcmToken,
+  String? referralCode,
+}) async {
+  try {
+    final request = VerifyOtpRequest(
+      mobileNo: phoneNumber,
+      otp: otp,
+      fcmToken: fcmToken,
+      referralCode: referralCode ?? "",
+    );
+    print('📤 Verifying OTP with FCM: ${request.toJson()}');
+    return await _networkClient.apiService.verifyOtp(request);
+  } catch (e) {
+    print('❌ Auth Repository - Verify OTP Error: $e');
+    rethrow;
   }
+}
 
   Future<Map<String, dynamic>> verifyOtpGeneric({
     required String phoneNumber,

@@ -24,6 +24,22 @@ Map<String, dynamic> _$BookingServiceItemToJson(BookingServiceItem instance) =>
       'discountPrice': instance.discountPrice,
     };
 
+BookingAmount _$BookingAmountFromJson(Map<String, dynamic> json) =>
+    BookingAmount(
+      actualAmount: json['actualAmount'] as num,
+      plateFormFee: json['plateFormFee'] as num,
+      gstAmount: json['gstAmount'] as num,
+      gstPercentage: json['gstPercentage'] as num,
+    );
+
+Map<String, dynamic> _$BookingAmountToJson(BookingAmount instance) =>
+    <String, dynamic>{
+      'actualAmount': instance.actualAmount,
+      'plateFormFee': instance.plateFormFee,
+      'gstAmount': instance.gstAmount,
+      'gstPercentage': instance.gstPercentage,
+    };
+
 AddBookingRequest _$AddBookingRequestFromJson(Map<String, dynamic> json) =>
     AddBookingRequest(
       spId: json['spId'] as String,
@@ -32,6 +48,10 @@ AddBookingRequest _$AddBookingRequestFromJson(Map<String, dynamic> json) =>
       bookingTime: json['bookingTime'] as String,
       bookingDate: json['bookingDate'] as String,
       paymentMode: json['paymentMode'] as String,
+      couponId: json['couponId'] as String?,
+      bookingAmount: BookingAmount.fromJson(
+        json['bookingAmount'] as Map<String, dynamic>,
+      ),
       bookingService: (json['bookingService'] as List<dynamic>)
           .map((e) => BookingServiceItem.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -45,6 +65,8 @@ Map<String, dynamic> _$AddBookingRequestToJson(AddBookingRequest instance) =>
       'bookingTime': instance.bookingTime,
       'bookingDate': instance.bookingDate,
       'paymentMode': instance.paymentMode,
+      'couponId': instance.couponId,
+      'bookingAmount': instance.bookingAmount,
       'bookingService': instance.bookingService,
     };
 

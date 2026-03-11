@@ -16,15 +16,16 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  late final NotificationService _notificationService;
+   //final NotificationService _notificationService;
 
 
   @override
   void initState() {
     super.initState();
     // 🔥 INIT FCM ON APP START
-  _notificationService = NotificationService();
-  _notificationService.init();
+  //_notificationService = NotificationService();
+  //_notificationService.init();
+  NotificationService().init();
 
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1000),

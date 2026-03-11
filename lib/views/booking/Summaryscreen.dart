@@ -12,6 +12,7 @@ import 'showScheduleAddressPopup.dart';
 import 'booking_successful_screen.dart';
 import 'PaymentScreen.dart';
 import '../chayan_sathi/chayan_sathi_screen.dart';
+import '../../models/coupon_models.dart';
 
 // --- Controller & Model Imports ---
 import '../../controllers/cart_controller.dart';
@@ -23,6 +24,7 @@ import '../../models/service_models.dart';
 import '../../models/category_models.dart'; 
 import '../../models/booking_models.dart';
 import '../../utils/test_extensions.dart';
+import '../../controllers/coupon_controller.dart';
 
 // --- WIDGET IMPORT ---
 // Ensure summary_widgets.dart is in the same folder or update path
@@ -82,7 +84,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
   TimeOfDay? _inlineTime;
   bool _isGlobalLoading = false;
   
-  CouponModel? _selectedCoupon;
+Coupon? _selectedCoupon;
 
   late final LocationController _locationController;
   late final BookingController _bookingController;
@@ -90,6 +92,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
 @override
   void initState() {
     super.initState();
+    Get.find<CouponController>().selectedCoupon.value = null;
     address = widget.initialAddress;
     timeSlot = widget.initialTimeSlot;
     saathi = widget.initialSaathi;
@@ -174,6 +177,13 @@ class _SummaryScreenState extends State<SummaryScreen> {
       });
     }
   }
+  void _handleBack() {
+  // ✅ Clear the coupon state
+  Get.find<CouponController>().selectedCoupon.value = null;
+  
+  // ✅ Then pop the screen
+  Navigator.pop(context);
+}
 
   // ✅ NEW: Context-Aware Cart Item Retrieval
   List<CartItem> _getCurrentPageCartItems(CartController cartController) {
@@ -309,12 +319,21 @@ class _SummaryScreenState extends State<SummaryScreen> {
     if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateToSend)) {
        dateToSend = DateFormat('yyyy-MM-dd').format(DateTime.now());
     }
+      final items = _getCurrentPageCartItems(Get.find<CartController>());
+  
+
+        
+    final int totalDuration = _estimateTotalDurationMinutes(items);
+
 
     final DateTime? picked = await showMergedBookingModal(
       context,
       initialDateStr: dateToSend,
       initialTime: _inlineTime,
       minTimeConstraint: nextSlotConstraint,
+      currentBookingDuration: totalDuration,
+
+      
     );
 
     if (picked != null) {
@@ -422,50 +441,65 @@ class _SummaryScreenState extends State<SummaryScreen> {
     return totalMinutes;
   }
 
-List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
+List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items, {int couponPct = 0}) {
     final cart = Get.find<CartController>();
     final Map<String, _Agg> agg = {};
     
     for (final it in items) {
-      // ✅ FIX: Use correct quantity getter based on mode
       final q = widget.isRebooking 
           ? cart.getRebookingQuantity(it.id) 
           : cart.getQuantity(it.id);
 
-      // If quantity is 0, it skips adding to the list (This was your bug)
       if (q <= 0) continue;
 
       final key = '${it.categoryId}::${it.id}';
+      
+      // 1. Original Price (The "Price" field in API)
       final pricePerUnit = it.hasDiscount ? it.originalPrice : it.price;
-      final discountPerUnit = it.hasDiscount ? it.price : it.price;
-      final discountPct = it.hasDiscount && it.originalPrice > 0
+      
+      // 2. Base Discount from Item (e.g. 10% off on the menu)
+      int itemDiscountPct = it.hasDiscount && it.originalPrice > 0
           ? (((it.originalPrice - it.price) / it.originalPrice) * 100).round()
           : 0;
+          
+      // 3. Total Discount Percentage (Item Discount + Coupon Discount)
+      final totalDiscountPct = itemDiscountPct + couponPct;
 
       final entry = agg.putIfAbsent(
         key,
-        () => _Agg(categoryId: it.categoryId, serviceId: it.id, discountPct: discountPct),
+        () => _Agg(categoryId: it.categoryId, serviceId: it.id, discountPct: totalDiscountPct),
       );
+      
       entry.price += pricePerUnit * q;
-      entry.discountPrice += discountPerUnit * q;
+      
+      // 4. Calculate final discountPrice for this item after Coupon
+      double effectiveItemPrice = it.price.toDouble(); 
+      if (couponPct > 0) {
+        effectiveItemPrice = effectiveItemPrice * (1 - (couponPct / 100));
+      }
+      entry.discountPrice += effectiveItemPrice * q;
     }
 
-    return agg.values
-        .map((a) => BookingServiceItem(
-              categoryId: a.categoryId,
-              serviceId: a.serviceId,
-              discountPercentage: a.discountPct,
-              price: a.price,
-              discountPrice: a.discountPrice,
-            ))
-        .toList();
+    return agg.values.map((a) => BookingServiceItem(
+      categoryId: a.categoryId,
+      serviceId: a.serviceId,
+      discountPercentage: a.discountPct, // Combined %
+      price: a.price,                   // Original Total
+      discountPrice: a.discountPrice,   // Final price user paid for this item
+    )).toList();
   }
-  // --- BUILD METHOD ---
   @override
   Widget build(BuildContext context) {
     final CartController cartController = Get.find<CartController>();
+    final CouponController couponController = Get.find<CouponController>(); // <--- ADD IT HERE
 
-    return LayoutBuilder(builder: (context, constraints) {
+    return PopScope(
+    canPop: false, // Prevent default pop
+    onPopInvokedWithResult: (didPop, result) {
+      if (didPop) return;
+      _handleBack(); // Trigger our manual cleanup and pop
+    },
+    child: LayoutBuilder(builder: (context, constraints) {
       final bool isTablet = constraints.maxWidth > 600;
       final double scale = isTablet ? constraints.maxWidth / 411 : 1.0;
 
@@ -473,6 +507,7 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
         // Data Preparation
         final currentPageItems = _getCurrentPageCartItems(cartController);
         final hasCurrentPageItems = currentPageItems.isNotEmpty;
+        final selected = couponController.selectedCoupon.value;
         
         String currentCategoryId = '';
         if (currentPageItems.isNotEmpty) {
@@ -485,28 +520,42 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
         final String categoryName = category?.categoryName ?? '';
 
         // Financial Calculations
-        final itemTotal = _calculateCurrentPageTotal(currentPageItems);
-        final int servicePriceInclusive = itemTotal.round();
-        
-        final int booking       = servicePriceInclusive;
-        final int platformFee = (booking * 0.20).round();
-        final int perService  = (booking * 0.80).round();
-        final int gst         = (platformFee * 0.18).round();
-        final int subTotal    = perService + platformFee + gst; 
-        
-        double discountAmount = 0.0;
-        if (_selectedCoupon != null) {
-            if (subTotal > _selectedCoupon!.minOrderAmount) {
-                if (_selectedCoupon!.isPercentage) {
-                    discountAmount = subTotal * (_selectedCoupon!.value / 100);
-                } else {
-                    discountAmount = _selectedCoupon!.value;
-                }
-            }
-        }
-        
-        final int totalRaw = (subTotal - discountAmount).toInt();
-        final int total = totalRaw > 0 ? totalRaw : 0; 
+        // --- Financial Calculations (80/20 Scenario) ---
+final double itemTotal = _calculateCurrentPageTotal(currentPageItems);
+final int servicePriceInclusive = itemTotal.round(); // Actual Service Price (100%)
+
+// 1. Calculate the Platform's 20% share
+final double platformShare = servicePriceInclusive * 0.20;
+
+// 2. Calculate 18% GST ONLY on that 20% share
+final int gstOnFee = (platformShare * 0.18).round();
+
+// 3. User views: Actual Service Price + GST
+final int subTotal = servicePriceInclusive + gstOnFee;
+
+double discountAmount = 0.0;
+int? discountPercentage; // New field to pass to API
+
+if (selected != null) {
+  if (subTotal >= selected.minPurchaseAmount) {
+    if (selected.discountType == "PERCENTAGE") {
+      discountPercentage = selected.discountPercentage.toInt();
+      discountAmount = subTotal * (selected.discountPercentage / 100);
+    } else {
+      discountAmount = selected.amount;
+      // Calculate effective percentage for the API
+      discountPercentage = ((discountAmount / subTotal) * 100).round();
+    }
+  } else {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      couponController.selectedCoupon.value = null;
+    });
+  }
+}
+
+// 4. Final calculation for the user to pay
+final int totalRaw = (subTotal - discountAmount).toInt();
+final int total = totalRaw > 0 ? totalRaw : 0;
         
         final inr = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
         final scheduledDisplay = _formatFullScheduleDisplay();
@@ -522,7 +571,7 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
                   children: [
                     ChayanHeader(
                       title: 'Summary',
-                      onBack: () => Navigator.pop(context),
+                      onBack: _handleBack, // Now points to our handler
                     ),
                     Expanded(
                       child: SingleChildScrollView(
@@ -638,38 +687,48 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
                               const SizedBox.shrink(),
 
                             SizedBox(height: 20.h * scale),
+                            
 
                             // --- MODULE 4: COUPONS ---
-                            if (hasCurrentPageItems) ...[
-                              SummaryCouponsRow(
-                                scale: scale,
-                                selectedCoupon: _selectedCoupon,
-                                discountAmount: discountAmount,
-                                onTap: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    builder: (context) => CouponsBottomSheet(
-                                      scale: scale,
-                                      selectedCoupon: _selectedCoupon,
-                                      orderAmount: subTotal.toDouble(),
-                                      onApply: (coupon) {
-                                        setState(() {
-                                          _selectedCoupon = coupon;
-                                        });
-                                        Get.snackbar('Coupon Applied', '${coupon.code} applied!', backgroundColor: Colors.green[100], colorText: Colors.green[800]);
-                                      },
-                                      onRemove: () {
-                                        setState(() {
-                                          _selectedCoupon = null;
-                                        });
-                                        Get.snackbar('Coupon Removed', 'Coupon removed', backgroundColor: Colors.red[100], colorText: Colors.red[800]);
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
+                           if (hasCurrentPageItems) ...[
+  SummaryCouponsRow(
+  scale: scale,
+  selectedCoupon: couponController.selectedCoupon.value,
+  discountAmount: discountAmount,
+  onRemove: () => couponController.removeCoupon(), 
+  onTap: () {
+    // 1. Fetch fresh coupons for this category
+    couponController.fetchCoupons(currentCategoryId);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CouponsBottomSheet(
+        scale: scale,
+        orderAmount: subTotal.toDouble(),
+        selectedCoupon: couponController.selectedCoupon.value,
+        // ✅ UPDATED: Added async/await to handle sheet closing
+        onApply: (coupon) async {
+          final bool success = await couponController.applyCoupon(
+            coupon, 
+            subTotal.toDouble(), 
+            currentCategoryId,
+          );
+          
+          // ✅ Close the sheet only if validation succeeded
+          if (success && mounted) {
+            Navigator.of(context).pop(); 
+          }
+        },
+        onRemove: () {
+          couponController.removeCoupon();
+          // Use Navigator for consistency within the UI layer
+        },
+      ),
+    );
+  },
+),
                               
                               SizedBox(height: 20.h * scale),
                               
@@ -754,11 +813,25 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
                                     _inlineTime,
                                 );
                                 
-                                final bookingItems = _mapCartToBookingItems(currentPageItems);
+// --- ADD THIS LOGIC TO SYNC WITH BUILD CALCULATIONS ---
+int couponPctForMapper = 0;
+if (selected != null) {
+  if (selected.discountType == "PERCENTAGE") {
+    couponPctForMapper = selected.discountPercentage.toInt();
+  } else {
+    // For FLAT discounts, calculate the effective percentage for the items
+    couponPctForMapper = ((discountAmount / subTotal) * 100).round();
+  }
+}
+
+// Pass the percentage to the mapper so 'discountPrice' per item is correct
+final bookingItems = _mapCartToBookingItems(currentPageItems, couponPct: couponPctForMapper);
                                 final totalDuration = _estimateTotalDurationMinutes(currentPageItems);
                                 final spId = saathi!['id'].toString();
                                 final addressId = _addressId!;
                                 final paymentMode = _paymentMethod == PaymentMethod.afterService ? 'CASH' : 'ONLINE';
+                                final String? selectedCouponId = couponController.selectedCoupon.value?.id;
+                                const double currentGstPercentage = 18.0;
                                 
                                 // 5. SUBMIT VIA CONTROLLER
                                 
@@ -772,6 +845,11 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
                                       paymentMode: 'ONLINE',
                                       services: bookingItems,
                                       totalDuration: totalDuration,
+                                      couponId: selectedCouponId,
+                                      actualAmount: servicePriceInclusive, 
+    plateFormFee: platformShare.round(),
+    gstAmount: gstOnFee,
+    gstPercentage: 18.0,
                                     );
 
                                     if (!(res.success) || (res.bookingId ?? '').isEmpty) {
@@ -831,6 +909,12 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
                                       paymentMode: paymentMode,
                                       services: bookingItems,
                                       totalDuration: totalDuration,
+// ✅ Coupon Logic: Pass values if selected, else null
+couponId: selectedCouponId, // Null if no coupon applied  
+                                        actualAmount: servicePriceInclusive, 
+    plateFormFee: platformShare.round(),
+    gstAmount: gstOnFee,
+    gstPercentage: 18.0,
                                     );
 
                                     if (res.success && (res.bookingId?.isNotEmpty ?? false)) {
@@ -881,11 +965,12 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items) {
                        child: ThreeDotLoader(size: 20.0, color: const Color(0xFFE47830)),
                      ),
                    ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      });
-    });
+          );
+        }); 
+      }), 
+    ); 
   }
 }

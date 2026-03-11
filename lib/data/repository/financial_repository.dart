@@ -33,4 +33,16 @@ class FinancialRepository {
       rethrow;
     }
   }
+  // 1. Add the update endpoint to your existing repository
+Future<void> updateBankDetails(Map<String, dynamic> details) async {
+  final token = await _db.getAuthToken();
+  if (token == null) throw Exception('User not authenticated');
+
+  try {
+    // This calls the @PUT or @POST endpoint in your ApiService
+    await _api.updateRefundBankDetail('Bearer $token', details);
+  } catch (e) {
+    rethrow;
+  }
+}
 }

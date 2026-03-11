@@ -18,6 +18,7 @@ Map<String, dynamic> _$CustomerResponseToJson(CustomerResponse instance) =>
 Customer _$CustomerFromJson(Map<String, dynamic> json) => Customer(
   id: json['id'] as String,
   mobileNo: json['mobileNo'] as String,
+  referralCode: json['referralCode'] as String?,
   emailId: json['emailId'] as String?,
   firstName: json['firstName'] as String?,
   middleName: json['middleName'] as String?,
@@ -31,6 +32,7 @@ Customer _$CustomerFromJson(Map<String, dynamic> json) => Customer(
 Map<String, dynamic> _$CustomerToJson(Customer instance) => <String, dynamic>{
   'id': instance.id,
   'mobileNo': instance.mobileNo,
+  'referralCode': instance.referralCode,
   'emailId': instance.emailId,
   'firstName': instance.firstName,
   'middleName': instance.middleName,

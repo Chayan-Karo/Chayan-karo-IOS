@@ -34,10 +34,17 @@ VerifyOtpRequest _$VerifyOtpRequestFromJson(Map<String, dynamic> json) =>
     VerifyOtpRequest(
       mobileNo: json['mobileNo'] as String,
       otp: json['otp'] as String,
+      fcmToken: json['fcmToken'] as String?,
+      referralCode: json['referralCode'] as String? ?? "",
     );
 
 Map<String, dynamic> _$VerifyOtpRequestToJson(VerifyOtpRequest instance) =>
-    <String, dynamic>{'mobileNo': instance.mobileNo, 'otp': instance.otp};
+    <String, dynamic>{
+      'mobileNo': instance.mobileNo,
+      'otp': instance.otp,
+      'fcmToken': instance.fcmToken,
+      'referralCode': instance.referralCode,
+    };
 
 AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) => AuthResponse(
   type: json['type'] as String,

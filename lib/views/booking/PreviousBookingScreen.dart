@@ -166,8 +166,7 @@ class PreviousBookingScreen extends StatelessWidget {
                   // Billing (80/20 + 18% on platform)
                   _billingSection(
                     scaleFactor,
-                    itemTotal: booking.bookingService.fold<num>(0, (sum, s) => sum + (s.price)),
-                    itemDiscount: booking.bookingService.fold<num>(0, (sum, s) => sum + (s.price - s.discountPrice)),
+                   booking: booking,
                   ),
 
                   SizedBox(height: 24.h * scaleFactor),
@@ -317,116 +316,136 @@ class PreviousBookingScreen extends StatelessWidget {
   }
 
   // Updated Billing: 80% per service + 20% platform + 18% GST (on platform)
-  Widget _billingSection(
-    double scaleFactor, {
-    required num itemTotal,
-    required num itemDiscount,
-  }) {
-    // Base to split: post-discount value
-    final int bookingBase = (itemTotal - itemDiscount).toInt();
-    final int platformFee = (bookingBase * 0.20).round(); // 20%
-    final int perService = (bookingBase * 0.80).round(); // 80%
-    final int gstOnPlat = (platformFee * 0.18).round(); // 18% of platform
-    final int total = perService + platformFee + gstOnPlat;
+ Widget _billingSection(
+  double scaleFactor, {
+  required CustomerBooking booking,
+}) {
+  // 1. Prioritize backend-calculated amounts
+  final bool hasAmountData = booking.bookingAmount != null;
 
-    final inr = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+  // Actual total of items (100% service price)
+  final double actualAmount = hasAmountData
+      ? booking.bookingAmount!.actualAmount.toDouble()
+      : booking.bookingService.fold<double>(0, (sum, s) => sum + s.discountPrice.toDouble());
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-      child: Container(
-        decoration: ShapeDecoration(
-          shape: RoundedRectangleBorder(
-            side: BorderSide(width: 2.w * scaleFactor, color: const Color(0xFFF3F3F3)),
-            borderRadius: BorderRadius.circular(10 * scaleFactor),
-          ),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(16.w * scaleFactor, 16.w * scaleFactor, 16.w * scaleFactor, 0),
-              child: Row(
-                children: [
-                  Text(
-                    'Billing Details',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16.sp * scaleFactor,
-                      fontFamily: 'SF Pro Display',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // --- INSERT NEW FIELDS HERE ---
-            SizedBox(height: 12.h * scaleFactor), // Add some spacing
-            
-            // 1. Reference Number
-            if (booking.bookingReferenceNumber.isNotEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-                child: _detailRow('Reference No.', booking.bookingReferenceNumber, scaleFactor: scaleFactor, isCopyable: true),
-              ),
+  // 20% Platform Fee (Internal logic, hidden from simplified UI)
+  final double platformFee = hasAmountData
+      ? booking.bookingAmount!.plateFormFee.toDouble()
+      : (actualAmount * 0.20);
 
-            // 2. Booking PIN
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-              child: _detailRow('Start PIN', booking.bookingPin.toString().padLeft(4, '0'), scaleFactor: scaleFactor),
-            ),
+  // 18% GST ONLY on the platform fee portion
+  final int gstOnPlat = hasAmountData
+      ? booking.bookingAmount!.gstAmount.toInt()
+      : (platformFee * 0.18).round();
 
-            // 3. Payment Status
-            if (booking.paymentStatus != null)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-                child: _detailRow('Payment Status', booking.paymentStatus!, scaleFactor: scaleFactor),
-              ),
+  // Total payable by user: (100% Items + calculated GST)
+  final int total = (actualAmount + gstOnPlat).round();
 
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-              child: Divider(height: 24.h * scaleFactor, color: const Color(0xFFF3F3F3), thickness: 1.5),
-            ),
-            // -----------------------------
+  final inr = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
-            _billingRow('Per Service Charge', inr.format(perService), scaleFactor: scaleFactor),
-            _billingRow('Platform Fee', inr.format(platformFee), scaleFactor: scaleFactor),
-            _billingRow('GST on Platform (18%)', inr.format(gstOnPlat),
-                color: Colors.black87, scaleFactor: scaleFactor),
-
-            _billingRow('Total', inr.format(total), isBold: true, scaleFactor: scaleFactor),
-
-            Container(
-              height: 47.h * scaleFactor,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F3F3),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(10.h * scaleFactor),
-                  bottomRight: Radius.circular(10.h * scaleFactor),
-                ),
-              ),
-              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Payment mode', style: TextStyle(fontFamily: 'Inter', fontSize: 14.sp * scaleFactor)),
- Text(
-                                        _paymentModeLabel(
-                                            booking),
-                                        style: TextStyle(
-                                          fontSize: 14.sp *
-                                              scaleFactor,
-                                          fontWeight:
-                                              FontWeight.w500,
-                                        ),
-                                      ),                ],
-              ),
-            ),
-          ],
+  return Padding(
+    padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+    child: Container(
+      decoration: ShapeDecoration(
+        shape: RoundedRectangleBorder(
+          side: BorderSide(width: 2.w * scaleFactor, color: const Color(0xFFF3F3F3)),
+          borderRadius: BorderRadius.circular(10 * scaleFactor),
         ),
       ),
-    );
-  }
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16.w * scaleFactor),
+            child: Row(
+              children: [
+                Text(
+                  'Billing Details',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16.sp * scaleFactor,
+                    fontFamily: 'SF Pro Display',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          if (booking.bookingReferenceNumber.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+              child: _detailRow('Reference No.', booking.bookingReferenceNumber, scaleFactor: scaleFactor, isCopyable: true),
+            ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+            child: _detailRow('Start PIN', booking.bookingPin.toString().padLeft(4, '0'), scaleFactor: scaleFactor),
+          ),
+          if (booking.paymentStatus != null)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+              child: _detailRow('Payment Status', booking.paymentStatus!, scaleFactor: scaleFactor),
+            ),
 
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+            child: Divider(height: 24.h * scaleFactor, color: const Color(0xFFF3F3F3), thickness: 1.5),
+          ),
+
+          // Simplified rows as per requirement
+          _billingRow(
+            'Item Total', 
+            inr.format(actualAmount), 
+            scaleFactor: scaleFactor,
+          ),
+          _billingRow(
+            'Taxes & Fees (GST)', 
+            inr.format(gstOnPlat),
+            color: Colors.black87, 
+            scaleFactor: scaleFactor,
+          ),
+
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+            child: Divider(height: 30.h * scaleFactor, color: const Color(0xFFF3F3F3)),
+          ),
+
+          _billingRow(
+            'Total Amount', 
+            inr.format(total), 
+            isBold: true, 
+            scaleFactor: scaleFactor,
+          ),
+
+          // Payment Mode Footer
+          Container(
+            height: 47.h * scaleFactor,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F3F3),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(10.h * scaleFactor),
+                bottomRight: Radius.circular(10.h * scaleFactor),
+              ),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Payment mode', style: TextStyle(fontFamily: 'Inter', fontSize: 14.sp * scaleFactor)),
+                Text(
+                  _paymentModeLabel(booking),
+                  style: TextStyle(
+                    fontSize: 14.sp * scaleFactor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   Widget _billingRow(
     String label,
     String value, {

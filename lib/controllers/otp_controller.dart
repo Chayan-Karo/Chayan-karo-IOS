@@ -6,11 +6,13 @@ import '../data/repository/auth_repository.dart';
 import '../data/repository/location_repository.dart';
 import '../data/local/database.dart';
 import '../controllers/profile_controller.dart'; 
+import '../../services/notification_service.dart'; // Ensure path is correct
 
 class OtpController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final LocationRepository _locationRepository = Get.find<LocationRepository>();
   final AppDatabase _database = Get.find<AppDatabase>();
+  final NotificationService _notificationService = NotificationService();
 
   // Observable variables
   final _phoneNumber = ''.obs;
@@ -20,6 +22,13 @@ class OtpController extends GetxController {
   final _isButtonEnabled = false.obs;
   final _canResend = false.obs;
   final _secondsRemaining = 30.obs;
+  // 1. Add these observables
+   final _referralController = TextEditingController();
+   final _isExistingUser = false.obs; // This will come from your Login API
+
+// 2. Add getters
+TextEditingController get referralController => _referralController;
+bool get isExistingUser => _isExistingUser.value;
 
   // Controllers and focus nodes for OTP input
   late List<TextEditingController> otpControllers;
@@ -44,6 +53,7 @@ class OtpController extends GetxController {
     final args = Get.arguments as Map<String, dynamic>?;
     if (args != null && args.containsKey('phone')) {
       _phoneNumber.value = args['phone'];
+      _isExistingUser.value = args['userExists'] ?? false; // Catch the boolean here
     }
 
     // Initialize OTP controllers and focus nodes
@@ -169,49 +179,53 @@ void onOtpChanged(String value, int index) {
   }
 
   Future<void> verifyOTP() async {
-    if (_secondsRemaining.value <= 0) {
-      _showErrorSnackbar('OTP has expired. Please click Resend OTP.');
-      return;
-    } 
-    if (_otp.value.length != 4) {
-      _showErrorSnackbar('Please enter complete OTP');
-      return;
-    }
-
-    if (_phoneNumber.value.isEmpty) {
-      _showErrorSnackbar('Phone number not found');
-      return;
-    }
-
-    _isLoading.value = true;
-    _errorMessage.value = '';
-
-    try {
-      print('🔐 Verifying OTP: ${_otp.value} for phone: ${_phoneNumber.value}');
-
-      // Get response from auth repository
-      final response = await _authRepository.verifyOtp(
-        phoneNumber: _phoneNumber.value,
-        otp: _otp.value,
-      );
-
-      print('📥 Verify OTP Response Type: ${response.runtimeType}');
-      print('📥 Verify OTP Response: $response');
-
-      // Universal response handler
-      await _handleUniversalResponse(response);
-    } on DioException catch (e) {
-      _handleDioError(e);
-      _clearOtpFields();
-    } catch (e) {
-      _showErrorSnackbar('An unexpected error occurred. Please try again.');
-      print('❌ Unexpected error verifying OTP: $e');
-      print('❌ Error type: ${e.runtimeType}');
-      _clearOtpFields();
-    } finally {
-      _isLoading.value = false;
-    }
+  if (_secondsRemaining.value <= 0) {
+    _showErrorSnackbar('OTP has expired. Please click Resend OTP.');
+    return;
+  } 
+  if (_otp.value.length != 4) {
+    _showErrorSnackbar('Please enter complete OTP');
+    return;
   }
+
+  if (_phoneNumber.value.isEmpty) {
+    _showErrorSnackbar('Phone number not found');
+    return;
+  }
+
+  _isLoading.value = true;
+  _errorMessage.value = '';
+
+  try {
+    // --- ADD THESE LINES TO GET FCM TOKEN ---
+    String? fcmToken = await _notificationService.getToken();
+    print('🚀 FCM Token for Login: $fcmToken');
+    // ----------------------------------------
+
+    print('🔐 Verifying OTP: ${_otp.value} for phone: ${_phoneNumber.value}');
+
+    // --- UPDATE THIS CALL TO PASS FCM TOKEN ---
+    final response = await _authRepository.verifyOtp(
+      phoneNumber: _phoneNumber.value,
+      otp: _otp.value,
+      fcmToken: fcmToken, // Pass the token here
+      referralCode: _referralController.text.trim(),
+    );
+    // ----------------------------------------
+
+    print('📥 Verify OTP Response: $response');
+    await _handleUniversalResponse(response);
+    
+  } on DioException catch (e) {
+    _handleDioError(e);
+    _clearOtpFields();
+  } catch (e) {
+    _showErrorSnackbar('An unexpected error occurred. Please try again.');
+    _clearOtpFields();
+  } finally {
+    _isLoading.value = false;
+  }
+}
 
   Future<void> _handleUniversalResponse(dynamic response) async {
     try {

@@ -62,7 +62,12 @@ Future<AddBookingResponse> placeBooking({
   required DateTime slot,
   required String paymentMode,
   required List<BookingServiceItem> services,
+  required num actualAmount,   // <--- Added
+  required num plateFormFee,  // <--- Added
+  required num gstAmount,      // <--- Added
+  required num gstPercentage,  // <--- Added
   required int totalDuration,
+  String? couponId,
 }) async {
   try {
     isPlacing.value = true;
@@ -84,7 +89,14 @@ Future<AddBookingResponse> placeBooking({
       bookingTime: bookingTime,
       bookingDate: bookingDate,
       paymentMode: paymentMode,
+      couponId: couponId,
       bookingService: services,
+      bookingAmount: BookingAmount( // <--- Constructing the new object
+        actualAmount: actualAmount,
+        plateFormFee: plateFormFee,
+        gstAmount: gstAmount,
+        gstPercentage: gstPercentage,
+      ),
     );
 
     final res = await _repo.addBooking(req);
@@ -150,6 +162,11 @@ Future<AddBookingResponse> placeBooking({
     required DateTime slot,
     required List<BookingServiceItem> services,
     required int totalDuration,
+    required num actualAmount,   // <--- ADDED
+    required num plateFormFee,  // <--- ADDED
+    required num gstAmount,      // <--- ADDED
+    required num gstPercentage,  // <--- ADDED
+    String? couponId,            // Added for completeness
   }) async {
     final res = await placeBooking(
       spId: spId,
@@ -158,6 +175,12 @@ Future<AddBookingResponse> placeBooking({
       paymentMode: 'ONLINE',
       services: services,
       totalDuration: totalDuration,
+      actualAmount: actualAmount,     // <--- PASSING NEW PARAMETERS
+      plateFormFee: plateFormFee,
+      gstAmount: gstAmount,
+      gstPercentage: gstPercentage,
+      couponId: couponId,
+      
     );
 
     // If placeBooking threw, this is never reached; if we are here, we have a response.

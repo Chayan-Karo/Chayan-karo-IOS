@@ -775,8 +775,8 @@ Widget _buildCategoryInfoBlock(double scaleFactor) {
       },
       {
         'icon': 'assets/icons/card.svg',
-        'title': 'CRED Pay',
-        'subtitle': 'Upto Rs. 100 cashback',
+        'title': 'Safe Discount',
+        'subtitle': 'Apply coupons for instant savings',
       },
     ];
 
