@@ -21,7 +21,7 @@ class OtpController extends GetxController {
   final _errorMessage = ''.obs; // Kept to avoid breaking existing bindings, but we rely on Snackbar now
   final _isButtonEnabled = false.obs;
   final _canResend = false.obs;
-  final _secondsRemaining = 30.obs;
+  final _secondsRemaining = 60.obs;
   // 1. Add these observables
    final _referralController = TextEditingController();
    final _isExistingUser = false.obs; // This will come from your Login API
@@ -575,7 +575,7 @@ void onOtpChanged(String value, int index) {
 
   void _startResendTimer() {
     _canResend.value = false;
-    _secondsRemaining.value = 30;
+    _secondsRemaining.value = 60;
 
     _resendTimer?.cancel();
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {

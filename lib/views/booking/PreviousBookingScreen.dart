@@ -179,7 +179,7 @@ if (booking.totalDuration > 0)
   ),
 
 // ADD THIS: Coupon Applied UI
-if (booking.coupon != null )
+if (booking?.coupon?.couponCode != null)
   Padding(
     padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
     child: Container(
@@ -449,7 +449,7 @@ final int total = (actualAmount + gstOnPlatform).round();
             inr.format(itemTotal), 
             scaleFactor: scaleFactor,
           ),
-          if (booking?.coupon != null || couponDiscount > 0)
+if ((booking?.coupon?.couponCode != null) || couponDiscount > 0)
   _billingRow(
     'Coupon Discount', 
     "- ${inr.format(couponDiscount)}",

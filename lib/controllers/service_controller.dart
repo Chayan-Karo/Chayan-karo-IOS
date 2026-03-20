@@ -16,6 +16,7 @@ class ServiceController extends GetxController {
   final RxString _errorMessage = ''.obs;
   final RxString _currentServiceCategoryId = ''.obs;
   final RxBool _isEmpty = false.obs; // Track if category is empty (404)
+  
 
   // Getters
   List<Service> get services => _services;
@@ -23,6 +24,7 @@ class ServiceController extends GetxController {
   bool get hasError => _hasError.value;
   bool get isEmpty => _isEmpty.value; // New getter for empty state
   String get errorMessage => _errorMessage.value;
+  RxString get currentServiceCategoryId => _currentServiceCategoryId;
 
   @override
   void onInit() {
@@ -36,10 +38,13 @@ class ServiceController extends GetxController {
     print('🔧 ServiceController ready');
   }
 
-  Future<void> loadServices(String serviceCategoryId) async {
-    if (_currentServiceCategoryId.value == serviceCategoryId && _services.isNotEmpty) {
-      return; // Already loaded
-    }
+  Future<void> loadServices(String serviceCategoryId,{bool forceRefresh = false}) async {
+    if (!forceRefresh && 
+      _currentServiceCategoryId.value == serviceCategoryId && 
+      _services.isNotEmpty) {
+    print('ℹ️ Services already loaded, skipping API call');
+    return; 
+  }
 
     _isLoading.value = true;
     _hasError.value = false;

@@ -13,6 +13,9 @@ import '../views/booking/Summaryscreen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'snakeanimation.dart';
 import '../../utils/test_extensions.dart';
+import '../controllers/coupon_controller.dart';
+import '../data/repository/coupon_repository.dart';
+import 'package:shimmer/shimmer.dart';
 
 
 class CategoryServiceScreen extends StatefulWidget {
@@ -35,6 +38,7 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
   final ScrollController _scrollController = ScrollController();
   late ServiceController serviceController;
   late CartController cartController;
+  late CouponController couponController; // Add this
 
   final RxSet<String> _currentPageInteractedServices = <String>{}.obs;
   final RxList<String> _currentPageSelectedServices = <String>[].obs;
@@ -52,6 +56,8 @@ class _CategoryServiceScreenState extends State<CategoryServiceScreen> {
     super.initState();
     serviceController = Get.find<ServiceController>();
     cartController = Get.find<CartController>();
+    couponController = Get.put(CouponController(repo: Get.find<CouponRepository>()));
+    couponController.fetchCoupons(widget.category.categoryId);
     
 
 // 2. ADD HIGHLIGHT INITIALIZATION LOGIC
@@ -766,88 +772,121 @@ Widget _buildCategoryInfoBlock(double scaleFactor) {
     );
   }
 
-  Widget _buildDiscountCards(double scaleFactor) {
-    final List<Map<String, String>> offers = [
-      {
-        'icon': 'assets/icons/cash.svg',
-        'title': 'Save 15% on every order',
-        'subtitle': 'Get Plus now',
-      },
-      {
-        'icon': 'assets/icons/card.svg',
-        'title': 'Safe Discount',
-        'subtitle': 'Apply coupons for instant savings',
-      },
-    ];
+Widget _buildDiscountCards(double scaleFactor) {
+  final CouponController couponController = Get.find<CouponController>();
 
+  return Obx(() {
+    // 1. Loading State - show shimmer
+    if (couponController.isLoading.value) {
+      return _buildShimmerLoading(scaleFactor);
+    }
+
+    // 2. Hide entirely if no coupons exist
+    if (couponController.coupons.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // 3. Show Dynamic Coupons
     return SizedBox(
       height: 100.h * scaleFactor,
       child: ListView.separated(
         padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
         scrollDirection: Axis.horizontal,
-        itemBuilder: (context, index) {
-          final offer = offers[index];
-          return Container(
-            width: 240.w * scaleFactor,
-            padding: EdgeInsets.symmetric(
-              horizontal: 12.h * scaleFactor,
-              vertical: 14.h * scaleFactor,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF6F6F6),
-              borderRadius: BorderRadius.circular(12 * scaleFactor),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 6 * scaleFactor,
-                  offset: Offset(0, 2 * scaleFactor),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                SvgPicture.asset(
-                  offer['icon']!,
-                  width: 28.w * scaleFactor,
-                  height: 28.h * scaleFactor,
-                  color: Colors.black,
-                ),
-                SizedBox(width: 12.w * scaleFactor),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        offer['title']!,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14.sp * scaleFactor,
-                        ),
-                        softWrap: true,
-                        maxLines: 2,
-                      ),
-                      SizedBox(height: 4.h * scaleFactor),
-                      Text(
-                        offer['subtitle']!,
-                        style: TextStyle(
-                          fontSize: 12.sp * scaleFactor,
-                          color: Colors.black54,
-                        ),
-                        softWrap: true,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+        itemCount: couponController.coupons.length,
         separatorBuilder: (_, __) => SizedBox(width: 12.w * scaleFactor),
-        itemCount: offers.length,
+        itemBuilder: (context, index) {
+          final coupon = couponController.coupons[index];
+          
+          final String title = coupon.discountType == "PERCENTAGE" 
+              ? "${coupon.discountPercentage}% Instant Discount" 
+              : "Flat ₹${coupon.amount.toInt()} Off";
+          
+          final String subtitle = coupon.description; 
+          const String iconPath = 'assets/icons/card.svg';
+
+          return _buildSingleDiscountCard(title, subtitle, iconPath, scaleFactor);
+        },
       ),
     );
-  }
+  });
+}
+Widget _buildSingleDiscountCard(String title, String subtitle, String icon, double scaleFactor) {
+  return Container(
+    width: 240.w * scaleFactor,
+    padding: EdgeInsets.symmetric(horizontal: 12.h * scaleFactor, vertical: 14.h * scaleFactor),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF6F6F6),
+      borderRadius: BorderRadius.circular(12 * scaleFactor),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 6 * scaleFactor,
+          offset: Offset(0, 2 * scaleFactor),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        SvgPicture.asset(
+          icon,
+          width: 28.w * scaleFactor,
+          height: 28.h * scaleFactor,
+          color: Colors.black,
+        ),
+        SizedBox(width: 12.w * scaleFactor),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14.sp * scaleFactor,
+                ),
+                maxLines: 1, // Keep title clean
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 4.h * scaleFactor),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12.sp * scaleFactor,
+                  color: Colors.black54,
+                ),
+                maxLines: 2, // Allow subtitle to wrap if needed
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+Widget _buildShimmerLoading(double scaleFactor) {
+  return Shimmer.fromColors(
+    baseColor: Colors.grey[300]!,
+    highlightColor: Colors.grey[100]!,
+    child: SizedBox(
+      height: 100.h * scaleFactor,
+      child: ListView.separated(
+        padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+        scrollDirection: Axis.horizontal,
+        itemCount: 2,
+        separatorBuilder: (_, __) => SizedBox(width: 12.w * scaleFactor),
+        itemBuilder: (context, index) => Container(
+          width: 240.w * scaleFactor,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12 * scaleFactor),
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
  /* Widget _buildCustomPackageSection(double scaleFactor) {
     return Padding(

@@ -37,7 +37,7 @@ android {
         applicationId = "com.chayankaroindia.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36 // Matches your compileSdk
-        versionCode = 35
+        versionCode = 36
         versionName = "1.0.2"
     }
 

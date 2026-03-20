@@ -140,22 +140,22 @@ class BookingServiceRead {
 
 @JsonSerializable()
 class Coupon {
-  final String id;
-  final String couponType;
-  final String couponCode;
-  final num amount;
-  final num minPurchaseAmount;
-  final int discountPercentage;
-  final int sameUserLimit;
+  final String? id;
+  final String? couponType;
+  final String? couponCode;
+  final num? amount;
+  final num? minPurchaseAmount;
+  final int? discountPercentage;
+  final int? sameUserLimit;
 
   Coupon({
-    required this.id,
-    required this.couponType,
-    required this.couponCode,
-    required this.amount,
-    required this.minPurchaseAmount,
-    required this.discountPercentage,
-    required this.sameUserLimit,
+    this.id,
+    this.couponType,
+    this.couponCode,
+    this.amount,
+    this.minPurchaseAmount,
+    this.discountPercentage,
+    this.sameUserLimit,
   });
 
   factory Coupon.fromJson(Map<String, dynamic> json) => _$CouponFromJson(json);

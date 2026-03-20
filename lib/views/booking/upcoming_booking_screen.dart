@@ -360,7 +360,7 @@ final inr = NumberFormat.currency(
                                         16.h * scaleFactor),
                                         // --- NEW LINES START HERE ---
                                         // --- ADD THE COUPON UI HERE ---
-if (booking?.coupon != null)
+if (booking?.coupon?.couponCode != null)
   Padding(
     padding: EdgeInsets.only(bottom: 12.h * scaleFactor),
     child: Container(
@@ -419,7 +419,7 @@ if (booking?.coupon != null)
   inr.format(itemTotal),
   scaleFactor: scaleFactor,
 ),
-if (booking?.coupon != null || couponDiscount > 0)
+if ((booking?.coupon?.couponCode != null) || couponDiscount > 0)
   _billingRow(
     'Coupon Discount', 
     "- ${inr.format(couponDiscount)}",

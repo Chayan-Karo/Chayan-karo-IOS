@@ -118,13 +118,13 @@ Map<String, dynamic> _$BookingServiceReadToJson(BookingServiceRead instance) =>
     };
 
 Coupon _$CouponFromJson(Map<String, dynamic> json) => Coupon(
-  id: json['id'] as String,
-  couponType: json['couponType'] as String,
-  couponCode: json['couponCode'] as String,
-  amount: json['amount'] as num,
-  minPurchaseAmount: json['minPurchaseAmount'] as num,
-  discountPercentage: (json['discountPercentage'] as num).toInt(),
-  sameUserLimit: (json['sameUserLimit'] as num).toInt(),
+  id: json['id'] as String?,
+  couponType: json['couponType'] as String?,
+  couponCode: json['couponCode'] as String?,
+  amount: json['amount'] as num?,
+  minPurchaseAmount: json['minPurchaseAmount'] as num?,
+  discountPercentage: (json['discountPercentage'] as num?)?.toInt(),
+  sameUserLimit: (json['sameUserLimit'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$CouponToJson(Coupon instance) => <String, dynamic>{

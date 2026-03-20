@@ -26,6 +26,7 @@ import '../../controllers/booking_read_controller.dart'; // <--- ADD THIS
 import './widgets/exit_app_dialog.dart';  // <--- ADD THIS
 // Repositories
 import '../../data/repository/location_repository.dart';
+import '../../controllers/service_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -173,12 +174,19 @@ return PopScope(
       final categoryController = Get.find<CategoryController>();
       final homeController = Get.find<HomeController>();
       final cartController = Get.find<CartController>();
+      final serviceController = Get.find<ServiceController>();
 
       await Future.wait([
         categoryController.refreshCategories(),
         homeController.refreshData(),
+      if (serviceController.currentServiceCategoryId.value.isNotEmpty)
+      serviceController.loadServices(
+        serviceController.currentServiceCategoryId.value, 
+        forceRefresh: true
+      ),
       ]);
       cartController.refreshCart();
+      
     },
     child: SingleChildScrollView(
       padding: EdgeInsets.zero,
