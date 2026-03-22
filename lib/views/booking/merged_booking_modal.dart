@@ -368,12 +368,12 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
       final int endMinutes = startMinutes + widget.currentBookingDuration;
       
       // 2. Check if it exceeds 7:00 PM (19 * 60 = 1140 minutes)
-      const int cutoffMinutes = 19 * 60; 
+      const int cutoffMinutes = 20 * 60; 
 
       if (endMinutes > cutoffMinutes) {
         Get.snackbar(
           'Booking Duration Exceeds', 
-          'The total duration exceeds service hours (7 PM). Please select an earlier slot.',
+          'The total duration exceeds service hours (8 PM). Please select an earlier slot.',
           backgroundColor: Colors.red[100],
           colorText: Colors.red[900],
           snackPosition: SnackPosition.TOP,

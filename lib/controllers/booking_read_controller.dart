@@ -69,59 +69,68 @@ class BookingReadController extends GetxController {
   }
 
   /// Call this explicitly from Home Screen
-  Future<void> checkForPendingFeedback() async {
-    // If bookings are empty, try to fetch silently first
-    if (bookings.isEmpty) {
-        try {
-           await fetchCustomerBookings(force: false);
-        } catch(e) {
-           return; // If fetch fails, just stop
-        }
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-
-    // Only look at completed bookings
-    final completedList = bookings.where((b) => (b.status ?? '').toLowerCase() == 'completed');
-
-    for (var booking in completedList) {
-        final String bookingId = booking.id ?? '';
-        if (bookingId.isEmpty) continue;
-
-        String key = 'shown_feedback_for_$bookingId';
-        bool alreadyShown = prefs.getBool(key) ?? false;
-
-        if (!alreadyShown) {
-          // 1. Mark as shown IMMEDIATELY
-          await prefs.setBool(key, true);
-
-          // 2. Extract Data
-          String spId = booking.spId ?? '';
-          
-          // String serviceId = '';
-          String serviceName = '';
-          
-          if (booking.bookingService != null && booking.bookingService!.isNotEmpty) {
-             var s = booking.bookingService!.first;
-             // Try 'id' first (booking specific), then generic 'serviceId'
-             //serviceId = s.id ?? s.serviceId ?? ''; 
-             serviceName = s.serviceIName ?? 'Service';
-          }
-
-          // 3. Trigger Navigation
-          Get.to(
-            () => const FeedbackScreen(),
-            arguments: {
-              'spId': spId,
-              'bookingId': bookingId,
-             // 'serviceId': serviceId,
-              'serviceName': serviceName,
-            },
-          );
-
-          // 4. Break - Only show ONE popup per app open
-          break; 
-        }
+ Future<void> checkForPendingFeedback() async {
+  // If bookings are empty, try to fetch silently first
+  if (bookings.isEmpty) {
+    try {
+      await fetchCustomerBookings(force: false);
+    } catch (e) {
+      return; // If fetch fails, just stop
     }
   }
+
+  final prefs = await SharedPreferences.getInstance();
+
+  // Only look at completed bookings
+  final completedList = bookings.where(
+    (b) => (b.status ?? '').toLowerCase() == 'completed',
+  );
+
+  for (var booking in completedList) {
+    final String bookingId = booking.id ?? '';
+    if (bookingId.isEmpty) continue;
+
+    // ✅ 1. BACKEND CHECK (HIGHEST PRIORITY 🚨)
+    // Replace 'feedback' with your actual field if different
+    final bool isFeedbackGiven = booking.feedbackSubmitted == true;
+
+    if (isFeedbackGiven) {
+      continue; // ❌ NEVER show popup
+    }
+
+    // ✅ 2. LOCAL CHECK (show only once)
+    final String key = 'shown_feedback_for_$bookingId';
+    final bool alreadyShown = prefs.getBool(key) ?? false;
+
+    if (alreadyShown) {
+      continue; // ❌ Already shown once → skip
+    }
+
+    // ✅ 3. MARK AS SHOWN IMMEDIATELY (avoid duplicate popup)
+    await prefs.setBool(key, true);
+
+    // ✅ 4. Extract Data
+    String spId = booking.spId ?? '';
+    String serviceName = 'Service';
+
+    if (booking.bookingService != null &&
+        booking.bookingService!.isNotEmpty) {
+      var s = booking.bookingService!.first;
+      serviceName = s.serviceIName ?? 'Service';
+    }
+
+    // ✅ 5. Navigate to Feedback Screen
+    Get.to(
+      () => const FeedbackScreen(),
+      arguments: {
+        'spId': spId,
+        'bookingId': bookingId,
+        'serviceName': serviceName,
+      },
+    );
+
+    // ✅ 6. Only ONE popup per app open
+    break;
+  }
+}
 }

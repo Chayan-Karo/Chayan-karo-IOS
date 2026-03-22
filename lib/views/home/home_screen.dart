@@ -179,12 +179,9 @@ return PopScope(
       await Future.wait([
         categoryController.refreshCategories(),
         homeController.refreshData(),
-      if (serviceController.currentServiceCategoryId.value.isNotEmpty)
-      serviceController.loadServices(
-        serviceController.currentServiceCategoryId.value, 
-        forceRefresh: true
-      ),
+     
       ]);
+
       cartController.refreshCart();
       
     },

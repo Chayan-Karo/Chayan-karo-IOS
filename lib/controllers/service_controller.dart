@@ -55,8 +55,10 @@ class ServiceController extends GetxController {
     try {
       print('🔄 Loading services for category: $serviceCategoryId');
       
-      final services = await _serviceRepository.getServices(serviceCategoryId);
-      _services.assignAll(services);
+final services = forceRefresh
+    ? await _serviceRepository.refreshServices(serviceCategoryId)
+    : await _serviceRepository.getServices(serviceCategoryId);
+          _services.assignAll(services);
       
       print('✅ Loaded ${_services.length} services');
       

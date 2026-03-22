@@ -16,6 +16,7 @@ import '../../utils/test_extensions.dart';
 import '../controllers/coupon_controller.dart';
 import '../data/repository/coupon_repository.dart';
 import 'package:shimmer/shimmer.dart';
+import '../widgets/three_dot_loader.dart';
 
 
 class CategoryServiceScreen extends StatefulWidget {
@@ -111,8 +112,10 @@ void _precacheBanner() {
 
     try {
       print('🔄 Loading services for service category: $serviceCategoryId');
-      await serviceController.loadServices(serviceCategoryId);
-      
+await serviceController.loadServices(
+  serviceCategoryId,
+  forceRefresh: true,
+);      
       // FIX: Define the local variable 'services' here
       final services = List<Service>.from(serviceController.services);
       
@@ -1109,7 +1112,7 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
       return Container(
         height: 100.h * scaleFactor,
         child: const Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF6F00)),
+          child: ThreeDotLoader(color: Color(0xFFFF6F00)),
         ),
       );
     }
