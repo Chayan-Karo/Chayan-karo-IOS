@@ -29,6 +29,7 @@ import '../../controllers/coupon_controller.dart';
 // --- WIDGET IMPORT ---
 // Ensure summary_widgets.dart is in the same folder or update path
 import './widgets/summary_widgets.dart'; 
+import '../../widgets/app_snackbar.dart';
 
 // Helper class for mapping
 class _Agg {
@@ -783,7 +784,7 @@ final int total = totalRaw > 0 ? totalRaw : 0;
                                      return; 
                                   }
                                   if((_locationId ?? '').isEmpty) {
-                                      Get.snackbar('Address required', 'Please select an address');
+                                      AppSnackbar.showWarning('Please select an address');
                                       return;
                                   }
                                 }
@@ -801,11 +802,11 @@ final int total = totalRaw > 0 ? totalRaw : 0;
                                 }
                                 // 3. Validate for Final Submission
                                 if (saathi == null || (saathi?['id']?.toString().isEmpty ?? true)) {
-                                  Get.snackbar('Saathi required', 'Please select a Chayan Saathi');
+                                  AppSnackbar.showWarning('Please select a Chayan Saathi');
                                   return;
                                 }
                                 if (_inlineTime == null) {
-                                  Get.snackbar('Time required', 'Please select a preferred time');
+                                  AppSnackbar.showWarning('Please select a preferred time');
                                   return;
                                 }
 
@@ -866,7 +867,7 @@ final bookingItems = _mapCartToBookingItems(currentPageItems, couponPct: couponP
                                        } else if (mLower.contains('already booked') || mLower.contains('unavailable')) {
                                           title = 'Provider Unavailable';
                                        }
-                                       Get.snackbar(title, msg, backgroundColor: Colors.red[100], colorText: Colors.red[900]);
+                                       AppSnackbar.showError('$title: $msg');
                                        return; 
                                     }
 
@@ -899,7 +900,7 @@ final bookingItems = _mapCartToBookingItems(currentPageItems, couponPct: couponP
                                     // ✅ NEW: Clear Rebooking Cart if successful init
                                     if(widget.isRebooking) cartController.clearRebookingCart();
                                   } catch (e) {
-                                    Get.snackbar('Error', e.toString(), backgroundColor: Colors.red[100]);
+                                    AppSnackbar.showError(e.toString());
                                   }
                                   return; // <--- CRITICAL FIX: Stops execution here so it doesn't run the Cash logic below.
                                 }
@@ -940,10 +941,10 @@ couponId: selectedCouponId, // Null if no coupon applied
                                        )));
                                     } else {
                                         // Error Handling
-                                        Get.snackbar('Booking Failed', res.message.isNotEmpty ? res.message : 'Could not place booking', backgroundColor: Colors.red[100], colorText: Colors.red[900]);
+                                        AppSnackbar.showError(res.message.isNotEmpty ? res.message : 'Could not place booking');
                                     }
                                 } catch (e) {
-                                    Get.snackbar('Error', e.toString(), backgroundColor: Colors.red[100]);
+                                    AppSnackbar.showError(e.toString());
                                 }
                             },
                             child: Container(

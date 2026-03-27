@@ -12,6 +12,7 @@ import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../widgets/chayan_header.dart';
 import '../../widgets/three_dot_loader.dart'; 
 import './widgets/bouncy_card.dart'; 
+import '../../widgets/app_snackbar.dart';
 
 // --- Controllers & Models ---
 import '../../controllers/booked_saathi_controller.dart'; 
@@ -188,8 +189,7 @@ class _PreviousChayanSathiScreenState extends State<PreviousChayanSathiScreen> {
       _navigateToService(provider);
     } else {
       if (lockController.error.value.isNotEmpty) {
-         Get.snackbar('Lock Failed', lockController.error.value, 
-           backgroundColor: Colors.red, colorText: Colors.white);
+         AppSnackbar.showError(lockController.error.value);
       }
     }
     

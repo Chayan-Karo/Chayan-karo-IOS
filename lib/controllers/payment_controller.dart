@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../data/repository/payment_repository.dart';
 import '../controllers/profile_controller.dart';
+import '../widgets/app_snackbar.dart';
 
 class PaymentController extends GetxController {
   PaymentRepository get _repository => PaymentRepository();
@@ -90,12 +91,12 @@ class PaymentController extends GetxController {
 
   Future<void> initiatePaymentDirect() async {
     if (bookingAmount == null) {
-      Get.snackbar('Error', 'Booking amount missing');
+      AppSnackbar.showError('Booking amount missing');
       Get.back();
       return;
     }
     if ((bookingId ?? '').isEmpty) {
-      Get.snackbar('Error', 'Booking ID missing');
+      AppSnackbar.showError('Booking ID missing');
       return;
     }
     paymentCancelled.value = false;
@@ -105,11 +106,11 @@ class PaymentController extends GetxController {
 
   Future<void> initiatePayment() async {
     if (selectedMethod.value == null) {
-      Get.snackbar('Error', 'Please select a payment method');
+      AppSnackbar.showWarning('Please select a payment method');
       return;
     }
     if (bookingAmount == null) {
-      Get.snackbar('Error', 'Booking amount missing');
+      AppSnackbar.showError('Booking amount missing');
       return;
     }
     if (selectedMethod.value == 'Cash') {
@@ -117,7 +118,7 @@ class PaymentController extends GetxController {
       return;
     }
     if ((bookingId ?? '').isEmpty) {
-      Get.snackbar('Error', 'Booking ID missing');
+      AppSnackbar.showError('Booking ID missing');
       return;
     }
     await _processOnlinePayment();
@@ -176,12 +177,12 @@ class PaymentController extends GetxController {
 
       if (!hasValidKey) {
         isLoading.value = false;
-        Get.snackbar('Configuration error', 'Razorpay Key ID is missing.');
+        AppSnackbar.showError('Razorpay Key ID is missing.');
         return;
       }
       if (!isLikelyE164) {
         isLoading.value = false;
-        Get.snackbar('Phone required', 'Add a valid mobile number to continue.');
+        AppSnackbar.showWarning('Add a valid mobile number to continue.');
         return;
       }
 
@@ -212,9 +213,7 @@ class PaymentController extends GetxController {
       errorMessage.value = e.toString();
       print('❌ _processOnlinePayment error: $e');
 
-      Get.snackbar('Error', 'Failed to create order: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 3));
+      AppSnackbar.showError('Failed to create order: $e');
       Future.delayed(const Duration(seconds: 2), () {
         if (Get.currentRoute == '/payment') Get.back();
       });
@@ -290,8 +289,7 @@ class PaymentController extends GetxController {
 
   void _handleExternalWallet(ExternalWalletResponse response) {
     _debugLog('RZP.externalWallet', response.walletName);
-    Get.snackbar('External Wallet', 'Wallet: ${response.walletName}',
-        snackPosition: SnackPosition.BOTTOM);
+    AppSnackbar.showInfo('Wallet: ${response.walletName}');
   }
 
   void _processCashPayment() {

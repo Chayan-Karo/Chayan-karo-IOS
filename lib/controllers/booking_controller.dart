@@ -1,6 +1,6 @@
-// lib/controllers/booking_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../widgets/app_snackbar.dart';
 
 import '../data/repository/booking_repository.dart';
 import '../models/booking_models.dart';
@@ -28,31 +28,11 @@ final RxBool isRefunding = false.obs;
   }
 
   void _showNetworkErrorSnackbar() {
-    if (Get.isSnackbarOpen) return; // Prevent duplicate snackbars
-    Get.snackbar(
-      'Connection Error',
-      'No internet connection or server is unreachable. Please check your settings.',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.redAccent,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 4),
-      icon: const Icon(Icons.wifi_off, color: Colors.white),
-    );
+    AppSnackbar.showError('No internet connection or server is unreachable. Please check your settings.');
   }
 
   void _showErrorSnackbar(String title, String message) {
-    if (Get.isSnackbarOpen) return;
-    Get.snackbar(
-      title,
-      message.replaceFirst('Exception: ', ''), // Clean up common Dart error prefix
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.redAccent,
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
-      borderRadius: 12,
-      icon: const Icon(Icons.error_outline, color: Colors.white),
-      duration: const Duration(seconds: 3),
-    );
+    AppSnackbar.showError(message.replaceFirst('Exception: ', ''));
   }
  // lib/controllers/booking_controller.dart
 
@@ -221,13 +201,7 @@ Future<AddBookingResponse> placeBooking({
           bookingDate.isEmpty ||
           bookingTime.isEmpty) {
         error.value = 'Missing required fields for reschedule';
-        Get.snackbar(
-          'Reschedule failed',
-          error.value,
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white,
-        );
+        AppSnackbar.showError(error.value);
         return false;
       }
 
@@ -253,13 +227,7 @@ Future<AddBookingResponse> placeBooking({
         } catch (_) {}
       } else {
         error.value = res.message.isNotEmpty ? res.message : 'Failed to reschedule';
-        Get.snackbar(
-          'Reschedule failed',
-          error.value,
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white,
-        );
+        AppSnackbar.showError(error.value);
       }
 
       return ok;
@@ -324,13 +292,7 @@ final msg = e.toString();
 
       if (bookingId.trim().isEmpty) {
         error.value = 'Missing bookingId';
-        Get.snackbar(
-          'Cancel failed',
-          error.value,
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white,
-        );
+        AppSnackbar.showError(error.value);
         return false;
       }
 
@@ -350,13 +312,7 @@ final msg = e.toString();
         } catch (_) {}
       } else {
         error.value = res.message.isNotEmpty ? res.message : 'Failed to cancel booking';
-        Get.snackbar(
-          'Cancel failed',
-          error.value,
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white,
-        );
+        AppSnackbar.showError(error.value);
       }
 
       return ok;

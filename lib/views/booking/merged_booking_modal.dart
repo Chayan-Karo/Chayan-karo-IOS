@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../widgets/app_snackbar.dart';
 
 /// Returns a DateTime containing BOTH the selected date and the selected time.
 Future<DateTime?> showMergedBookingModal(
@@ -190,14 +191,7 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
   }
   void _onTimeTap(TimeOfDay slot) {
     if (_isSlotBlocked(slot)) {
-      Get.snackbar(
-        'Current Booking',
-        'This is your currently booked slot.',
-         snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green[100],
-          colorText: Colors.green[800],
-          duration: const Duration(seconds: 3),
-      );
+      AppSnackbar.showSuccess('This is your currently booked slot.');
       return;
     }
     // Check Provider Constraint Logic
@@ -214,14 +208,7 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
           final int selectedTotal = (slot.hour * 60) + slot.minute;
 
           if (selectedTotal < constraintTotal) {
-            Get.snackbar(
-              'Slot Unavailable',
-              'Provider available after ${_formatTimeString(widget.minTimeConstraint!)} today.',
-              snackPosition: SnackPosition.TOP,
-              backgroundColor: Colors.redAccent,
-              colorText: Colors.white,
-              margin: const EdgeInsets.all(16),
-            );
+            AppSnackbar.showError('Provider available after ${_formatTimeString(widget.minTimeConstraint!)} today.');
             return;
           }
         } catch (_) {}
@@ -371,13 +358,7 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
       const int cutoffMinutes = 20 * 60; 
 
       if (endMinutes > cutoffMinutes) {
-        Get.snackbar(
-          'Booking Duration Exceeds', 
-          'The total duration exceeds service hours (8 PM). Please select an earlier slot.',
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900],
-          snackPosition: SnackPosition.TOP,
-        );
+        AppSnackbar.showError('The total duration exceeds service hours (8 PM). Please select an earlier slot.');
         return; // ⛔ Prevent navigation/closing
       }
 

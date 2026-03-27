@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../../widgets/app_snackbar.dart';
 
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/most_used_service_controller.dart'; // Import this
@@ -64,23 +65,10 @@ class MostUsedServicesWidget extends StatelessWidget {
                             if (homeController.mostUsedServices.isNotEmpty) {
                               Get.to(() => const AllMostUsedServicesScreen());
                             } else {
-                              Get.snackbar(
-                                'No Services',
-                                'No services available at the moment',
-                                snackPosition: SnackPosition.TOP,
-                                backgroundColor: const Color(0xFFFF6F00),
-                                colorText: Colors.white,
-                                duration: const Duration(seconds: 2),
-                              );
+                              AppSnackbar.showInfo('No services available at the moment');
                             }
                           } catch (e) {
-                            Get.snackbar(
-                              'Error',
-                              'Something went wrong',
-                              snackPosition: SnackPosition.TOP,
-                              backgroundColor: Colors.red,
-                              colorText: Colors.white,
-                            );
+                            AppSnackbar.showError('Something went wrong');
                           }
                         },
                         child: Padding(

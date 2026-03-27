@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../widgets/discard_changes_sheet.dart';
 import '../../widgets/chayan_header.dart';
 import '../../controllers/booking_controller.dart';
+import '../../widgets/app_snackbar.dart';
 import 'BookingCancelledScreen.dart';
 import 'bank_selector_popup.dart';
 import '../../models/booking_read_models.dart' show CustomerBooking;
@@ -123,7 +124,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
   // 2. REPLACE your _cancelNow method with this logic:
 Future<void> _cancelNow(BuildContext context, [double scaleFactor = 1.0]) async {
   if (bookingId.isEmpty) {
-    Get.snackbar('Missing booking', 'Booking id not found');
+    AppSnackbar.showError('Booking id not found');
     return;
   }
 
@@ -139,12 +140,7 @@ Future<void> _cancelNow(BuildContext context, [double scaleFactor = 1.0]) async 
     
     // If user closes without selecting, stop the cancellation
     if (selectedBank == null) {
-      Get.snackbar(
-        'Refund Bank Required', 
-        'Please select a bank account to receive your refund.',
-        backgroundColor: Colors.orange[100],
-        colorText: Colors.orange[900]
-      );
+      AppSnackbar.showWarning('Please select a bank account to receive your refund.');
       return; 
     }
     selectedBankId = selectedBank.id;

@@ -14,6 +14,7 @@ import 'merged_booking_modal.dart';
 import 'showScheduleAddressPopup.dart';
 import 'booking_rescheduled_screen.dart';
 import '../chayan_sathi/chayan_sathi_screen.dart';
+import '../../widgets/app_snackbar.dart';
 
 class RescheduleSummaryScreen extends StatefulWidget {
   final String bookingId;
@@ -252,21 +253,11 @@ class _RescheduleSummaryScreenState extends State<RescheduleSummaryScreen> {
 
   // --- REUSABLE SNACKBAR HELPER ---
   void _showCustomSnackbar(String title, String message, {bool isError = false}) {
-    Get.snackbar(
-      title,
-      message,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: isError ? const Color(0xFFFFE5E5) : Colors.green[100], // Light Red for error, Green for success
-      colorText: isError ? Colors.red[800] : Colors.green[800],
-      duration: const Duration(seconds: 3),
-      margin: EdgeInsets.all(16.w), // Responsive margin
-      borderRadius: 12,
-      icon: Icon(
-        isError ? Icons.error_outline : Icons.check_circle_outline,
-        color: isError ? Colors.red[800] : Colors.green[800],
-      ),
-      shouldIconPulse: true,
-    );
+    if (isError) {
+      AppSnackbar.showError(message);
+    } else {
+      AppSnackbar.showWarning(message); // Mapped to warning because these are validation messages
+    }
   }
 
  Future<void> _editDateAndTime() async {

@@ -15,6 +15,7 @@ import '../../models/saathi_models.dart';
 import 'chayan_sathi_rating_screen.dart';
 import './widgets/bouncy_card.dart';
 import '../../widgets/three_dot_loader.dart'; // Custom loader widget
+import '../../widgets/app_snackbar.dart';
 import 'previouschayansathiscreen.dart';
 
 class ChayanSathiScreen extends StatefulWidget {
@@ -84,18 +85,7 @@ class _ChayanSathiScreenState extends State<ChayanSathiScreen> {
   }
 
   void _showErrorSnackbar(String title, String message) {
-    Get.snackbar(
-      title,
-      message,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(10),
-      borderRadius: 8,
-      icon: const Icon(Icons.error_outline, color: Colors.white),
-      shouldIconPulse: true,
-      duration: const Duration(seconds: 3),
-    );
+    AppSnackbar.showError(message);
   }
 
   @override

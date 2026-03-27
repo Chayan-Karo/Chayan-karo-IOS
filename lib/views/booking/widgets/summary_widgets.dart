@@ -13,6 +13,7 @@ import '../../../views/login/widgets/legal_modal.dart';
 import '../../../views/login/widgets/legal_content.dart';
 import '../../../models/coupon_models.dart';
 import '../../../controllers/coupon_controller.dart';
+import '../../../widgets/app_snackbar.dart';
 
 // --- ENUMS & MODELS ---
 
@@ -850,8 +851,7 @@ class _CouponsBottomSheetState extends State<CouponsBottomSheet> {
                               if (found != null) {
                                 await widget.onApply(found);
                               } else {
-                                Get.snackbar('Invalid', 'Coupon code not found', 
-                                    backgroundColor: Colors.red.shade50, colorText: Colors.red.shade900);
+                                AppSnackbar.showError('Coupon code not found');
                               }
                             },
                             child: Text('Apply',
@@ -943,14 +943,7 @@ Widget _buildCouponItem(Coupon coupon, double scale) {
     onTap: () {
       // 2. Block tap if ineligible and show why
       if (!isEligible) {
-        Get.snackbar(
-          'Not Eligible',
-          'Add items worth ₹${(coupon.minPurchaseAmount - widget.orderAmount).toInt()} more',
-          backgroundColor: Colors.orange[100],
-          colorText: Colors.orange[900],
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 2),
-        );
+        AppSnackbar.showWarning('Add items worth ₹${(coupon.minPurchaseAmount - widget.orderAmount).toInt()} more');
         return;
       }
 

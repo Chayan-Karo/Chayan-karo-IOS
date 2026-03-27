@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../data/repository/profile_repository.dart';
 import '../models/customer_models.dart';
-import 'package:image_cropper/image_cropper.dart'; // <--- ADD THIS
+import 'package:image_cropper/image_cropper.dart';
+import '../widgets/app_snackbar.dart';
 
 class ProfileController extends GetxController {
   final ProfileRepository _profileRepository = Get.find<ProfileRepository>();
@@ -128,26 +129,14 @@ class ProfileController extends GetxController {
       imageVersion.value = DateTime.now().millisecondsSinceEpoch;
       // --------------------------------------------------
 
-      Get.snackbar(
-        'Success', 
-        'Profile picture updated successfully',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green[100],
-        colorText: Colors.green[800],
-      );
+      AppSnackbar.showSuccess('Profile picture updated successfully');
 
     } catch (e) {
       // If upload fails, remove the local preview
       localImage.value = null; 
       
       print('❌ Upload Error: $e');
-      Get.snackbar(
-        'Error', 
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      AppSnackbar.showError(e.toString().replaceAll('Exception: ', ''));
     } finally {
       _isUploading.value = false;
     }

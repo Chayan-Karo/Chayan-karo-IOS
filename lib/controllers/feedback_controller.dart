@@ -1,8 +1,8 @@
 // lib/controllers/feedback_controller.dart
-import 'package:flutter/material.dart'; 
 import 'package:get/get.dart';
 import '../data/repository/feedback_repository.dart';
 import '../models/feedback_req_model.dart';
+import '../widgets/app_snackbar.dart';
 
 class FeedbackController extends GetxController {
   final FeedbackRepository _repo;
@@ -25,18 +25,7 @@ class FeedbackController extends GetxController {
   }
 
   void _showNetworkErrorSnackbar() {
-    if (Get.isSnackbarOpen) return;
-    Get.snackbar(
-      'Connection Error',
-      'No internet connection. Please check your settings.',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 4),
-      margin: const EdgeInsets.all(16),
-      borderRadius: 12,
-      icon: const Icon(Icons.wifi_off, color: Colors.white),
-    );
+    AppSnackbar.showError('No internet connection. Please check your settings.');
   }
 
   /// Submits distinct feedback for Provider and Booking simultaneously
@@ -84,16 +73,7 @@ class FeedbackController extends GetxController {
       if (_isNetworkError(msg)) {
         _showNetworkErrorSnackbar();
       } else {
-        Get.snackbar(
-          "Error",
-          "Failed to submit feedback. Please try again.",
-          snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.red,
-          colorText: Colors.white,
-          margin: const EdgeInsets.all(16),
-          borderRadius: 12,
-          icon: const Icon(Icons.error_outline, color: Colors.white),
-        );
+        AppSnackbar.showError('Failed to submit feedback. Please try again.');
       }
       return false; // Failed
     } finally {

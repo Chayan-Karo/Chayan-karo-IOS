@@ -1,6 +1,6 @@
 // lib/controllers/home_controller.dart
 import 'package:get/get.dart';
-import 'package:flutter/material.dart';
+import '../widgets/app_snackbar.dart';
 
 import '../data/repository/home_repository.dart';
 import '../models/home_models.dart';
@@ -134,23 +134,11 @@ class HomeController extends GetxController {
       print('✅ Login state saved and loaded successfully');
       
       // Show success message
-      Get.snackbar(
-        'Welcome!',
-        'Successfully logged in as ${userName ?? 'User'}',
-        backgroundColor: Colors.green[100],
-        colorText: Colors.green[800],
-        snackPosition: SnackPosition.BOTTOM,
-        duration: Duration(seconds: 2),
-      );
+      AppSnackbar.showSuccess('Successfully logged in as ${userName ?? 'User'}');
       
     } catch (e) {
       print('❌ Error handling successful login: $e');
-      Get.snackbar(
-        'Login Error',
-        'Failed to save login state. Please try again.',
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
+      AppSnackbar.showError('Failed to save login state. Please try again.');
     }
   }
 
@@ -166,25 +154,14 @@ class HomeController extends GetxController {
       
       print('🚪 User logged out successfully');
       
-      Get.snackbar(
-        'Logged Out',
-        'You have been logged out successfully',
-        backgroundColor: Colors.blue[100],
-        colorText: Colors.blue[800],
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      AppSnackbar.showInfo('You have been logged out successfully');
       
       // Navigate to login screen
       Get.offAllNamed('/login');
       
     } catch (e) {
       print('❌ Error during logout: $e');
-      Get.snackbar(
-        'Logout Error',
-        'Failed to logout. Please try again.',
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
+      AppSnackbar.showError('Failed to logout. Please try again.');
     }
   }
 
@@ -199,21 +176,11 @@ class HomeController extends GetxController {
       // Reload auth state to get updated data
       await _loadAuthState();
       
-      Get.snackbar(
-        'Profile Updated',
-        'Your profile has been updated successfully',
-        backgroundColor: Colors.green[100],
-        colorText: Colors.green[800],
-      );
+      AppSnackbar.showSuccess('Your profile has been updated successfully');
       
     } catch (e) {
       print('❌ Error updating profile: $e');
-      Get.snackbar(
-        'Update Failed',
-        'Failed to update profile. Please try again.',
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
+      AppSnackbar.showError('Failed to update profile. Please try again.');
     }
   }
 

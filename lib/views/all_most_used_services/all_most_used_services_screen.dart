@@ -27,6 +27,7 @@ import '../cart/cart_screen.dart';
 // Widgets
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../widgets/common_top_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class AllMostUsedServicesScreen extends StatefulWidget {
   const AllMostUsedServicesScreen({super.key});
@@ -74,7 +75,7 @@ class _AllMostUsedServicesScreenState extends State<AllMostUsedServicesScreen> {
             highlightServiceId: service.id,
           ));
     } else {
-      Get.snackbar('Error', 'Service category not found');
+      AppSnackbar.showError('Service category not found');
     }
   }
 

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../controllers/payment_controller.dart';
 import '../../controllers/profile_controller.dart';
+import '../../widgets/app_snackbar.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -49,12 +50,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (controller.bookingAmount == null || controller.bookingAmount == 0) {
-        Get.snackbar('Error', 'Booking amount missing');
+        AppSnackbar.showError('Booking amount missing');
         Get.back();
         return;
       }
       if ((controller.bookingId ?? '').isEmpty) {
-        Get.snackbar('Error', 'Booking ID missing');
+        AppSnackbar.showError('Booking ID missing');
         Get.back();
         return;
       }

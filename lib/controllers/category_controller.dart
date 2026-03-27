@@ -1,6 +1,6 @@
 // lib/controllers/category_controller.dart
 import 'package:get/get.dart';
-import 'package:flutter/material.dart';
+import '../widgets/app_snackbar.dart';
 import '../data/repository/category_repository.dart';
 import '../models/category_models.dart';
 
@@ -61,14 +61,7 @@ class CategoryController extends GetxController {
       print('❌ Error loading categories: $e');
       _errorMessage.value = 'Failed to load categories: ${e.toString()}';
       
-      Get.snackbar(
-        'Error',
-        'Failed to load categories. Please try again.',
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-        snackPosition: SnackPosition.BOTTOM,
-        duration: Duration(seconds: 3),
-      );
+      AppSnackbar.showError('Failed to load categories. Please try again.');
     } finally {
       _isLoading.value = false;
     }
@@ -89,25 +82,12 @@ class CategoryController extends GetxController {
       
       print('✅ Categories refreshed successfully: ${categories.length}');
       
-      Get.snackbar(
-        'Success',
-        'Categories updated successfully',
-        backgroundColor: Colors.green[100],
-        colorText: Colors.green[800],
-        snackPosition: SnackPosition.TOP,
-        duration: Duration(seconds: 2),
-      );
+      AppSnackbar.showSuccess('Categories updated successfully');
     } catch (e) {
       print('❌ Error refreshing categories: $e');
       _errorMessage.value = 'Failed to refresh categories: ${e.toString()}';
       
-      Get.snackbar(
-        'Refresh Failed',
-        'Could not refresh categories. Please check your connection.',
-        backgroundColor: Colors.orange[100],
-        colorText: Colors.orange[800],
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      AppSnackbar.showWarning('Could not refresh categories. Please check your connection.');
     } finally {
       _isRefreshing.value = false;
     }
@@ -164,12 +144,7 @@ class CategoryController extends GetxController {
         'categoryId': categoryId,
       });
     } else {
-      Get.snackbar(
-        'Error',
-        'Category not found',
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
+      AppSnackbar.showError('Category not found');
     }
   }
 

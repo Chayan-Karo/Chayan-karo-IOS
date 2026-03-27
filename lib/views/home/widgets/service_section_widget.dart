@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../../controllers/home_controller.dart';
 import '../../../widgets/service_bottom_sheet.dart';
 import '../../../models/home_models.dart';
+import '../../../widgets/app_snackbar.dart';
 
 class ServiceSectionWidget extends StatelessWidget {
   final String title;
@@ -115,13 +116,7 @@ class ServiceSectionWidget extends StatelessWidget {
                             ),
                           );
                         } catch (e) {
-                          Get.snackbar(
-                            'Error',
-                            'Unable to show service details',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: Colors.red,
-                            colorText: Colors.white,
-                          );
+                          AppSnackbar.showError('Unable to show service details');
                         }
                       },
                       child: Container(

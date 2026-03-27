@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import '../data/repository/financial_repository.dart';
 import '../../models/bank_model.dart';
 import '../../models/bank_response_model.dart';
-import 'package:flutter/material.dart';
+import '../widgets/app_snackbar.dart';
 
 class FinancialController extends GetxController {
   final FinancialRepository _repository = FinancialRepository();
@@ -83,23 +83,9 @@ class FinancialController extends GetxController {
     
     // Check for "Failed to lookup host" (No Internet)
     if (errorMsg.contains("Failed host lookup") || errorMsg.contains("SocketException")) {
-      Get.snackbar(
-        "Connection Error", 
-        "Please check your internet connection.",
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-        icon: const Icon(Icons.wifi_off, color: Colors.white),
-      );
+      AppSnackbar.showError('Please check your internet connection.');
     } else {
-      // General user-friendly error
-      Get.snackbar(
-        "Upload Failed", 
-        "Something went wrong. Please try again later.",
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      AppSnackbar.showError('Something went wrong. Please try again later.');
     }
     return false;
   } finally {
@@ -138,22 +124,9 @@ Future<bool> updateBankDetails({
     String errorMsg = e.toString();
     
     if (errorMsg.contains("Failed host lookup") || errorMsg.contains("SocketException")) {
-      Get.snackbar(
-        "Connection Error", 
-        "Please check your internet connection.",
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-        icon: const Icon(Icons.wifi_off, color: Colors.white),
-      );
+      AppSnackbar.showError('Please check your internet connection.');
     } else {
-      Get.snackbar(
-        "Operation Failed", 
-        "Something went wrong. Please try again later.",
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      AppSnackbar.showError('Something went wrong. Please try again later.');
     }
 }
 }

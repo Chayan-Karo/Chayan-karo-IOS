@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 //import '../../../controllers/home_controller.dart';
 import '../../../services/FemaleSpaScreen.dart';
+import '../../../widgets/app_snackbar.dart';
 
 class SpaWomenSection extends StatelessWidget {
   const SpaWomenSection({super.key});
@@ -141,13 +142,7 @@ class _SpaWomenCard extends StatelessWidget {
           Get.to(() => FemaleSpaScreen(scrollToServiceId: serviceId));
         } catch (e) {
           print('❌ Spa navigation error: $e');
-          Get.snackbar(
-            'Error',
-            'Unable to open spa service',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
-          );
+          AppSnackbar.showError('Unable to open spa service');
         }
       },
       child: AnimatedContainer(

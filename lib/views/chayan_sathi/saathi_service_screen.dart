@@ -24,6 +24,7 @@ import '../../data/local/database.dart';
 
 // Views
 import '../booking/Summaryscreen.dart'; // ✅ Standard casing
+import '../../widgets/app_snackbar.dart';
 
 // Popups & Modals
 import '../booking/showScheduleAddressPopup.dart'; 
@@ -300,7 +301,7 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
   Future<void> _handleRebookingFlow() async {
     // 0. Validation
     if (cartController.rebookingItemCount == 0) {
-      Get.snackbar("Cart Empty", "Please select a service.");
+      AppSnackbar.showWarning('Please select a service.');
       return;
     }
 
@@ -323,7 +324,7 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
     }) ?? locationController.addresses.firstOrNull; 
 
     if (selectedAddressObj == null) {
-      Get.snackbar("Error", "Could not resolve address details.");
+      AppSnackbar.showError('Could not resolve address details.');
       return;
     }
 

@@ -7,6 +7,7 @@ import '../../models/bank_model.dart';
 import '../../widgets/chayan_header.dart';
 import '../../utils/test_extensions.dart';
 import '../../widgets/three_dot_loader.dart';
+import '../../widgets/app_snackbar.dart';
 
 class FinancialDetailsScreen extends StatefulWidget {
   const FinancialDetailsScreen({super.key});
@@ -305,12 +306,7 @@ IconButton(
 
     if (success && mounted) {
       Navigator.pop(context);
-      Get.snackbar(
-        "Success", 
-        isEdit ? "Bank details updated" : "Bank details added",
-        backgroundColor: Colors.green[100], 
-        colorText: Colors.green[800]
-      );
+      AppSnackbar.showSuccess(isEdit ? 'Bank details updated' : 'Bank details added');
     }
   }
 },

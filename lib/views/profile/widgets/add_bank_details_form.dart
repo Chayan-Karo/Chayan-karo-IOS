@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../../../controllers/financial_controller.dart';
+import '../../../widgets/app_snackbar.dart';
 
 class AddBankDetailsForm extends StatefulWidget {
   const AddBankDetailsForm({super.key});
@@ -102,7 +103,7 @@ class _AddBankDetailsFormState extends State<AddBankDetailsForm> {
       );
       if (success) {
         Get.back();
-        Get.snackbar("Success", "Bank details saved!", backgroundColor: Colors.green[100]);
+        AppSnackbar.showSuccess('Bank details saved!');
       }
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../widgets/app_snackbar.dart';
 import '../data/local/database.dart';
 import '../models/service_models.dart';
 
@@ -247,175 +248,27 @@ class CartController extends GetxController {
 
   Future<void> completeCheckout() async {
     if (await validateCartForCheckout()) {
-      Get.snackbar(
-        'Processing Order',
-        'Processing $cartItemCount items worth $formattedTotalPrice',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFE47830),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
+      AppSnackbar.showInfo('Processing $cartItemCount items worth $formattedTotalPrice');
 
       await Future.delayed(const Duration(seconds: 2));
       await clearCart();
 
-      Get.snackbar(
-        'Order Placed',
-        'Your order has been placed successfully!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
+      AppSnackbar.showSuccess('Your order has been placed successfully!');
     }
   }
 
   // ============ FEEDBACK (SNACKBARS) ============
 
   void _showItemAddedFeedback(CartItem item) {
-    Get.snackbar(
-      '',
-      '',
-      titleText: const SizedBox.shrink(),
-      messageText: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE47830).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle,
-                color: Color(0xFFE47830),
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Added to Cart',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '₹${item.price.toInt()}',
-              style: const TextStyle(
-                fontSize: 16,
-                color: Color(0xFFE47830),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.transparent,
-      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-      padding: EdgeInsets.zero,
-      borderRadius: 12,
-      duration: const Duration(milliseconds: 1500),
-      animationDuration: const Duration(milliseconds: 300),
-      boxShadows: [],
-      isDismissible: true,
-      dismissDirection: DismissDirection.up,
-    );
+    AppSnackbar.showSuccess('${item.name} added to cart');
   }
 
   void _showRemoveFeedback(String itemName) {
-    Get.snackbar(
-      '',
-      '',
-      titleText: const SizedBox.shrink(),
-      messageText: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.withOpacity(0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.remove_circle_outline,
-                color: Colors.red, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '$itemName removed',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.transparent,
-      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-      padding: EdgeInsets.zero,
-      duration: const Duration(milliseconds: 1200),
-      animationDuration: const Duration(milliseconds: 250),
-      boxShadows: [],
-    );
+    AppSnackbar.showInfo('$itemName removed');
   }
 
   void _showSimpleFeedback(String message) {
-    Get.snackbar(
-      '',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(milliseconds: 1500),
-      backgroundColor: const Color(0xFFE47830),
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
-      borderRadius: 8,
-    );
+    AppSnackbar.showWarning(message);
   }
 Future<void> clearCartOnBookingSuccess() async {
   // optional: log

@@ -1,9 +1,9 @@
 // lib/controllers/service_controller.dart
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import 'package:flutter/material.dart';
 import '../data/repository/service_repository.dart';
 import '../models/service_models.dart';
+import '../widgets/app_snackbar.dart';
 
 class ServiceController extends GetxController {
   // Singleton repository
@@ -80,28 +80,14 @@ final services = forceRefresh
         _hasError.value = true;
         _errorMessage.value = 'Failed to load services. Please try again.';
         
-        Get.snackbar(
-          'Error',
-          'Failed to load services. Please try again.',
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[800],
-          snackPosition: SnackPosition.BOTTOM,
-          duration: Duration(seconds: 3),
-        );
+        AppSnackbar.showError('Failed to load services. Please try again.');
       }
     } catch (e) {
       print('❌ Error loading services: $e');
       _hasError.value = true;
       _errorMessage.value = 'Failed to load services: ${e.toString()}';
       
-      Get.snackbar(
-        'Error',
-        'Failed to load services. Please try again.',
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-        snackPosition: SnackPosition.BOTTOM,
-        duration: Duration(seconds: 3),
-      );
+      AppSnackbar.showError('Failed to load services. Please try again.');
     } finally {
       _isLoading.value = false;
     }
@@ -126,14 +112,7 @@ final services = forceRefresh
         _isEmpty.value = true;
         print('ℹ️ Category ${_currentServiceCategoryId.value} is empty after refresh');
       } else {
-        Get.snackbar(
-          'Success',
-          'Services updated successfully',
-          backgroundColor: Colors.green[100],
-          colorText: Colors.green[800],
-          snackPosition: SnackPosition.BOTTOM,
-          duration: Duration(seconds: 2),
-        );
+        AppSnackbar.showSuccess('Services updated successfully');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
@@ -145,26 +124,14 @@ final services = forceRefresh
         _hasError.value = true;
         _errorMessage.value = 'Failed to refresh services: ${e.toString()}';
         
-        Get.snackbar(
-          'Refresh Failed',
-          'Could not refresh services. Please check your connection.',
-          backgroundColor: Colors.orange[100],
-          colorText: Colors.orange[800],
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        AppSnackbar.showWarning('Could not refresh services. Please check your connection.');
       }
     } catch (e) {
       print('❌ Error refreshing services: $e');
       _hasError.value = true;
       _errorMessage.value = 'Failed to refresh services: ${e.toString()}';
       
-      Get.snackbar(
-        'Refresh Failed',
-        'Could not refresh services. Please check your connection.',
-        backgroundColor: Colors.orange[100],
-        colorText: Colors.orange[800],
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      AppSnackbar.showWarning('Could not refresh services. Please check your connection.');
     }
   }
 
@@ -204,12 +171,7 @@ final services = forceRefresh
         'serviceId': serviceId,
       });
     } else {
-      Get.snackbar(
-        'Error',
-        'Service not found',
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
+      AppSnackbar.showError('Service not found');
     }
   }
 }

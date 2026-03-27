@@ -7,6 +7,7 @@ import '../../controllers/location_controller.dart';
 import '../../models/location_models.dart';
 import '../../utils/test_extensions.dart';
 import '../../widgets/three_dot_loader.dart';
+import '../../widgets/app_snackbar.dart';
 
 class ManageAddressScreen extends StatefulWidget {
   const ManageAddressScreen({super.key});
@@ -491,15 +492,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
   final lMark = landmarkCtrl.text.trim();
 
   if (hNum.isEmpty || lMark.isEmpty) {
-    Get.snackbar(
-      "Required Fields",
-      "Please fill in both House Number and Landmark",
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.orange[50],
-      colorText: Colors.orange[800],
-      margin: EdgeInsets.all(16.w * scaleFactor),
-      borderRadius: 8,
-    );
+    AppSnackbar.showWarning("Please fill in both House Number and Landmark");
     return;
   }
 
@@ -521,27 +514,13 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
       Navigator.pop(context);
 
       // 2. Custom Success Snackbar
-      Get.snackbar(
-        'Success',
-        'Address updated successfully',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green[100],
-        colorText: Colors.green[800],
-        borderRadius: 8,
-        duration: const Duration(seconds: 2),
-      );
+      AppSnackbar.showSuccess('Address updated successfully');
     } else {
       // 3. Custom Error Snackbar
-      Get.snackbar(
-        'Error',
+      AppSnackbar.showError(
         locationController.error.value.isNotEmpty 
             ? locationController.error.value 
-            : 'Failed to update address',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-        borderRadius: 8,
-        icon: const Icon(Icons.error_outline, color: Colors.red),
+            : 'Failed to update address'
       );
     }
   }
@@ -621,16 +600,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                             if (success) {
                               // Success: Close dialog & Refresh
                               Navigator.pop(dialogContext);
-                              Get.snackbar(
-                                'Success',
-                                'Address deleted successfully',
-                                snackPosition: SnackPosition.TOP,
-                                backgroundColor: Colors.green[100],
-                                colorText: Colors.green[800],
-                                margin: EdgeInsets.all(16.w * scaleFactor),
-                                borderRadius: 8,
-                                duration: const Duration(seconds: 2),
-                              );
+                              AppSnackbar.showSuccess('Address deleted successfully');
                               _alignSelectedDefaultFromData();
                             } else {
                           // Failure: Stop spinner, keep dialog open for Retry
@@ -649,16 +619,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                             friendlyError = rawError; // Use server message if it's not a socket error
                           }
 
-                          Get.snackbar(
-                            'Connection Failed', // Clearer Title
-                            friendlyError,       // Optimized Message
-                            snackPosition: SnackPosition.TOP,
-                            backgroundColor: Colors.red[100],
-                            colorText: Colors.red[800],
-                            margin: EdgeInsets.all(16.w * scaleFactor),
-                            borderRadius: 8,
-                            icon: const Icon(Icons.wifi_off, color: Colors.red), // Visual cue
-                          );
+                          AppSnackbar.showError(friendlyError);
                             }
                           }
                         },

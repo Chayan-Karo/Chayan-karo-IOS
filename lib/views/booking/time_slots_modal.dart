@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart'; // Required for Snackbar
+import '../../widgets/app_snackbar.dart';
 
 /// UPDATED: Added [minTimeConstraint] parameter
 Future<TimeOfDay?> showTimeSlotsModal(
@@ -121,17 +122,7 @@ class _TimeSlotsSheetState extends State<_TimeSlotsSheet> {
 
         // C. If Selected Time < Constraint Time -> Show Error
         if (selectedTotalMinutes < constraintTotalMinutes) {
-          Get.snackbar(
-            'Slot Unavailable',
-            'Provider is only available after ${_formatTimeString(widget.minTimeConstraint!)} today.',
-            snackPosition: SnackPosition.TOP, // <--- Requested Position
-            backgroundColor: Colors.redAccent,
-            colorText: Colors.white,
-            margin: const EdgeInsets.all(16),
-            borderRadius: 8,
-            duration: const Duration(seconds: 3),
-            icon: const Icon(Icons.error_outline, color: Colors.white),
-          );
+          AppSnackbar.showError('Provider is only available after ${_formatTimeString(widget.minTimeConstraint!)} today.');
           return; // STOP execution, do not select
         }
       } catch (e) {
