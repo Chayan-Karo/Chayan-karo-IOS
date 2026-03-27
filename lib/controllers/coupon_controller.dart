@@ -25,7 +25,7 @@ class CouponController extends GetxController {
       coupons.value = fetchedList;
       
     } catch (e) {
-      debugPrint("Silent fetch error: $e");
+      print("Silent fetch error: $e");
       // Optional: Clear list on error to avoid showing stale data
       coupons.clear(); 
     } finally {

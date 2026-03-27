@@ -59,7 +59,7 @@ class FinancialController extends GetxController {
         bankName.value = ""; // Trigger Empty State
       }
     } catch (e) {
-      debugPrint("Financial Fetch Error: $e");
+      print("Financial Fetch Error: $e");
     } finally {
       isLoading(false);
     }
