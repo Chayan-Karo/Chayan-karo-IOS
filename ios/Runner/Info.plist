@@ -60,6 +60,8 @@
 	<!-- Location (ONLY WHEN IN USE) -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We use your location to show available services in your area and provide accurate service availability.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>We use your location to show nearby service providers. Location is only used while using the app.</string>
 
 	<!-- Photo Library (READ ONLY) -->
 	<key>NSPhotoLibraryUsageDescription</key>
