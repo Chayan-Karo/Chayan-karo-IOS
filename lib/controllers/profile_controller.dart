@@ -16,6 +16,8 @@ class ProfileController extends GetxController {
   final _errorMessage = ''.obs;
   final imageVersion = DateTime.now().millisecondsSinceEpoch.obs;
   final localImage = Rxn<File>();
+  final _isDeleting = false.obs;
+  bool get isDeleting => _isDeleting.value;
 
 
   Customer? get customer => _customer.value;
@@ -195,5 +197,36 @@ class ProfileController extends GetxController {
     if (gender.isEmpty) return false;
 
     return true;
+  }
+  Future<void> deleteUserAccount() async {
+    try {
+      _isDeleting.value = true;
+
+      // 1. Call the Repository method
+      await _profileRepository.deleteAccount();
+
+      // 2. Clear Critical GetX Controllers (Fixes BUG-006)
+      // We delete these to ensure no user data remains in memory
+      try {
+        Get.delete<ProfileController>(force: true);
+        // Add other controllers your app uses, e.g.:
+        // Get.delete<HomeController>(force: true);
+        // Get.delete<CartController>(force: true);
+      } catch (e) {
+        print("⚠️ Controller disposal warning: $e");
+      }
+
+      // 3. Success Feedback
+      AppSnackbar.showSuccess('Your account has been permanently deleted.');
+
+      // 4. Navigate to Login Screen (clearing navigation stack)
+      Get.offAllNamed('/login');
+
+    } catch (e) {
+      print('❌ Error during account deletion: $e');
+      AppSnackbar.showError(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      _isDeleting.value = false;
+    }
   }
 }

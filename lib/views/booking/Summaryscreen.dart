@@ -851,7 +851,8 @@ final bookingItems = _mapCartToBookingItems(currentPageItems, couponPct: couponP
                                       services: bookingItems,
                                       totalDuration: totalDuration,
                                       couponId: selectedCouponId,
-                                      actualAmount: servicePriceInclusive, 
+                                      // actualAmount: servicePriceInclusive, 
+                                      actualAmount: (servicePriceInclusive * 0.80).round(),
     plateFormFee: platformShare.round(),
     gstAmount: gstOnFee,
     gstPercentage: 18.0,
@@ -916,7 +917,8 @@ final bookingItems = _mapCartToBookingItems(currentPageItems, couponPct: couponP
                                       totalDuration: totalDuration,
 // ✅ Coupon Logic: Pass values if selected, else null
 couponId: selectedCouponId, // Null if no coupon applied  
-                                        actualAmount: servicePriceInclusive, 
+                                     //   actualAmount: servicePriceInclusive, 
+                                     actualAmount: (servicePriceInclusive * 0.80).round(),
     plateFormFee: platformShare.round(),
     gstAmount: gstOnFee,
     gstPercentage: 18.0,

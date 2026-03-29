@@ -334,4 +334,32 @@ class ProfileRepository {
       print('❌ Error debugging auth state: $e');
     }
   }
+  Future<void> deleteAccount() async {
+    final token = await _database.getAuthToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('No authentication token found. Please login again.');
+    }
+
+    try {
+      print('⚠️ Requesting account deletion...');
+      final response = await _networkClient.dio.delete(
+        '/user/deleteCustomerAccount',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Account deleted successfully from server');
+        // Clear local data immediately after successful API call
+        await clearCachedProfile();
+      } else {
+        throw Exception('Failed to delete account: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      print('❌ Delete Account Error: ${e.response?.data}');
+      rethrow;
+    } catch (e) {
+      print('❌ Generic Delete Error: $e');
+      rethrow;
+    }
+  }
 }

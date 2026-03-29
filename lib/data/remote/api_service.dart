@@ -235,4 +235,8 @@ Future<ValidateCouponResponse> validateCoupon(
   @Header("Authorization") String token,
   @Body() Map<String, dynamic> body,
 );
+@DELETE('/user/deleteCustomerAccount')
+Future<dynamic> deleteAccount(
+  @Header("Authorization") String token,
+);
 }

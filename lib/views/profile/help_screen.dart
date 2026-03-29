@@ -4,6 +4,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/chayan_header.dart';
+import '../../controllers/profile_controller.dart';
+import 'package:get/get.dart';
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
@@ -89,6 +91,64 @@ class _HelpScreenState extends State<HelpScreen> {
                         scaleFactor: scaleFactor,
                       ),
                     ),
+                 // 2. Account Actions (Using settings.svg and ExpansionTile)
+      ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        leading: ColorFiltered(
+          colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+          child: SvgPicture.asset(
+            'assets/icons/settings.svg', // Using your requested icon
+            height: 26.h * scaleFactor,
+            width: 26.w * scaleFactor,
+          ),
+        ),
+        title: Text(
+          'Account Actions',
+          style: TextStyle(
+            fontSize: 16.sp * scaleFactor,
+            fontFamily: 'SF Pro',
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              left: 10.w * scaleFactor,
+              right: 10.w * scaleFactor,
+              bottom: 15.h * scaleFactor,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: Colors.red.withOpacity(0.1)),
+              ),
+              child: ListTile(
+                onTap: () => _showDeleteConfirmation(context),
+                leading: Icon(Icons.delete_forever, color: Colors.red, size: 22.sp * scaleFactor),
+                title: Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14.sp * scaleFactor,
+                    fontFamily: 'SF Pro',
+                  ),
+                ),
+                subtitle: Text(
+                  'Permanently remove your account and data',
+                  style: TextStyle(
+                    fontSize: 11.sp * scaleFactor,
+                    color: Colors.red.withOpacity(0.7),
+                  ),
+                ),
+                trailing: Icon(Icons.arrow_forward_ios, size: 12.sp, color: Colors.red),
+              ),
+            ),
+          ),
+        ],
+      ),
                   ],
                 ),
               ),
@@ -99,6 +159,57 @@ class _HelpScreenState extends State<HelpScreen> {
     );
   }
 }
+Future<void> _showDeleteConfirmation(BuildContext context) async {
+    final profileController = Get.find<ProfileController>();
+
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24.sp),
+            SizedBox(width: 8.w),
+            Text(
+              'Delete Account',
+              style: TextStyle(
+                fontSize: 18.sp, 
+                fontWeight: FontWeight.w700, 
+                fontFamily: 'SF Pro'
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure? This will permanently delete your profile, history, and coins. This action cannot be undone.',
+          style: TextStyle(fontSize: 14.sp, fontFamily: 'SF Pro', color: Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+          ),
+          Obx(() => ElevatedButton(
+            onPressed: profileController.isDeleting 
+                ? null 
+                : () => profileController.deleteUserAccount(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+            ),
+            child: profileController.isDeleting
+                ? SizedBox(
+                    height: 20.h, 
+                    width: 20.h, 
+                    child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                  )
+                : const Text('Delete', style: TextStyle(color: Colors.white)),
+          )),
+        ],
+      ),
+    );
+  }
 
 class HelpTopic {
   final String title;
