@@ -35,7 +35,7 @@ class AppSnackbar {
   static void showInfo(String message) {
     _show(
       message: message,
-      backgroundColor: Colors.blue,
+      backgroundColor: const Color(0xFFE47830),
       icon: Icons.info_outline,
     );
   }
