@@ -59,9 +59,9 @@
 
 	<!-- Location (ONLY WHEN IN USE) -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We use your location to show available services in your area and provide accurate service availability.</string>
+	<string>We use your location to show nearby services, enable bookings, and assign service providers accurately while you use the app.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>We use your location to show nearby service providers. Location is only used while using the app.</string>
+    <string>We use your location to show nearby services, enable bookings, and assign service providers accurately while you use the app.</string>
 
 	<!-- Photo Library (READ ONLY) -->
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -94,13 +94,10 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
+	<key>UIDeviceFamily</key>
+    <array>
+	<integer>1</integer>
+    </array>
 
 </dict>
 </plist>

@@ -422,7 +422,26 @@ Future<void> _handleLogout() async {
                     buildListItem('assets/icons/about.svg', "About Chayan karo Services", scaleFactor,testId: 'profile_item_about', onTap: () {
                       Get.to(() => AboutChaynkaroServicesScreen());
                     }),
-                    
+                    ListTile(
+  contentPadding: EdgeInsets.symmetric(horizontal: 4.w * scaleFactor),
+  leading: Icon(
+    Icons.delete_forever,
+    size: 20.w * scaleFactor,
+    color: Colors.black,
+  ),
+  title: Text(
+    "Delete Account",
+    style: TextStyle(
+      fontFamily: 'Inter',
+      fontWeight: FontWeight.w500,
+      fontSize: 16.sp * scaleFactor,
+    ),
+  ),
+  trailing: Icon(Icons.arrow_forward_ios, size: 16.sp * scaleFactor),
+  onTap: () {
+    _showDeleteConfirmation(context);
+  },
+),
 
                     
                     buildListItem(
@@ -494,6 +513,58 @@ Future<void> _handleLogout() async {
       },
     );
   }
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
+    final profileController = Get.find<ProfileController>();
+
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24.sp),
+            SizedBox(width: 8.w),
+            Text(
+              'Delete Account',
+              style: TextStyle(
+                fontSize: 18.sp, 
+                fontWeight: FontWeight.w700, 
+                fontFamily: 'SF Pro'
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure? This will permanently delete your profile, history, and coins. This action cannot be undone.',
+          style: TextStyle(fontSize: 14.sp, fontFamily: 'SF Pro', color: Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+          ),
+          Obx(() => ElevatedButton(
+            onPressed: profileController.isDeleting 
+                ? null 
+                : () => profileController.deleteUserAccount(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+            ),
+            child: profileController.isDeleting
+                ? SizedBox(
+                    height: 20.h, 
+                    width: 20.h, 
+                    child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                  )
+                : const Text('Delete', style: TextStyle(color: Colors.white)),
+          )),
+        ],
+      ),
+    );
+  }
+
 
   Widget buildQuickAction(String label, String iconAssetPath, double scaleFactor) {
     return Container(
