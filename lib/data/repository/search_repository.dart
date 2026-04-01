@@ -15,12 +15,12 @@ class SearchRepository {
   Future<List<SearchResult>> searchServices(String query) async {
     // 1. Get Token from DB
     final token = await _db.getAuthToken();
-    if (token == null) throw Exception('User not authenticated');
+   final authHeader = (token != null && token.isNotEmpty) ? 'Bearer $token' : null;
 
     try {
       // 2. Call API with Bearer token
       // Note: The response model wraps the list in a 'result' field
-      final response = await _api.searchActiveServices('Bearer $token', query);
+      final response = await _api.searchActiveServices(authHeader, query);
       return response.result ?? [];
     } catch (e) {
       // Handle or rethrow error

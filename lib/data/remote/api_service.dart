@@ -24,6 +24,7 @@ import '../../models/check_availability_model.dart';
 import '../../models/bank_response_model.dart';
 import '../../models/banner_model.dart'; // Add this import
 import '../../models/coupon_models.dart'; // Add this import
+import '../../models/service_timing_model.dart';
 
 part 'api_service.g.dart';
 
@@ -59,12 +60,12 @@ abstract class ApiService {
 
   // Category
   @GET('/user/getCategory')
-  Future<CategoryResponse> getCategories(@Header("Authorization") String authorization);
+  Future<CategoryResponse> getCategories(@Header("Authorization") String? authorization);
 
   // Services
   @GET('/user/getServices')
   Future<ServiceResponse> getServices(
-    @Header("Authorization") String authorization,
+    @Header("Authorization") String? authorization,
     @Query("serviceCategoryId") String serviceCategoryId,
   );
 
@@ -193,13 +194,13 @@ Future<CancelBookingEnvelope> cancelBookingRaw(
   
   @GET("/user/searchActiveService")
   Future<SearchResponse> searchActiveServices(
-    @Header("Authorization") String token,
+    @Header("Authorization") String? token,
     @Query("search") String query,
   );
   // Add this to your ApiService interface
   @GET("/user/mostUsedServices")
   Future<MostUsedServiceResponse> getMostUsedServices(
-    @Header("Authorization") String token,
+    @Header("Authorization") String? token,
   );
   @POST('/user/addRefundBankDetail')
 Future<void> addRefundBankDetail(
@@ -223,7 +224,7 @@ Future<void> updateRefundBankDetail(
 );
 
 @GET("/user/getAllSlideBanners")
-Future<BannerResponse> getHomeBanners(@Header("Authorization") String token);
+Future<BannerResponse> getHomeBanners(@Header("Authorization") String? token);
 @GET('/user/getAllCoupons')
 Future<CouponResponse> getAllCoupons(
   @Header("Authorization") String token,
@@ -238,5 +239,10 @@ Future<ValidateCouponResponse> validateCoupon(
 @DELETE('/user/deleteCustomerAccount')
 Future<dynamic> deleteAccount(
   @Header("Authorization") String token,
+);
+@GET('/user/getServiceTiming')
+Future<ServiceTimingModel> getServiceTiming(
+  @Header('Authorization') String token,
+  @Query('categoryId') String categoryId,
 );
 }

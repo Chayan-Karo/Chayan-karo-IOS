@@ -269,12 +269,15 @@ class _RescheduleSummaryScreenState extends State<RescheduleSummaryScreen> {
         nextSlotConstraint = saathi!['nextAvailableSlot'];
       }
     }
+    await bookingController.fetchCategoryTiming(widget.categoryId);
 
     final DateTime? result = await showMergedBookingModal(
       context,
       initialDateStr: dayToken,
       initialTime: preferredTime,
       minTimeConstraint: nextSlotConstraint,
+      categoryId: widget.categoryId,
+      currentBookingDuration: widget.totalDuration,
       blockedSlot: _originalBlockedSlot, // Pass the frozen original time
     );
 

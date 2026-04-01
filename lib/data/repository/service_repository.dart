@@ -33,11 +33,9 @@ class ServiceRepository {
       // If no local data, fetch from API
       print('🌐 Fetching services for category $serviceCategoryId from API...');
       final token = await _database.getAuthToken();
-      if (token == null) {
-        throw Exception('No authentication token available');
-      }
+     final authHeader = (token != null && token.isNotEmpty) ? 'Bearer $token' : null;
 
-      final response = await _networkClient.apiService.getServices('Bearer $token', serviceCategoryId);
+      final response = await _networkClient.apiService.getServices(authHeader, serviceCategoryId);
       final services = response.result;
       
       // Save to local database
@@ -81,11 +79,9 @@ class ServiceRepository {
     try {
       print('🔄 Force refreshing services for category $serviceCategoryId from API...');
       final token = await _database.getAuthToken();
-      if (token == null) {
-        throw Exception('No authentication token available');
-      }
+      final authHeader = (token != null && token.isNotEmpty) ? 'Bearer $token' : null;
 
-      final response = await _networkClient.apiService.getServices('Bearer $token', serviceCategoryId);
+      final response = await _networkClient.apiService.getServices(authHeader, serviceCategoryId);
       final services = response.result;
       
       // Save to local database

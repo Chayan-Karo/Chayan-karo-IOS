@@ -7,6 +7,7 @@ import '../../../utils/test_extensions.dart';
 import '../../../controllers/category_controller.dart';
 import '../../../models/category_models.dart';
 import '../../../services/universal_service_screen.dart';
+import '../../../widgets/three_dot_loader.dart';
 
 class CategoriesGridWidget extends StatelessWidget {
   final double scaleFactor;
@@ -105,8 +106,9 @@ class CategoriesGridWidget extends StatelessWidget {
           height: 200.h * scaleFactor,
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: const Center(
-            child: CircularProgressIndicator(
-              color: Color(0xFFFF6F00),
+            child: ThreeDotLoader(
+              color: Color(0xFFFF6F00), // Matching your brand orange
+              size: 12.0,               // Slightly smaller for grid context
             ),
           ),
         ).withId('categories_grid_loading');

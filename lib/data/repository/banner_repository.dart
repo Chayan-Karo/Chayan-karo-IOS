@@ -8,11 +8,11 @@ class BannerRepository {
 
   Future<List<BannerItem>> getHomeBanners() async {
     final token = await _db.getAuthToken();
-    if (token == null) throw Exception('Authentication Required');
+    final authHeader = (token != null && token.isNotEmpty) ? 'Bearer $token' : null;
 
     try {
       // You should add this method to your ApiService interface
-      final response = await _api.getHomeBanners('Bearer $token');
+      final response = await _api.getHomeBanners(authHeader);
       return response.result ?? [];
     } catch (e) {
       rethrow;

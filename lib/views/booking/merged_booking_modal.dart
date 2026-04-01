@@ -3,35 +3,37 @@ import 'package:intl/intl.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../controllers/booking_controller.dart';
 
 /// Returns a DateTime containing BOTH the selected date and the selected time.
 Future<DateTime?> showMergedBookingModal(
   BuildContext context, {
-  required String initialDateStr, // "yyyy-MM-dd" or "dd"
+  required String initialDateStr,
+  String? categoryId, // ✅ Add this
   TimeOfDay? initialTime,
   String? minTimeConstraint,
-  DateTime? blockedSlot, // <--- ADD THIS LINE
-  int currentBookingDuration = 0, // ✅ Add this
+  DateTime? blockedSlot,
+  int currentBookingDuration = 0,
 }) {
   return showModalBottomSheet<DateTime>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20.r))),
     builder: (_) => _MergedBookingSheet(
       initialDateStr: initialDateStr,
+      categoryId: categoryId, // ✅ Pass it
       initialTime: initialTime,
       minTimeConstraint: minTimeConstraint,
-      blockedSlot: blockedSlot, // <--- ADD THIS LINE
-      currentBookingDuration: currentBookingDuration, // ✅ Pass it here
+      blockedSlot: blockedSlot,
+      currentBookingDuration: currentBookingDuration,
     ),
   );
 }
 
 class _MergedBookingSheet extends StatefulWidget {
   final String initialDateStr;
+  final String? categoryId;
   final TimeOfDay? initialTime;
   final String? minTimeConstraint;
   final DateTime? blockedSlot; // <--- ADD THIS LINE
@@ -41,6 +43,7 @@ class _MergedBookingSheet extends StatefulWidget {
     super.key,
     required this.initialDateStr,
     this.initialTime,
+    this.categoryId,
     this.minTimeConstraint,
     this.blockedSlot, // <--- ADD THIS LINE
     this.currentBookingDuration = 0, // ✅ Add this with default value
@@ -56,20 +59,44 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
   
   late List<TimeOfDay> _allSlots;
   TimeOfDay? _selectedTime;
-
+  String _dynamicEndTime = "20:00";
   // Configuration constant
   final int _bufferMinutes = 45;
 
   @override
   void initState() {
     super.initState();
+     WidgetsBinding.instance.addPostFrameCallback((_) {
+    _loadDynamicCutoff(); // ✅ SAFE NOW
+  });
     _initTimeSlots(); // Init slots first to help date filtering
     _initDates(); // Filter dates based on slot availability
     
     // Set initial selection if available
     _selectedTime = widget.initialTime;
   }
+ void _loadDynamicCutoff() async {
+  if (widget.categoryId != null) {
+    final controller = Get.find<BookingController>();
 
+    debugPrint("📡 Calling timing API for category: ${widget.categoryId}");
+
+    await controller.fetchCategoryTiming(widget.categoryId!);
+
+    final timing = controller.currentTiming.value;
+
+    debugPrint("📡 API RESULT: ${timing?.endTime}");
+
+    if (timing != null) {
+      setState(() {
+        _dynamicEndTime = timing.endTime;
+      });
+    }
+  } else {
+    debugPrint("❌ categoryId is null, API not called");
+  }
+}
+  
   void _initTimeSlots() {
     // Generate slots from 8:30 AM to 7:00 PM
     _allSlots = _generateSlots(
@@ -219,6 +246,13 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
       _selectedTime = slot;
     });
   }
+ String _getFormattedEndTime() {
+     try {
+      final parts = _dynamicEndTime.split(':');
+      final dt = DateTime(0, 1, 1, int.parse(parts[0]), int.parse(parts[1]));
+      return DateFormat('hh:mm a').format(dt);
+    } catch (_) { return _dynamicEndTime; }
+  }
 
   String _formatTimeString(String timeString) {
     try {
@@ -355,13 +389,18 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
       final int endMinutes = startMinutes + widget.currentBookingDuration;
       
       // 2. Check if it exceeds 7:00 PM (19 * 60 = 1140 minutes)
-      const int cutoffMinutes = 20 * 60; 
+    final parts = _dynamicEndTime.split(':');
+      final int cutoffMinutes = (int.parse(parts[0]) * 60) + int.parse(parts[1]);
 
       if (endMinutes > cutoffMinutes) {
-        AppSnackbar.showError('The total duration exceeds service hours (8 PM). Please select an earlier slot.');
-        return; // ⛔ Prevent navigation/closing
+        // Use the helper method you already have to show a friendly time
+        AppSnackbar.showError(
+          'Total duration exceeds service hours (ends at ${_getFormattedEndTime()}). '
+          'Please select an earlier slot.'
+        );
+        return; // ⛔ Block closing
       }
-
+      //const int cutoffMinutes = 20 * 60; 
       // 3. If valid, merge and return
       final finalDateTime = DateTime(
         _selectedDate.year,

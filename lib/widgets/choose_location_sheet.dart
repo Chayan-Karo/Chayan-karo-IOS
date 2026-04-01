@@ -6,6 +6,8 @@ import '../../controllers/location_controller.dart';
 import '../../models/location_models.dart';
 import 'package:flutter/services.dart';
 import '../../utils/test_extensions.dart';
+import '../../data/local/database.dart'; // 💡 IMPORT THIS
+import '../../widgets/login_required_widget.dart'; // 💡 IMPORT THIS
 
 
 class ChooseLocationSheet extends StatefulWidget {
@@ -19,14 +21,23 @@ class ChooseLocationSheet extends StatefulWidget {
 class _ChooseLocationSheetState extends State<ChooseLocationSheet> {
   final LocationController lc = Get.find<LocationController>();
   String? selectedId;
+  final RxBool isLoggedIn = false.obs;
 
   @override
   void initState() {
     super.initState();
     // Trigger fetch; selectedId will be aligned after data arrives
-    lc.fetchCustomerAddresses();
-    // Optional initial guess from any preloaded data
-    selectedId = lc.addresses.firstWhereOrNull((a) => a.isDefault)?.id;
+  _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final db = Get.find<AppDatabase>();
+    isLoggedIn.value = await db.isUserLoggedIn();
+    
+    if (isLoggedIn.value) {
+      lc.fetchCustomerAddresses();
+      selectedId = lc.addresses.firstWhereOrNull((a) => a.isDefault)?.id;
+    }
   }
 
   Future<void> _handleSelect(CustomerAddress a) async {
@@ -101,6 +112,14 @@ Widget build(BuildContext context) {
     ),
 
     body: Obx(() {
+    if (!isLoggedIn.value) {
+          return LoginRequiredWidget(
+            title: "Whoops, You are logged out!",
+            message: "Please log in to save your home, work, or other addresses for faster service booking.",
+            iconPath: "assets/icons/location.svg", // 📍 Use location icon as requested
+          );
+        }
+
       final loading = lc.isLoadingAddresses.value;
       final err = lc.error.value;
       final list = lc.addresses;

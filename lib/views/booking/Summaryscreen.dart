@@ -326,6 +326,10 @@ Coupon? _selectedCoupon;
 
         
     final int totalDuration = _estimateTotalDurationMinutes(items);
+     String? currentCategoryId;
+  if (items.isNotEmpty) {
+    currentCategoryId = items.first.categoryId;
+  }
 
 
     final DateTime? picked = await showMergedBookingModal(
@@ -334,6 +338,7 @@ Coupon? _selectedCoupon;
       initialTime: _inlineTime,
       minTimeConstraint: nextSlotConstraint,
       currentBookingDuration: totalDuration,
+      categoryId: widget.isRebooking ? null : currentCategoryId,
 
       
     );

@@ -5,6 +5,7 @@ import '../data/repository/booking_read_repository.dart';
 import '../models/booking_read_models.dart';
 // Import your Feedback Screen
 import '../views/booking/feedback_screen.dart'; // ADJUST PATH IF NEEDED
+import '../data/local/database.dart';
 
 class BookingReadController extends GetxController {
   BookingReadController({BookingReadRepository? repo})
@@ -12,11 +13,35 @@ class BookingReadController extends GetxController {
 
   final BookingReadRepository _repo;
 
+  final RxBool isLoggedIn = false.obs;
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
   final RxList<CustomerBooking> bookings = <CustomerBooking>[].obs;
 
   int _reqId = 0;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // 💡 Check auth status immediately when controller is created
+    checkAuthAndFetch();
+  }
+
+  /// 🎯 Logic to handle Guest vs Logged-in state
+  Future<void> checkAuthAndFetch() async {
+    final db = Get.find<AppDatabase>();
+    final bool authStatus = await db.isUserLoggedIn();
+    
+    isLoggedIn.value = authStatus;
+
+    if (authStatus) {
+      print('🔐 BookingCtrl: User Logged In. Fetching data...');
+      fetchCustomerBookings();
+    } else {
+      print('👤 BookingCtrl: Guest Mode. Skipping data fetch.');
+      bookings.clear();
+    }
+  }
 
   // --- Getters ---
   List<CustomerBooking> get previous {
@@ -36,6 +61,12 @@ class BookingReadController extends GetxController {
   }
 
   Future<void> fetchCustomerBookings({bool force = true}) async {
+    final db = Get.find<AppDatabase>();
+    if (!(await db.isUserLoggedIn())) {
+      isLoggedIn.value = false;
+      return;
+    }
+    isLoggedIn.value = true;
     final int cur = ++_reqId; 
     try {
       isLoading.value = true;
@@ -71,6 +102,7 @@ class BookingReadController extends GetxController {
   /// Call this explicitly from Home Screen
  Future<void> checkForPendingFeedback() async {
   // If bookings are empty, try to fetch silently first
+  if (!isLoggedIn.value) return;
   if (bookings.isEmpty) {
     try {
       await fetchCustomerBookings(force: false);

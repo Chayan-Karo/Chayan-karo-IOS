@@ -14,7 +14,8 @@ import 'PreviousBookingScreen.dart';
 import 'feedback_screen.dart';
 import '../../widgets/no_internet_screen.dart'; // Import the new file
 import '../../widgets/three_dot_loader.dart';
-
+import '../../data/local/database.dart'; // Ensure this is imported
+import '../../widgets/login_required_widget.dart'; // Import your new widget
 // NEW
 import '../../controllers/booking_read_controller.dart';
 import '../../models/booking_read_models.dart';
@@ -632,6 +633,16 @@ Widget _buildEmptyState(BuildContext context, double scaleFactor, {
 
             Expanded(
               child: Obx(() {
+               // final database = Get.find<AppDatabase>();
+
+                if (!readCtrl.isLoggedIn.value) {
+                  return LoginRequiredWidget(
+                    scaleFactor: scaleFactor,
+                    title: "Whoops, You are logged out!",
+                    message: "Please log in to check your booking information and service history.",
+                    iconPath: "assets/icons/bookings.svg",
+                  );
+                }
                 // 1. Loading State
                 if (readCtrl.isLoading.value && readCtrl.bookings.isEmpty) {
                   return Center(

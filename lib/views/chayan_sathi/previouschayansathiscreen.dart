@@ -23,6 +23,7 @@ import '../../models/saathi_models.dart';
 // --- Screens ---
 import 'chayan_sathi_rating_screen.dart'; 
 import './saathi_service_screen.dart';
+import '../../widgets/login_required_widget.dart';
 
 class PreviousChayanSathiScreen extends StatefulWidget {
   const PreviousChayanSathiScreen({super.key});
@@ -57,6 +58,14 @@ class _PreviousChayanSathiScreenState extends State<PreviousChayanSathiScreen> {
 
               Expanded(
                 child: Obx(() {
+                  if (!listController.isLoggedIn.value) {
+                    return LoginRequiredWidget(
+                      scaleFactor: scaleFactor,
+                      title: "Whoops, You are logged out!",
+                      message: "Login to view and quickly book your preferred service professionals from previous services.",
+                      iconPath: "assets/icons/chayansathi.svg", // Use your Saathi icon
+                    );
+                  }
                   final isLoading = listController.isLoading.value;
                   final list = listController.saathiList;
                   final lastLockedId = lockController.lastLockedProviderId.value;

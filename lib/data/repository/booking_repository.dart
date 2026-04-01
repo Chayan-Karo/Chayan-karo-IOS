@@ -7,6 +7,7 @@ import '../../data/local/database.dart';
 import '../../models/booking_models.dart';
 import '../../models/reschedule_models.dart';
 import '../../models/cancel_models.dart';
+import '../../models/service_timing_model.dart';
 
 class BookingRepository {
   BookingRepository({AppDatabase? database})
@@ -99,5 +100,18 @@ class BookingRepository {
 
   // This calls the @POST('/user/refundBookingAmount') you added to ApiService
   return _api.refundBookingAmount('Bearer $token', payload);
+}
+Future<ServiceTimingModel?> getServiceTiming(String categoryId) async {
+  final token = await _db.getAuthToken();
+  if (token == null) throw Exception('User not authenticated');
+
+  try {
+    // Direct model return from ApiService
+    return await _api.getServiceTiming('Bearer $token', categoryId);
+  } catch (e) {
+    if (kDebugMode) debugPrint('Error fetching service timing: $e');
+    // If the API fails, we return null or handle the error gracefully
+    return null; 
+  }
 }
 }

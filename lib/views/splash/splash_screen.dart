@@ -46,47 +46,59 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   // ✨ Simplified navigation logic: auth + onboarding only
+ /// 🎯 Refactored Guest Mode + Auth Flow Logic
   Future<void> _navigateToCorrectScreen() async {
     try {
       final database = Get.find<AppDatabase>();
 
+      // Fetch all status flags
+      final bool hasSeenOnboarding = await database.hasSeenOnboarding();
+      final bool hasEnteredApp = await database.hasEnteredApp(); // New Flag
       final bool isLoggedIn = await database.isUserLoggedIn();
       final bool isSessionValid = await database.isSessionValid();
-      final bool hasSeenOnboarding = await database.hasSeenOnboarding();
 
-      print('🔐 Splash: Auth Check - isLoggedIn=$isLoggedIn, sessionValid=$isSessionValid, hasSeenOnboarding=$hasSeenOnboarding');
+      print('🔐 Splash: Onboarding=$hasSeenOnboarding, Entered=$hasEnteredApp, LoggedIn=$isLoggedIn');
 
-      // 1️⃣ New or logged-out user
-      if (!isLoggedIn || !isSessionValid) {
-        if (isLoggedIn && !isSessionValid) {
-          print('⚠️ Splash: Session expired - clearing auth data');
-          await database.clearAuthData();
-        }
-
-        if (hasSeenOnboarding) {
-          print('👀 Splash: User has seen onboarding - redirecting to login');
-          Get.offAllNamed('/login');
-          return;
-        } else {
-          print('🆕 Splash: New user - showing onboarding');
-          Get.offAllNamed('/onboarding');
-          return;
-        }
+      // 1️⃣ Priority: Mandatory Onboarding for new installs
+      if (!hasSeenOnboarding) {
+        print('🆕 Splash: Brand new user - showing onboarding');
+        Get.offAllNamed('/onboarding');
+        return;
       }
 
-      // 2️⃣ Auth valid → go home (location check happens after login/OTP flow)
-      final userData = await database.getCurrentUser();
-      print('✅ Splash: Auth OK → User: ${userData['name']}');
-      Get.offAllNamed('/home');
+      // 2️⃣ Priority: Valid Session - Go Home (Logged-in Mode)
+      if (isLoggedIn && isSessionValid) {
+        print('✅ Splash: Auth OK - Going Home');
+        Get.offAllNamed('/home');
+        return;
+      }
+
+      // 3️⃣ Priority: Guest Mode Check (The "Skip" Logic)
+      // If they have "Entered App" once (via Skip or previous login), 
+      // even if logged out or session expired, they go straight to Home.
+      if (hasEnteredApp) {
+        print('🏠 Splash: Guest Mode active - Going Home');
+        
+        // Cleanup expired session data quietly if needed
+        if (isLoggedIn && !isSessionValid) {
+          await database.clearAuthData();
+        }
+        
+        Get.offAllNamed('/home');
+        return;
+      }
+
+      // 4️⃣ Default: First time seeing the Login screen after Onboarding
+      print('🔑 Splash: User must see login screen for the first time');
+      Get.offAllNamed('/login');
 
     } catch (e, stack) {
       print('❌ Splash: Fatal error determining route: $e');
       print(stack);
-      // Fallback to onboarding on error
-      Get.offAllNamed('/onboarding');
+      Get.offAllNamed('/onboarding'); // Safe fallback
     }
   }
-
+  
   @override
   void dispose() {
     _controller.dispose();

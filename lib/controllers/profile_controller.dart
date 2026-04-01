@@ -6,9 +6,11 @@ import '../data/repository/profile_repository.dart';
 import '../models/customer_models.dart';
 import 'package:image_cropper/image_cropper.dart';
 import '../widgets/app_snackbar.dart';
+import '../data/local/database.dart';
 
 class ProfileController extends GetxController {
   final ProfileRepository _profileRepository = Get.find<ProfileRepository>();
+  AppDatabase get _database => Get.find<AppDatabase>();
 
   final _customer = Rxn<Customer>();
   final _isLoading = false.obs;
@@ -37,6 +39,13 @@ class ProfileController extends GetxController {
     try {
       _isLoading.value = true;
       _errorMessage.value = '';
+    final bool isLoggedIn = await _database.isUserLoggedIn();
+    if (!isLoggedIn) {
+        print('👤 ProfileController: Guest Mode active. Skipping API call.');
+        _customer.value = null; // Triggers LoginRequiredWidget in UI
+        return;
+      }
+
       final customerData = await _profileRepository.getCustomer();
       _customer.value = customerData;
     } catch (e) {
@@ -48,7 +57,9 @@ class ProfileController extends GetxController {
   }
 
   Future<void> refreshProfile() async {
-    await loadProfile();
+   if (await _database.isUserLoggedIn()) {
+      await loadProfile();
+    }
   }
 
   Future<bool> updateProfile({

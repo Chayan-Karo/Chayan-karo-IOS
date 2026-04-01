@@ -98,6 +98,25 @@ class LoginController extends GetxController {
     }
   }
 
+  // NEW: Skip Login Logic for Guest Mode
+  Future<void> skipLogin() async {
+    try {
+      // 1. Set the flag so Splash Screen knows to go to Home next time
+      await _database.setHasEnteredApp(true);
+      
+      // 2. Clear any lingering error messages
+      _errorMessage.value = '';
+      
+      // 3. Navigate to Home
+      print('🚀 Continuing as Guest...');
+      Get.offAllNamed('/home');
+    } catch (e) {
+      print('❌ Error skipping login: $e');
+      // Fallback navigation
+      Get.offAllNamed('/home');
+    }
+  }
+
   void _handleDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:

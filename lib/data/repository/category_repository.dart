@@ -32,11 +32,10 @@ class CategoryRepository {
       // If no local data, fetch from API
       print('🌐 Fetching categories from API...');
       final token = await _database.getAuthToken();
-      if (token == null) {
-        throw Exception('No authentication token available');
-      }
+     
+      final authHeader = (token != null && token.isNotEmpty) ? 'Bearer $token' : null;
 
-      final response = await _networkClient.apiService.getCategories('Bearer $token');
+      final response = await _networkClient.apiService.getCategories(authHeader);
       final categories = response.result;
       
       // Save to local database
@@ -64,11 +63,9 @@ class CategoryRepository {
     try {
       print('🔄 Force refreshing categories from API...');
       final token = await _database.getAuthToken();
-      if (token == null) {
-        throw Exception('No authentication token available');
-      }
+      final authHeader = (token != null && token.isNotEmpty) ? 'Bearer $token' : null;
 
-      final response = await _networkClient.apiService.getCategories('Bearer $token');
+      final response = await _networkClient.apiService.getCategories(authHeader);
       final categories = response.result;
       
       // Save to local database

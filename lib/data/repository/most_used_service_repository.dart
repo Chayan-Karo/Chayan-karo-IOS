@@ -15,11 +15,10 @@ class MostUsedServiceRepository {
   Future<List<MostUsedService>> fetchMostUsedServices() async {
     // 1. Get Token from DB
     final token = await _db.getAuthToken();
-    if (token == null) throw Exception('User not authenticated');
-
+    final authHeader = (token != null && token.isNotEmpty) ? 'Bearer $token' : null;
     try {
       // 2. Call API with Bearer token
-      final response = await _api.getMostUsedServices('Bearer $token');
+      final response = await _api.getMostUsedServices(authHeader);
       return response.result ?? [];
     } catch (e) {
       rethrow;

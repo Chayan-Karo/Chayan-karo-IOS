@@ -16,6 +16,7 @@ import './widgets/categories_grid_widget.dart';
 import './widgets/home_banner_widget.dart';
 import './widgets/most_used_services_widget.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
+import '../../data/local/database.dart';
 
 // Screens
 import '../chayan_sathi/chayan_sathi_screen.dart';
@@ -56,43 +57,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       print('❌ HomeScreen: Error initializing controllers: $e');
     }
 
-    // Profile + address presence check: enforce server-side prerequisites before allowing Home
-    Future.microtask(() async {
-      try {
-        // 1) Load profile and verify basic info (firstName, emailId, gender)
-        final profileController = Get.put(ProfileController(), permanent: true);
-        await profileController.loadProfile();
+   Future.microtask(() async {
+    try {
+      final database = Get.find<AppDatabase>();
+      final bool isLoggedIn = await database.isUserLoggedIn();
 
-        final isBasicInfoComplete = profileController.isBasicInfoComplete;
-        print('🔍 Home: isBasicInfoComplete = $isBasicInfoComplete');
-
-        if (!isBasicInfoComplete) {
-          print('✏️ Home: Incomplete basic profile info → EditProfileScreen');
-           Get.offAllNamed(
-        '/edit-profile',            // use same route name as profile screen
-        arguments: profileController.customer,
-      );
-          return;
-        }
-
-        // 2) If basic profile is OK, check address from server (same as before)
-        final repo = Get.find<LocationRepository>();
-        final list = await repo.getCustomerAddresses();
-        if (list.isEmpty) {
-          // No address on server → require user to pick location
-          print('📍 Home: No address on server → Location popup');
-          Get.offAllNamed('/location_popup');
-          return;
-        }
-
-        print('✅ Home: Profile + address checks passed');
-        Get.find<BookingReadController>().checkForPendingFeedback();
-      } catch (e) {
-        // On API/network failure, fail-safe to Location to avoid showing Home without prerequisites
-        print('❌ Home: Error in profile/address checks: $e');
-        Get.offAllNamed('/location_popup');
+      // 🛑 EXIT EARLY IF GUEST
+      if (!isLoggedIn) {
+        print('👤 Home: Guest Mode - Skipping Profile & Address checks');
+        return;
       }
-    });
+
+      // 🔐 LOGGED-IN ONLY LOGIC
+      print('🔐 Home: Auth User - Loading Profile and Address');
+      final profileController = Get.put(ProfileController(), permanent: true);
+      await profileController.loadProfile();
+
+      // 1) Enforce basic info
+      if (!profileController.isBasicInfoComplete) {
+        Get.offAllNamed('/edit-profile', arguments: profileController.customer);
+        return;
+      }
+
+      // 2) Enforce address presence
+      final repo = Get.find<LocationRepository>();
+      final list = await repo.getCustomerAddresses();
+      if (list.isEmpty) {
+        Get.offAllNamed('/location_popup');
+        return;
+      }
+
+      // 3) Check for feedback (Authenticated only)
+      Get.find<BookingReadController>().checkForPendingFeedback();
+      
+    } catch (e) {
+      print('❌ Home Auth Check Error: $e');
+      // On error for logged-in users, fallback to location is safer
+      // But for guests, this block isn't even reached.
+    }
+  });
+
   }
 
   @override

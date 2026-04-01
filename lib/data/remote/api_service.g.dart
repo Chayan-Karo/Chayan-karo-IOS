@@ -192,9 +192,10 @@ class _ApiService implements ApiService {
   }
 
   @override
-  Future<CategoryResponse> getCategories(String authorization) async {
+  Future<CategoryResponse> getCategories(String? authorization) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{r'Authorization': authorization};
     _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
@@ -221,13 +222,14 @@ class _ApiService implements ApiService {
 
   @override
   Future<ServiceResponse> getServices(
-    String authorization,
+    String? authorization,
     String serviceCategoryId,
   ) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'serviceCategoryId': serviceCategoryId,
     };
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{r'Authorization': authorization};
     _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
@@ -900,11 +902,12 @@ class _ApiService implements ApiService {
 
   @override
   Future<SearchResponse> searchActiveServices(
-    String token,
+    String? token,
     String query,
   ) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'search': query};
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{r'Authorization': token};
     _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
@@ -930,9 +933,10 @@ class _ApiService implements ApiService {
   }
 
   @override
-  Future<MostUsedServiceResponse> getMostUsedServices(String token) async {
+  Future<MostUsedServiceResponse> getMostUsedServices(String? token) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{r'Authorization': token};
     _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
@@ -1058,9 +1062,10 @@ class _ApiService implements ApiService {
   }
 
   @override
-  Future<BannerResponse> getHomeBanners(String token) async {
+  Future<BannerResponse> getHomeBanners(String? token) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{r'Authorization': token};
     _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
@@ -1164,6 +1169,37 @@ class _ApiService implements ApiService {
     );
     final _result = await _dio.fetch(_options);
     final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<ServiceTimingModel> getServiceTiming(
+    String token,
+    String categoryId,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{r'categoryId': categoryId};
+    final _headers = <String, dynamic>{r'Authorization': token};
+    _headers.removeWhere((k, v) => v == null);
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<ServiceTimingModel>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/user/getServiceTiming',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late ServiceTimingModel _value;
+    try {
+      _value = ServiceTimingModel.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
     return _value;
   }
 

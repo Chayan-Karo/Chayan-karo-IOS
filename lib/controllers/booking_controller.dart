@@ -6,6 +6,7 @@ import '../data/repository/booking_repository.dart';
 import '../models/booking_models.dart';
 import '../models/reschedule_models.dart';
 import '../models/cancel_models.dart';
+import '../models/service_timing_model.dart';
 
 // ADD: imports to trigger background refresh safely
 import 'dart:async' show unawaited;            // for fire-and-forget
@@ -17,6 +18,8 @@ class BookingController extends GetxController {
 final RxBool isRefunding = false.obs;
   final RxBool isPlacing = false.obs;
   final RxString error = ''.obs;
+  final Rx<ServiceTimingModel?> currentTiming = Rx<ServiceTimingModel?>(null);
+  final RxString serviceEndTime = ''.obs;
 // --- NEW: Network Error Helpers ---
   bool _isNetworkError(String msg) {
     final m = msg.toLowerCase();
@@ -367,4 +370,32 @@ Future<bool> processRefund({
     isRefunding.value = false;
   }
 }
+Future<void> fetchCategoryTiming(String categoryId) async {
+    try {
+      isPlacing.value = true; // Reusing loading state
+      final timing = await _repo.getServiceTiming(categoryId);
+      
+      if (timing != null) {
+        debugPrint("📡 API SUCCESS: Category: ${timing.id}, EndTime: ${timing.endTime}");
+        currentTiming.value = timing;
+        // Also update the string for the UI blocking check
+        serviceEndTime.value = timing.endTime; 
+      }
+    } finally {
+      isPlacing.value = false;
+    }
+  }
+
+  bool isBookingClosedToday() {
+    if (currentTiming.value == null) return false;
+    
+    final now = DateTime.now();
+    final endTimeParts = currentTiming.value!.endTime.split(':');
+    final endHour = int.parse(endTimeParts[0]);
+    final endMin = int.parse(endTimeParts[1]);
+    
+    final endDateTime = DateTime(now.year, now.month, now.day, endHour, endMin);
+    return now.isAfter(endDateTime);
+  }
 }
+

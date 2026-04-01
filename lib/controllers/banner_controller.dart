@@ -41,4 +41,5 @@ class BannerController extends GetxController {
   Future<void> refreshBanners() async {
     await fetchBanners();
   }
+  
 }

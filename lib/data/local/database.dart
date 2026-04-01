@@ -457,6 +457,25 @@ class AppDatabase extends _$AppDatabase {
       return false;
     }
   }
+  Future<bool> hasEnteredApp() async {
+    try {
+      final result = await getUserPreference('has_entered_app');
+      return result == 'true';
+    } catch (e) {
+      print('❌ Error checking entered app status: $e');
+      return false;
+    }
+  }
+
+  /// NEW: Set the flag when user clicks "Skip" or "Login"
+  Future<void> setHasEnteredApp(bool value) async {
+    try {
+      await saveUserPreference('has_entered_app', value.toString());
+      print('✅ Flag set: has_entered_app = $value');
+    } catch (e) {
+      print('❌ Error setting entered app flag: $e');
+    }
+  }
 
   /// Save user login state and data
   Future<void> saveLoginState({
@@ -468,7 +487,9 @@ class AppDatabase extends _$AppDatabase {
   }) async {
     try {
       await saveUserPreference('is_logged_in', isLoggedIn.toString());
-      
+      if (isLoggedIn) {
+        await setHasEnteredApp(true);
+      }
       if (userId != null) await saveUserPreference('user_id', userId);
       if (userToken != null) await saveUserPreference('user_token', userToken);
       if (userPhone != null) await saveUserPreference('user_phone', userPhone);
@@ -1591,7 +1612,9 @@ class AppDatabase extends _$AppDatabase {
 
       // 3. Clear User Preferences EXCEPT Onboarding Keys
       await (delete(userPreferencesTable)
-        ..where((tbl) => tbl.key.isNotIn(['has_seen_onboarding', 'onboarding_completed_at']))
+        ..where((tbl) => tbl.key.isNotIn(['has_seen_onboarding', 'onboarding_completed_at',
+        'has_entered_app' // 🔑 CRITICAL: Keep this so guest stays in Home
+        ]))
       ).go();
       
       print('✅ Secure Logout Complete: User data wiped, Onboarding preserved.');

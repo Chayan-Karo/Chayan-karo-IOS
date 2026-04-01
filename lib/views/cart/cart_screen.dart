@@ -19,6 +19,7 @@ import '../chayan_sathi/chayan_sathi_screen.dart';
 import '../booking/Summaryscreen.dart';
 import './widgets/read_more_text.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../data/local/database.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -768,6 +769,18 @@ Widget _buildCartItemCard(
   }
 
   void _proceedToCheckout(BuildContext context) async {
+    final database = Get.find<AppDatabase>();
+    final bool isLoggedIn = await database.isUserLoggedIn();
+
+    if (!isLoggedIn) {
+      // Show a friendly snackbar first so they know why they are being redirected
+      AppSnackbar.showInfo('Please login to continue with your booking');
+      
+      // Redirect to login. 
+      // After login, they will naturally land back on Home, or you can handle specific return logic.
+     Get.toNamed('/login'); 
+      return;
+    }
     final groupedItems = cartController.getItemsGroupedBySource();
     // 1. Restriction: Minimum Order Value Check
     if (cartController.totalPrice < 99) {

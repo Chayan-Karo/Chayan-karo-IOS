@@ -20,6 +20,7 @@ import '../../controllers/location_controller.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/category_controller.dart';
 import 'financial_details_screen.dart';
+import '../../widgets/login_required_widget.dart';
 
 // Widgets & Controllers
 import '../../widgets/custom_bottom_nav_bar.dart';
@@ -274,7 +275,7 @@ Future<void> _handleLogout() async {
       print('✅ User logged out successfully & State cleared');
       
       // 3. Navigate to Login Screen (clearing stack)
-      Get.offAllNamed('/login');
+      Get.offAllNamed('/home');
       
     } catch (e) {
       print('❌ Error during logout: $e');
@@ -371,7 +372,18 @@ Future<void> _handleLogout() async {
                 onBack: () => Navigator.pop(context),
               ),
               Expanded(
-                child: ListView(
+                child: Obx(() {
+                final bool isGuest = !_profileController.isLoading && _profileController.customer == null;
+
+                  if (isGuest) {
+                    return LoginRequiredWidget(
+                      scaleFactor: scaleFactor,
+                      title: "Whoops, You are logged out!",
+                      message: "Login to manage your profile, saved addresses, and active service bookings.",
+                      iconPath: "assets/icons/profile.svg", // Ensure this exists or use logo
+                    );
+                  }
+                return ListView(
                   padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
                   children: [
                     SizedBox(height: 24.h * scaleFactor),
@@ -501,7 +513,8 @@ Future<void> _handleLogout() async {
                     
                     SizedBox(height: 30.h * scaleFactor),
                   ],
-                ),
+                );
+                }),
               ),
             ],
           ),
