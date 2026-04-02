@@ -249,8 +249,17 @@ IconButton(
                             hintText: 'IFSC Code *', 
                             icon: Icons.code, 
                             testId: 'add_bank_ifsc',
-                            validator: (v) => !RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$').hasMatch(v?.toUpperCase() ?? "") 
-                                ? "Invalid IFSC format (e.g. SBIN0001234)" : null,
+                           validator: (v) {
+  final value = v?.toUpperCase() ?? "";
+
+  if (value.isEmpty) return "IFSC required";
+
+  if (!RegExp(r'^[A-Z0-9]{9,11}$').hasMatch(value)) {
+    return "Enter valid IFSC (9–11 alphanumeric, no special chars)";
+  }
+
+  return null;
+},
                           ),
                           SizedBox(height: 12.h),
                           _OutlinedIconField(
