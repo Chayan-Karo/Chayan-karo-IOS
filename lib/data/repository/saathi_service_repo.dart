@@ -44,6 +44,7 @@ class SaathiServiceRepository {
     required String addressId,
     required String bookingDate, // yyyy-MM-dd
     required String bookingTime, // HH:mm
+    required String categoryId,
     required int duration,
   }) async {
     final token = await _database.getAuthToken();
@@ -52,6 +53,7 @@ class SaathiServiceRepository {
     try {
       final body = {
         "providerId": providerId,
+        "categoryId": categoryId,
         "addressId": addressId,
         "bookingDate": bookingDate,
         "bookingTime": bookingTime,

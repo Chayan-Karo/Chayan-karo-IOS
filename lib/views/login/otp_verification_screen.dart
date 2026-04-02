@@ -213,8 +213,13 @@ Obx(() {
 Widget _buildOtpFields(OtpController controller, double scaleFactor) {
   return GestureDetector(
     onTap: () {
-      controller.otpFocusNode.requestFocus();
-    },
+  if (controller.otpFocusNode.hasFocus) {
+    // 🔥 FORCE REOPEN KEYBOARD
+    SystemChannels.textInput.invokeMethod('TextInput.show');
+  } else {
+    controller.otpFocusNode.requestFocus();
+  }
+},
     child: Stack(
       children: [
         // 🔥 HIDDEN TEXTFIELD

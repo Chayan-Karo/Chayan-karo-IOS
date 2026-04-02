@@ -366,12 +366,12 @@ Widget _buildCartItemCard(
                       width: 70.w * scaleFactor,
                       height: 70.h * scaleFactor,
                       color: Colors.grey[200],
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFFE47830),
-                        ),
-                      ),
+                     child: Center(
+  child: ThreeDotLoader(
+    size: 6 * scaleFactor, // 👈 adjust size nicely
+    color: const Color(0xFFE47830),
+  ),
+),
                     );
                   },
                 ),

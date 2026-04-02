@@ -21,19 +21,19 @@ class OtpController extends GetxController {
   final _errorMessage = ''.obs; // Kept to avoid breaking existing bindings, but we rely on Snackbar now
   final _isButtonEnabled = false.obs;
   final _canResend = false.obs;
-  final _secondsRemaining = 30.obs;
+  final _secondsRemaining = 60.obs;
   // 1. Add these observables
    final _referralController = TextEditingController();
    final _isExistingUser = false.obs; // This will come from your Login API
-   late List<FocusNode> keyboardFocusNodes;
+ //  late List<FocusNode> keyboardFocusNodes;
 
 // 2. Add getters
 TextEditingController get referralController => _referralController;
 bool get isExistingUser => _isExistingUser.value;
 
   // Controllers and focus nodes for OTP input
-  late List<TextEditingController> otpControllers;
-  late List<FocusNode> focusNodes;
+ // late List<TextEditingController> otpControllers;
+  //late List<FocusNode> focusNodes;
   final TextEditingController otpController = TextEditingController();
 final FocusNode otpFocusNode = FocusNode();
 
@@ -60,11 +60,11 @@ final FocusNode otpFocusNode = FocusNode();
     }
 
     // Initialize OTP controllers and focus nodes
-    otpControllers = List.generate(4, (index) => TextEditingController());
-    focusNodes = List.generate(4, (index) => FocusNode());
+  //  otpControllers = List.generate(4, (index) => TextEditingController());
+  //  focusNodes = List.generate(4, (index) => FocusNode());
     
   // FIX: Initialize the missing field here
-  keyboardFocusNodes = List.generate(4, (index) => FocusNode());
+ // keyboardFocusNodes = List.generate(4, (index) => FocusNode());
   otpController.addListener(() {
   String text = otpController.text;
 
@@ -97,15 +97,7 @@ final FocusNode otpFocusNode = FocusNode();
   void onClose() {
     _resendTimer?.cancel();
 
-    for (var controller in otpControllers) {
-      controller.dispose();
-    }
-    for (var focusNode in focusNodes) {
-      focusNode.dispose();
-    }
-    for (var focusNode in keyboardFocusNodes) {
-    focusNode.dispose();
-  }
+    
   otpController.dispose();
 otpFocusNode.dispose();
 
@@ -230,7 +222,7 @@ void _showSuccessSnackbar(String message) {
     entry?.remove();
   });
 }
-void onOtpChanged(String value, int index) {
+/*  void onOtpChanged(String value, int index) {
   // ✅ SMART PASTE SUPPORT
   final codeMatch = RegExp(r'\d{4}').firstMatch(value);
 
@@ -276,7 +268,7 @@ void handleBackspace(int index) {
 
   _otp.value = otpValue;
   _isButtonEnabled.value = otpValue.length == 4;
-}
+}  */
 
   Future<void> verifyOTP() async {
   if (_secondsRemaining.value <= 0) {
@@ -644,7 +636,7 @@ void handleBackspace(int index) {
 
   void _startResendTimer() {
     _canResend.value = false;
-    _secondsRemaining.value = 30;
+    _secondsRemaining.value = 60;
 
     _resendTimer?.cancel();
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {

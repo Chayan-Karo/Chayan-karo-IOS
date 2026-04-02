@@ -53,7 +53,7 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
   late SaathiServiceController controller;
   late CartController cartController;
   late LocationController locationController;
-
+   String? _selectedCategoryId;
   // Animation states
   final RxSet<String> _loadingServiceIds = <String>{}.obs;
 
@@ -113,6 +113,36 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
       print("DEBUG: Not rebooking mode, skipping cleanup.");
     }
   }
+  int _parseDurationToMinutes(String duration) {
+  final lower = duration.toLowerCase();
+
+  int hours = 0;
+  int minutes = 0;
+
+  // ✅ Extract hours (e.g., "2 hr", "1hr")
+  final hrMatch = RegExp(r'(\d+)\s*hr').firstMatch(lower);
+  if (hrMatch != null) {
+    hours = int.tryParse(hrMatch.group(1)!) ?? 0;
+  }
+
+  // ✅ Extract minutes (e.g., "30 mins", "15 min")
+  final minMatch = RegExp(r'(\d+)\s*min').firstMatch(lower);
+  if (minMatch != null) {
+    minutes = int.tryParse(minMatch.group(1)!) ?? 0;
+  }
+
+  // ✅ Fallback: if only number exists (rare case)
+  if (hours == 0 && minutes == 0) {
+    final numberMatch = RegExp(r'\d+').firstMatch(lower);
+    if (numberMatch != null) {
+      minutes = int.tryParse(numberMatch.group(0)!) ?? 30;
+    } else {
+      minutes = 30; // safe default
+    }
+  }
+
+  return (hours * 60) + minutes;
+}
 
   Service _mapToService(ProviderServiceItem item) {
     return Service(
@@ -139,12 +169,27 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
     _loadingServiceIds.add(serviceItem.id);
 
     // 3. Perform Action
-    final service = _mapToService(serviceItem);
-    cartController.addServiceToRebooking(
-      service, 
-      providerId: widget.providerData.id,
-      sourcePage: 'rebooking_screen'
-    );
+   final service = _mapToService(serviceItem);
+
+// 🛑 CATEGORY BLOCK LOGIC
+if (_selectedCategoryId != null &&
+    _selectedCategoryId != service.categoryId) {
+  
+  _loadingServiceIds.remove(serviceItem.id);
+
+  _showCategoryRestrictionSheet(); // 👈 show error
+  return;
+}
+
+// ✅ SET CATEGORY FIRST TIME
+_selectedCategoryId ??= service.categoryId;
+
+// ✅ NORMAL FLOW
+cartController.addServiceToRebooking(
+  service,
+  providerId: widget.providerData.id,
+  sourcePage: 'rebooking_screen',
+);
 
     // 4. Wait for 2 seconds (Debounce) before stopping animation
     Future.delayed(const Duration(seconds: 2), () { 
@@ -184,7 +229,9 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
     // 3. Perform Action
     int currentQty = cartController.getRebookingQuantity(serviceId);
     cartController.updateRebookingQuantity(serviceId, currentQty - 1);
-
+   if (cartController.rebookingItemCount == 0) {
+  _selectedCategoryId = null;
+    }    
     // 4. Wait for 2 seconds
     Future.delayed(const Duration(seconds: 2), () { 
       if (mounted) _loadingServiceIds.remove(serviceId);
@@ -199,29 +246,25 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
 
  // --- Helper to calculate duration from Rebooking Items ---
   int _calculateRebookingDuration() {
-    int totalMinutes = 0;
-    // We use rebookingItems directly from the controller
-    for (var item in cartController.rebookingItems) {
-      final qty = cartController.getRebookingQuantity(item.id);
-      if (qty > 0) {
-        // Simple parsing logic (assuming format "30 mins" or "1 hr")
-        int itemMins = 0;
-        final lower = item.duration.toLowerCase();
-        if (lower.contains('hr')) {
-           final parts = lower.split('hr'); // simplistic
-           double h = double.tryParse(parts[0].trim()) ?? 0;
-           itemMins = (h * 60).round();
-        } else if (lower.contains('min')) {
-           final parts = lower.split('min');
-           itemMins = int.tryParse(parts[0].trim()) ?? 0;
-        } else {
-           itemMins = int.tryParse(lower) ?? 30; // Default
-        }
-        totalMinutes += (itemMins * qty);
-      }
+  int totalMinutes = 0;
+
+  for (var item in cartController.rebookingItems) {
+    final qty = cartController.getRebookingQuantity(item.id);
+
+    if (qty > 0) {
+      final int itemMins = _parseDurationToMinutes(item.duration);
+
+      // 🔍 DEBUG (remove later)
+      print("DEBUG: ${item.duration} => $itemMins mins × $qty");
+
+      totalMinutes += (itemMins * qty);
     }
-    return totalMinutes;
   }
+
+  print("✅ TOTAL DURATION: $totalMinutes mins");
+
+  return totalMinutes;
+}
   void _showAvailabilityErrorSheet({required String message}) {
     Get.bottomSheet(
       Container(
@@ -344,6 +387,7 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
     
     // A. Calculate Duration
     final int totalDuration = _calculateRebookingDuration();
+    final categoryId = _selectedCategoryId;
 
     // B. Call API via Controller
     final bool isAvailable = await controller.checkProviderAvailability(
@@ -351,6 +395,7 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
       addressId: selectedAddressObj.id,
       dateTime: pickedDate,
       totalDurationMinutes: totalDuration,
+      categoryId: categoryId!,
     );
 
     // C. Check Result
@@ -401,20 +446,24 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
   }
   // --- UI BUILDERS ---
 
-  Map<String, List<ProviderServiceItem>> _groupServices(List<ProviderServiceItem> list) {
-    final Map<String, List<ProviderServiceItem>> grouped = {};
-    for (var item in list) {
-      final key = (item.serviceCategoryId.isNotEmpty) 
-          ? item.serviceCategoryId 
-          : "Other";
-      if (!grouped.containsKey(key)) {
-        grouped[key] = [];
-      }
-      grouped[key]!.add(item);
+ Map<String, List<ProviderServiceItem>> _groupServices(List<ProviderServiceItem> list) {
+  final Map<String, List<ProviderServiceItem>> grouped = {};
+
+  for (var item in list) {
+    // ✅ USE CATEGORY NAME AS KEY (NOT ID)
+    final key = (item.categoryName?.isNotEmpty ?? false)
+        ? item.categoryName!
+        : "Other Services";
+
+    if (!grouped.containsKey(key)) {
+      grouped[key] = [];
     }
-    return grouped;
+
+    grouped[key]!.add(item);
   }
 
+  return grouped;
+}
   String _getCategoryName(String id) {
     if (id == "Other") return "Other Services";
     return ""; 
@@ -502,35 +551,51 @@ class _SaathiServiceScreenState extends State<SaathiServiceScreen> {
                               );
                             }
 
-                            final grouped = _groupServices(controller.serviceList);
+                final grouped = _groupServices(controller.serviceList);
 
-                            return Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: grouped.entries.map((entry) {
-                                  String sectionTitle = _getCategoryName(entry.key);
-                                  bool showHeader = sectionTitle.isNotEmpty;
+// ✅ OPTIONAL: sort categories alphabetically (remove if not needed)
+final groupedEntries = grouped.entries.toList()
+  ..sort((a, b) => a.key.compareTo(b.key));
 
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      if (showHeader)
-                                        Padding(
-                                          padding: EdgeInsets.only(top: 12.h * scaleFactor, bottom: 8.h * scaleFactor),
-                                          child: Text(sectionTitle, style: TextStyle(fontSize: 16.sp * scaleFactor, fontWeight: FontWeight.bold, color: Colors.black)),
-                                        ),
-                                      
-                                      ...entry.value.map((service) => 
-                                        _buildServiceCard(service, scaleFactor)
-                                      ),
-                                      
-                                      if (showHeader) SizedBox(height: 8.h * scaleFactor),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
-                            );
+return Padding(
+  padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: groupedEntries.map((entry) {
+      final String categoryName = entry.key;
+      final List<ProviderServiceItem> services = entry.value;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          // 🔥 CATEGORY TITLE
+          Padding(
+            padding: EdgeInsets.only(
+              top: 16.h * scaleFactor,
+              bottom: 8.h * scaleFactor,
+            ),
+            child: Text(
+              categoryName,
+              style: TextStyle(
+                fontSize: 16.sp * scaleFactor,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+
+          // 🔥 SERVICES LIST UNDER CATEGORY
+          ...services.map((service) {
+            return _buildServiceCard(service, scaleFactor);
+          }).toList(),
+
+          SizedBox(height: 12.h * scaleFactor),
+        ],
+      );
+    }).toList(),
+  ),
+);
                           }),
                         ],
                       ),
@@ -966,4 +1031,118 @@ Widget _buildQuantitySelector(ProviderServiceItem service, double scaleFactor) {
       );
     });
   }
+  void _showCategoryRestrictionSheet() {
+  Get.bottomSheet(
+    Container(
+      padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 30.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          // 🔘 Handle Bar
+          Center(
+            child: Container(
+              width: 40.w,
+              height: 4.h,
+              margin: EdgeInsets.only(bottom: 16.h),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
+          ),
+
+          // 🔥 Title
+          Text(
+            "Multiple Categories Not Allowed",
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+
+          SizedBox(height: 10.h),
+
+          // 📝 Description
+          Text(
+            "You can only book services from one category at a time.\n\nTo switch category, clear your current cart.",
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: Colors.grey[700],
+              height: 1.5,
+            ),
+          ),
+
+          SizedBox(height: 20.h),
+
+          // 🔥 Divider
+          Divider(color: Colors.grey.shade200, height: 1),
+
+          SizedBox(height: 20.h),
+
+          // 🔥 PRIMARY BUTTON → CLEAR CART
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                cartController.clearRebookingCart();
+                _selectedCategoryId = null; // ✅ IMPORTANT RESET
+                Get.back();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE47830),
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                "Clear Cart & Switch",
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+
+          SizedBox(height: 10.h),
+
+          // 🔘 SECONDARY BUTTON
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Get.back(),
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                side: BorderSide(color: Colors.grey.shade300),
+              ),
+              child: Text(
+                "Continue Same Category",
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+  );
+}
 }

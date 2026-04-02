@@ -50,6 +50,7 @@ class SaathiServiceController extends GetxController {
     required String addressId,
     required DateTime dateTime,
     required int totalDurationMinutes,
+    required String categoryId,
   }) async {
     try {
       isLoading.value = true; // Show loader
@@ -63,6 +64,7 @@ class SaathiServiceController extends GetxController {
         bookingDate: dateStr,
         bookingTime: timeStr,
         duration: totalDurationMinutes,
+        categoryId: categoryId,
       );
 
       return isAvailable;

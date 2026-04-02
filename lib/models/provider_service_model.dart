@@ -20,6 +20,7 @@ class ProviderServiceItem {
   final String id;
   final String categoryId;
   final String serviceCategoryId;
+  final String categoryName;
   final String name;
   final double price;
   final String description;
@@ -56,6 +57,7 @@ class ProviderServiceItem {
     required this.id,
     required this.categoryId,
     required this.serviceCategoryId,
+    required this.categoryName,
     required this.name,
     required this.price,
     required this.description,
@@ -71,6 +73,7 @@ class ProviderServiceItem {
       id: json['id']?.toString() ?? "",
       categoryId: json['categoryId']?.toString() ?? "",
       serviceCategoryId: json['serviceCategoryId']?.toString() ?? "",
+      categoryName: json['categoryName']?.toString() ?? "",
       name: json['name']?.toString() ?? "",
       price: (json['price'] ?? 0).toDouble(),
       description: json['description']?.toString() ?? "",
