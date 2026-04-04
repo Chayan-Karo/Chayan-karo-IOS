@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-
+import '../../../controllers/booking_read_controller.dart';
 // --- IMPORTS ---
 // Adjust these paths to match your project structure exactly
 import '../../../controllers/cart_controller.dart';
@@ -147,6 +147,7 @@ class SummaryPaymentMethodBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bookingCtrl = Get.find<BookingReadController>();
     return Container(
       padding: EdgeInsets.all(16.r * scale),
       decoration: BoxDecoration(
@@ -166,17 +167,22 @@ class SummaryPaymentMethodBlock extends StatelessWidget {
               style: TextStyle(
                   fontWeight: FontWeight.w600, fontSize: 16.sp * scale)),
           SizedBox(height: 8.h * scale),
-          Row(
-            children: [
-              Radio<PaymentMethod>(
-                value: PaymentMethod.afterService,
-                groupValue: groupValue,
-                activeColor: const Color(0xFFE47830),
-                onChanged: onChanged,
-              ),
-              const Text('Pay after service'),
-            ],
-          ).withId('payment_option_cash'),
+         Obx(() {
+            if (bookingCtrl.shouldHideCashOption) {
+              return const SizedBox.shrink(); // Hides the button entirely
+            }
+            return Row(
+              children: [
+                Radio<PaymentMethod>(
+                  value: PaymentMethod.afterService,
+                  groupValue: groupValue,
+                  activeColor: const Color(0xFFE47830),
+                  onChanged: onChanged,
+                ),
+                const Text('Pay after service'),
+              ],
+            ).withId('payment_option_cash');
+          }),
           Row(
             children: [
               Radio<PaymentMethod>(

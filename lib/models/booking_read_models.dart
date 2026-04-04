@@ -246,7 +246,7 @@ extension CustomerBookingDisplay on CustomerBooking {
       return null;
     }
   }
-
+  bool get isCashPayment => (paymentMode ?? '').toLowerCase() == 'cash';
   // Convenience: date-only local object for grouping or headers.
   DateTime? get displayDateOnlyLocal {
     try {
@@ -259,6 +259,13 @@ extension CustomerBookingDisplay on CustomerBooking {
     } catch (_) {
       return null;
     }
+  }
+}
+extension BookingSummaryLogic on List<CustomerBooking> {
+  /// Logic to hide cash button: returns true if cancelled bookings >= 3
+  bool get hideCashButton {
+    final cancelledBookings = where((b) => b.status.toLowerCase() == 'cancelled').length;
+    return cancelledBookings >= 3;
   }
 }
 

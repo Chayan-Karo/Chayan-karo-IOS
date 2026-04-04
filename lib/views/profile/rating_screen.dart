@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../profile/profile_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/chayan_header.dart';
+import 'package:in_app_review/in_app_review.dart';
 
 class RatingScreen extends StatefulWidget {
   const RatingScreen({super.key});
@@ -15,7 +16,7 @@ class RatingScreen extends StatefulWidget {
 
 class _RatingScreenState extends State<RatingScreen> {
   int selectedRating = 0;
-
+  final InAppReview inAppReview = InAppReview.instance;
   // URLs
   final String instagramUrl =
       'https://www.instagram.com/chayankaro?igsh=MWZyOHVhNHV0ZmNrZw==';
@@ -38,7 +39,25 @@ class _RatingScreenState extends State<RatingScreen> {
       ),
     );
   }
+Future<void> _requestStoreReview() async {
+    try {
+      if (await inAppReview.isAvailable()) {
+        await inAppReview.requestReview();
+      }
+    } catch (e) {
+      debugPrint("Review error: $e");
+    }
+  }
 
+  void _handleSubmit() async {
+    // If rating is 4 or 5, trigger the store review popup
+    if (selectedRating >= 4) {
+      await _requestStoreReview();
+    }
+    
+    // Show your custom success popup regardless
+    _showReviewSubmittedDialog();
+  }
   // Helper to launch URLs with Top-SnackBar Error
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
@@ -190,9 +209,7 @@ class _RatingScreenState extends State<RatingScreen> {
                             ElevatedButton(
                               // ✅ CHANGED: Validation Check
                               // If selectedRating is 0, onPressed is null (Disabled)
-                              onPressed: selectedRating > 0
-                                  ? _showReviewSubmittedDialog
-                                  : null, 
+                              onPressed: selectedRating > 0 ? _handleSubmit : null,
                               style: ElevatedButton.styleFrom(
                                 // ✅ CHANGED: Visual Feedback
                                 // Grey if disabled, Orange if enabled

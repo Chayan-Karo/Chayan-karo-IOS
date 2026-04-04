@@ -145,20 +145,27 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
 
   /// Check if a specific date has at least one slot ahead of (Now + 45 mins)
   bool _hasSlotsForDate(DateTime date) {
-    final now = DateTime.now();
-    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
-    
-    if (!isToday) return true; // Future dates assumed to have slots
+  final now = DateTime.now();
+  // Create a normalized "Today" at 00:00:00
+  final today = DateTime(now.year, now.month, now.day);
+  final compareDate = DateTime(date.year, date.month, date.day);
 
-    final bufferTime = now.add(Duration(minutes: _bufferMinutes));
-    final bufferMinutesOfDay = bufferTime.hour * 60 + bufferTime.minute;
+  if (compareDate.isBefore(today)) return false;
+  if (compareDate.isAfter(today)) return true;
 
-    // Check if any slot in _allSlots is after the buffer
-    return _allSlots.any((slot) {
-      final slotMinutes = slot.hour * 60 + slot.minute;
-      return slotMinutes > bufferMinutesOfDay;
-    });
-  }
+  // It is Today: Calculate if buffer pushes us to tomorrow
+  final bufferTime = now.add(Duration(minutes: _bufferMinutes));
+  
+  // If bufferTime's day is different than now's day, Today is over.
+  if (bufferTime.day != now.day) return false;
+
+  final bufferMinutesOfDay = bufferTime.hour * 60 + bufferTime.minute;
+
+  return _allSlots.any((slot) {
+    final slotMinutes = slot.hour * 60 + slot.minute;
+    return slotMinutes > bufferMinutesOfDay;
+  });
+}
 
   List<TimeOfDay> _generateSlots({
     required TimeOfDay start,
@@ -179,22 +186,26 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
 
   // Filter slots based on the _selectedDate and 45-min buffer
   List<TimeOfDay> get _visibleSlots {
-    final now = DateTime.now();
-    final isToday = _selectedDate.year == now.year && 
-                    _selectedDate.month == now.month && 
-                    _selectedDate.day == now.day;
+  final now = DateTime.now();
+  final isToday = _selectedDate.year == now.year && 
+                  _selectedDate.month == now.month && 
+                  _selectedDate.day == now.day;
 
-    if (!isToday) return _allSlots;
+  if (!isToday) return _allSlots;
 
-    final bufferTime = now.add(Duration(minutes: _bufferMinutes));
-    final bufferMinutesOfDay = bufferTime.hour * 60 + bufferTime.minute;
+  final bufferTime = now.add(Duration(minutes: _bufferMinutes));
+  
+  // Logic: If the buffer time has rolled over to the next day, 
+  // there are no slots left for the 'current' selected date.
+  if (bufferTime.day != now.day) return [];
 
-    return _allSlots.where((t) {
-      final slotMinutes = t.hour * 60 + t.minute;
-      return slotMinutes > bufferMinutesOfDay; 
-    }).toList();
-  }
+  final bufferMinutesOfDay = bufferTime.hour * 60 + bufferTime.minute;
 
+  return _allSlots.where((t) {
+    final slotMinutes = t.hour * 60 + t.minute;
+    return slotMinutes > bufferMinutesOfDay; 
+  }).toList();
+}
   void _onDateTap(DateTime date) {
     setState(() {
       _selectedDate = DateTime(date.year, date.month, date.day);

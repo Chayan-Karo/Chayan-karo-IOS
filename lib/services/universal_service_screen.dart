@@ -539,40 +539,45 @@ Widget _buildHeader(BuildContext context, double scaleFactor) {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // 1. Back Icon
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Icon(Icons.arrow_back_ios_new, size: 20 * scaleFactor),
+        GestureDetector(
+  onTap: () => Navigator.pop(context),
+  behavior: HitTestBehavior.opaque, // CRITICAL: Makes the space between icon and text tappable
+  child: Row(
+    mainAxisSize: MainAxisSize.min, // Ensures it doesn't fight the Cart icon for space
+    children: [
+      // Same Icon as before
+      Icon(
+        Icons.arrow_back_ios_new, 
+        size: 20 * scaleFactor, 
+        color: Colors.black
+      ),
+      
+      SizedBox(width: 8.w * scaleFactor),
+      
+      // Category Name
+      Flexible(
+        child: Text(
+          widget.category.categoryName,
+          maxLines: 1,
+          style: TextStyle(
+            fontSize: 16.sp * scaleFactor,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
+            color: Colors.black,
           ),
-          
-          SizedBox(width: 8.w * scaleFactor),
-          
-          // 2. Title Category Name (The Fixed Part)
-          Expanded(
-            // KEY FIX: Use Align to stop GestureDetector from stretching
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                // Container with transparent color ensures clicks register on the text body
-                child: Container(
-                  color: Colors.transparent, 
-                  child: Text(
-                    widget.category.categoryName,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 16.sp * scaleFactor,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Inter',
-                      color: Colors.black,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          
-          SizedBox(width: 8.w * scaleFactor),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      
+      // Optional: Add a little extra padding to the right of the text 
+      // to make the "back" hit-box even more generous
+      SizedBox(width: 12.w * scaleFactor),
+    ],
+  ),
+),
+
+// Pushes the back section to the left and the Cart icon (below) to the right
+const Spacer(),
           
           // 3. Cart Icon
           Obx(() => GestureDetector(
@@ -1210,8 +1215,13 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
                 ),
               ],
             ),
-            child: Column(
-              children: [
+           child: GestureDetector(
+            onTap: () => isExpanded.toggle(),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: EdgeInsets.all(12.r * scaleFactor),
+              child: Column(
+                children: [
                 // ... (Keep existing Row content) ...
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1251,8 +1261,18 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
                         ],
                       ),
                     ),
-                    _buildQuantitySelector(service, scaleFactor),
-                  ],
+GestureDetector(
+                        onTap: () {}, // Blocks the toggle tap
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          // This margin/padding creates the "green box" area from your image
+                          // making sure taps near the button don't trigger expansion
+                          padding: EdgeInsets.only(left: 10.w * scaleFactor, bottom: 10.h * scaleFactor),
+                          alignment: Alignment.centerRight,
+                          child: _buildQuantitySelector(service, scaleFactor),
+                        ),
+                      ),
+                      ],
                 ),
                 // ... (Keep existing CrossFade) ...
                 AnimatedCrossFade(
@@ -1265,14 +1285,16 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
                       : const SizedBox.shrink(),
                   crossFadeState: isExpanded.value ? CrossFadeState.showSecond : CrossFadeState.showFirst,
                   duration: const Duration(milliseconds: 200),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    });
-  }
+                  ), 
+                ], 
+              ), 
+            ), 
+          ), 
+        ), 
+      ), 
+    );
+  }); 
+} 
   Widget _buildLargeServiceCard(Service service, double scaleFactor) {
     final RxBool isExpanded = false.obs;
     

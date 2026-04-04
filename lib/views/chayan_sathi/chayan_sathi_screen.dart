@@ -290,33 +290,27 @@ Widget _buildSaathiCard(SaathiItem saathi, double scaleFactor) {
         mainAxisSize: MainAxisSize.min,
         children: [
           // 1. Image
-          ClipRRect(
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(15.h * scaleFactor),
-            ),
-            child: hasNetImage
-                ? Image.network(
-                    img,
-                    height: 115.h * scaleFactor,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 115.h * scaleFactor,
-                      color: const Color(0xFFF5F5F5),
-                      alignment: Alignment.center,
-                      child: Icon(Icons.person,
-                          size: 40 * scaleFactor, color: Colors.grey),
-                    ),
-                  )
-                : Container(
-                    height: 115.h * scaleFactor,
-                    color: const Color(0xFFF5F5F5),
-                    alignment: Alignment.center,
-                    child: Icon(Icons.person,
-                        size: 40 * scaleFactor, color: Colors.grey),
-                  ),
-          ),
-          
+      ClipRRect(
+  borderRadius: BorderRadius.vertical(
+    top: Radius.circular(15.h * scaleFactor),
+  ),
+  child: Container(
+    height: 115.h * scaleFactor,
+    width: double.infinity,
+    color: const Color(0xFFFFEEE0), // Your background color for the sides
+    child: hasNetImage
+        ? Image.network(
+            img,
+            height: 115.h * scaleFactor,
+            width: double.infinity,
+            fit: BoxFit.contain, // Shows full face/body
+            alignment: Alignment.topCenter, // Keeps head at the top
+            // Pass the helper here
+            errorBuilder: (_, __, ___) => _buildPlaceholder(scaleFactor),
+          )
+        : _buildPlaceholder(scaleFactor), // Pass the helper here
+  ),
+),
           SizedBox(height: 8.h * scaleFactor),
 
           // 2. Name
@@ -422,6 +416,19 @@ Widget _buildSaathiCard(SaathiItem saathi, double scaleFactor) {
       ),
     );
   }
+  Widget _buildPlaceholder(double scaleFactor) {
+  return Container(
+    height: 115.h * scaleFactor,
+    width: double.infinity, // Ensures it fills the card width
+    color: const Color(0xFFF5F5F5),
+    alignment: Alignment.center,
+    child: Icon(
+      Icons.person,
+      size: 40 * scaleFactor,
+      color: Colors.grey,
+    ),
+  );
+}
 
 Widget _buildEmptySaathiState(BuildContext context, double scaleFactor) {
   final screenHeight = MediaQuery.of(context).size.height;

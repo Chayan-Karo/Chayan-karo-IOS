@@ -98,6 +98,14 @@ class BookingReadController extends GetxController {
       }
     }
   }
+  bool get shouldHideCashOption {
+    final cancelledCount = bookings.where(
+      (b) => (b.status ?? '').toLowerCase() == 'cancelled'
+    ).length;
+    
+    return cancelledCount >= 3;
+  }
+
 
   /// Call this explicitly from Home Screen
  Future<void> checkForPendingFeedback() async {
