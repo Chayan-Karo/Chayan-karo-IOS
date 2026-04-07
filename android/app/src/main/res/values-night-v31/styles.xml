@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 🔥 ANDROID 12+ SAFE SPLASH -->
     <style name="LaunchTheme" parent="Theme.SplashScreen">
-        <!-- Background -->
+        <!-- 🔥 SAME BG -->
         <item name="windowSplashScreenBackground">@color/splash_bg</item>
-        <!-- Logo -->
+        <!-- 🔥 YOUR LOGO -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
-        <!-- After splash -->
+        <!-- 🔥 GO TO NORMAL -->
         <item name="postSplashScreenTheme">@style/NormalTheme</item>
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowSplashScreenBackground">#F5F5F5</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/android12splash</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#F5F5F5</item>
     </style>
-    <!-- 🔥 Flutter screen background -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <!-- Prevent black/white flash -->
+        <!-- 🔥 PREVENT BLACK SCREEN -->
         <item name="android:windowBackground">@color/splash_bg</item>
-        <!-- Disable dark override -->
         <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>

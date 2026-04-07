@@ -349,8 +349,7 @@ class LocationController extends GetxController {
       if (!silent) isLoadingAddresses.value = true;
       error.value = '';
 
-      final fetched = await _repository.getCustomerAddresses();
-
+     final fetched = await _repository.getCustomerAddresses() .timeout(const Duration(seconds: 8));
       final localId = localDefaultAddressId.value;
       CustomerAddress markDefault(CustomerAddress a) => a.copyWith(
             isDefault: a.isDefault || (localId.isNotEmpty && a.id == localId),
@@ -383,8 +382,13 @@ class LocationController extends GetxController {
           await _repository.saveCachedLocationJson(cl);
         }
       }
-    } catch (e) {
-      error.value = e.toString();
+   } catch (e) {
+  print("⚠️ Address fetch failed: $e");
+
+  // Only show error if no data exists
+  if (addresses.isEmpty) {
+    error.value = 'Failed to load addresses';
+  }
     } finally {
       if (!silent) isLoadingAddresses.value = false;
     }

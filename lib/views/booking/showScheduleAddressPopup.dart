@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../models/location_models.dart';
 import '../profile/manage_address_screen.dart';
+import '../../../widgets/three_dot_loader.dart';
 
 Future<String?> showScheduleAddressPopup(BuildContext context) {
   return showModalBottomSheet<String>(
@@ -113,16 +114,44 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
                   /// List
                   Expanded(
                     child: loading
-                        ? const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF7900)),
-                          )
-                        : err.isNotEmpty
-                            ? Center(
-                                child: Text(
-                                  'Failed to load addresses',
-                                  style: TextStyle(color: Colors.red, fontSize: 14.sp),
-                                ),
-                              )
+                        ?const Center(
+  child: ThreeDotLoader(),
+)
+                        : addresses.isEmpty && err.isNotEmpty
+    ? Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.wifi_off, color: Colors.grey, size: 40),
+            SizedBox(height: 10),
+            Text(
+              'Unable to load addresses',
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Check your internet and try again',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12.sp,
+              ),
+            ),
+            SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => _loc.fetchCustomerAddresses(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF7900),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              child: Text('Retry'),
+            )
+          ],
+        ),
+      )
                             : addresses.isEmpty
                                 ? Center(
                                     child: Text(

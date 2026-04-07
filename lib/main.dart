@@ -26,6 +26,7 @@ import 'services/notification_service.dart';
 import 'di/app_binding.dart';
 import 'data/local/database.dart';
 import 'data/repository/category_repository.dart';
+import 'views/splash/app_initializer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,7 +88,8 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
           initialRoute: '/', // <-- Ensure OnboardingScreen uses a Scaffold!
 
           getPages: [
-            GetPage(name: '/', page: () => const SplashScreen()),
+           // GetPage(name: '/', page: () => const SplashScreen()),
+          GetPage(name: '/', page: () => const AppInitializer()),
             GetPage(name: '/onboarding', page: () => const OnboardingScreen()),
             GetPage(name: '/login', page: () => const LoginScreen()),
             GetPage(name: '/otp', page: () => const OtpVerificationScreen()),

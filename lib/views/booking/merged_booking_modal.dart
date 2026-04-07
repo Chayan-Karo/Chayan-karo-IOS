@@ -73,7 +73,13 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
     _initDates(); // Filter dates based on slot availability
     
     // Set initial selection if available
-    _selectedTime = widget.initialTime;
+if (widget.initialTime != null &&
+    !_isSlotExceedingEndTime(widget.initialTime!)) {
+  _selectedTime = widget.initialTime;
+} else {
+  _selectedTime = null;
+
+}
   }
  void _loadDynamicCutoff() async {
   if (widget.categoryId != null) {
@@ -87,9 +93,17 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
 
     debugPrint("📡 API RESULT: ${timing?.endTime}");
 
+    if (!mounted) return;
+
     if (timing != null) {
       setState(() {
         _dynamicEndTime = timing.endTime;
+
+        // 🔁 Re-validate already selected time
+        if (_selectedTime != null &&
+            _isSlotExceedingEndTime(_selectedTime!)) {
+          _selectedTime = null;
+        }
       });
     }
   } else {
@@ -166,7 +180,20 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
     return slotMinutes > bufferMinutesOfDay;
   });
 }
+bool _isSlotExceedingEndTime(TimeOfDay slot) {
+  final int startMinutes = slot.hour * 60 + slot.minute;
+  final int endMinutes = startMinutes + widget.currentBookingDuration;
 
+  try {
+    final parts = _dynamicEndTime.split(':');
+    final int cutoffMinutes =
+        (int.parse(parts[0]) * 60) + int.parse(parts[1]);
+
+    return endMinutes > cutoffMinutes;
+  } catch (_) {
+    return false;
+  }
+}
   List<TimeOfDay> _generateSlots({
     required TimeOfDay start,
     required TimeOfDay end,
@@ -228,10 +255,9 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
     return widget.blockedSlot!.hour == slot.hour && widget.blockedSlot!.minute == slot.minute;
   }
   void _onTimeTap(TimeOfDay slot) {
-    if (_isSlotBlocked(slot)) {
-      AppSnackbar.showSuccess('This is your currently booked slot.');
-      return;
-    }
+  if (_isSlotBlocked(slot) || _isSlotExceedingEndTime(slot)) {
+  return; // ❌ no snackbar → clean UX
+}
     // Check Provider Constraint Logic
     if (widget.minTimeConstraint != null && widget.minTimeConstraint!.isNotEmpty) {
       final now = DateTime.now();
@@ -364,10 +390,11 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
                         final slot = _visibleSlots[i];
                         final isSelected = _selectedTime == slot;
                         final isBlocked = _isSlotBlocked(slot);
+                        final isExceeding = _isSlotExceedingEndTime(slot);
                         return _TimeChip(
                           time: slot, 
                           isSelected: isSelected, 
-                          isBlocked: isBlocked, // <--- PASS THIS
+                          isBlocked: isBlocked || isExceeding,
                           onTap: () => _onTimeTap(slot),
                           scale: scale,
                         );
@@ -396,7 +423,7 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
                         ? null 
                         : () {
                             // 1. Calculate the end time of the booking
-      final int startMinutes = _selectedTime!.hour * 60 + _selectedTime!.minute;
+ /*     final int startMinutes = _selectedTime!.hour * 60 + _selectedTime!.minute;
       final int endMinutes = startMinutes + widget.currentBookingDuration;
       
       // 2. Check if it exceeds 7:00 PM (19 * 60 = 1140 minutes)
@@ -410,7 +437,7 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
           'Please select an earlier slot.'
         );
         return; // ⛔ Block closing
-      }
+      } */
       //const int cutoffMinutes = 20 * 60; 
       // 3. If valid, merge and return
       final finalDateTime = DateTime(

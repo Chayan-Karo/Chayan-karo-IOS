@@ -1,0 +1,4 @@
+<resources>
+    <!-- SAME color even in dark mode -->
+    <color name="splash_bg">#F5F5F5</color>
+</resources>
