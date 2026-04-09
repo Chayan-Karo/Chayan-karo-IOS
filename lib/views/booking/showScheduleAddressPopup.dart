@@ -69,7 +69,16 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
               final loading = _loc.isLoadingAddresses.value;
               final err = _loc.error.value;
               final addresses = _loc.addresses;
-
+              if (!loading && addresses.isNotEmpty && _selected == null) {
+  Future.microtask(() {
+    if (mounted) {
+      setState(() {
+        _selected = addresses.firstWhereOrNull((a) => a.isDefault) ?? addresses.first;
+        isSelected = true;
+      });
+    }
+  });
+}
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -85,10 +94,18 @@ class _ScheduleAddressSheetState extends State<_ScheduleAddressSheet> {
                         ),
                       ),
                       TextButton.icon(
-                        onPressed: () async {
-                          await Get.to(() => const ManageAddressScreen());
-                          await _loc.fetchCustomerAddresses();
-                        },
+                       onPressed: () async {
+  await Get.to(() => const ManageAddressScreen());
+  await _loc.fetchCustomerAddresses();
+  
+  // ADD THIS: Auto-select if a new address was added to an empty list
+  if (_loc.addresses.isNotEmpty && _selected == null) {
+    setState(() {
+      _selected = _loc.addresses.firstWhereOrNull((a) => a.isDefault) ?? _loc.addresses.first;
+      isSelected = true;
+    });
+  }
+},
                         icon: Icon(Icons.add, color: const Color(0xFFFF7900), size: 18 * scaleFactor),
                         label: Text(
                           'Add new address',

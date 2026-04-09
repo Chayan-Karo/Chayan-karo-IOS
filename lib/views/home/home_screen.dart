@@ -58,44 +58,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
    Future.microtask(() async {
-    try {
-      final database = Get.find<AppDatabase>();
-      final bool isLoggedIn = await database.isUserLoggedIn();
+  try {
+    final database = Get.find<AppDatabase>();
+    final bool isLoggedIn = await database.isUserLoggedIn();
 
-      // 🛑 EXIT EARLY IF GUEST
-      if (!isLoggedIn) {
-        print('👤 Home: Guest Mode - Skipping Profile & Address checks');
-        return;
-      }
-
-      // 🔐 LOGGED-IN ONLY LOGIC
-      print('🔐 Home: Auth User - Loading Profile and Address');
-      final profileController = Get.put(ProfileController(), permanent: true);
-      await profileController.loadProfile();
-
-      // 1) Enforce basic info
-      if (!profileController.isBasicInfoComplete) {
-        Get.offAllNamed('/edit-profile', arguments: profileController.customer);
-        return;
-      }
-
-      // 2) Enforce address presence
-      final repo = Get.find<LocationRepository>();
-      final list = await repo.getCustomerAddresses();
-      if (list.isEmpty) {
-        Get.offAllNamed('/location_popup');
-        return;
-      }
-
-      // 3) Check for feedback (Authenticated only)
-      Get.find<BookingReadController>().checkForPendingFeedback();
-      
-    } catch (e) {
-      print('❌ Home Auth Check Error: $e');
-      // On error for logged-in users, fallback to location is safer
-      // But for guests, this block isn't even reached.
+    // 🛑 1. GUEST GATE: If not logged in, stop here.
+    if (!isLoggedIn) {
+      print('👤 Home: Guest Mode - No checks required');
+      return;
     }
-  });
+
+    print('🔐 Home: Authenticated User - Running Profile & Address Checks');
+
+    // 🟢 2. PROFILE CHECK (Same order as old code)
+    final profileController = Get.put(ProfileController(), permanent: true);
+    await profileController.loadProfile();
+
+    if (!profileController.isBasicInfoComplete) {
+      print('✏️ Home: Incomplete profile → EditProfileScreen');
+      Get.offAllNamed('/edit-profile', arguments: profileController.customer);
+      return; // Stop here and navigate
+    }
+
+    // 📍 3. LOCATION CHECK (Only reached if profile is complete)
+    final repo = Get.find<LocationRepository>();
+    final list = await repo.getCustomerAddresses();
+    
+    if (list.isEmpty) {
+      print('📍 Home: No address on server → Location popup');
+      Get.offAllNamed('/location_popup');
+      return; // Stop here and navigate
+    }
+
+    // ✅ 4. FEEDBACK CHECK
+    Get.find<BookingReadController>().checkForPendingFeedback();
+    print('✅ Home: All checks passed');
+
+  } catch (e) {
+    // ⚠️ CRITICAL FIX: The old code used this as a fail-safe.
+    // If the API fails for a logged-in user, we MUST show the location popup.
+    print('❌ Home Auth Check Error: $e');
+    Get.offAllNamed('/location_popup'); 
+  }
+});
 
   }
 

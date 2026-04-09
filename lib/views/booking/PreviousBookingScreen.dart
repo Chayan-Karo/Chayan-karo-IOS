@@ -212,6 +212,9 @@ if (booking.coupon?.couponCode != null)
 
                   // Cancel reason only for cancelled bookings
                   if (isCancelled) _cancelReasonSection(scaleFactor),
+                  // NEW REFUND TEXT (Added here)
+if (isCancelled && booking.paymentMode?.toUpperCase() == 'ONLINE')
+  _refundInfoSection(scaleFactor),
 
                   SizedBox(height: 24.h * scaleFactor),
 
@@ -366,6 +369,41 @@ if (booking.coupon?.couponCode != null)
       ),
     );
   }
+Widget _refundInfoSection(double scaleFactor) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+      child: Container(
+        width: double.infinity,
+        margin: EdgeInsets.only(top: 8.h * scaleFactor),
+        padding: EdgeInsets.all(14.r * scaleFactor),
+        decoration: ShapeDecoration(
+          color: const Color(0xFFF0F7FF), // Light Blue
+          shape: RoundedRectangleBorder(
+            side: BorderSide(width: 2.w * scaleFactor, color: const Color(0xFFD0E3FF)),
+            borderRadius: BorderRadius.circular(10 * scaleFactor),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, size: 18.sp * scaleFactor, color: const Color(0xFF0056D2)),
+            SizedBox(width: 10.w * scaleFactor),
+            Expanded(
+              child: Text(
+                "Your refund will be processed to your bank account soon.",
+                style: TextStyle(
+                  fontSize: 13.sp * scaleFactor,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF0056D2),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }  
 
   // Updated Billing: 80% per service + 20% platform + 18% GST (on platform)
  Widget _billingSection(
