@@ -3,6 +3,7 @@ plugins {
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services") // ✅ ADD THIS
+    id("com.google.firebase.crashlytics")
 
 }
 
@@ -37,7 +38,7 @@ android {
         applicationId = "com.chayankaroindia.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36 // Matches your compileSdk
-        versionCode = 42
+        versionCode = 43
         versionName = "1.0.2"
     }
 

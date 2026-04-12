@@ -20,18 +20,28 @@ import 'views/booking/PaymentSuccess.dart';
 import 'views/booking/payment_failed_screen.dart';
 import 'views/booking/feedback_screen.dart';
 import 'views/profile/EditProfileScreen.dart';
-
+import 'dart:ui';
 // Services & Dependencies
 import 'services/notification_service.dart';
 import 'di/app_binding.dart';
 import 'data/local/database.dart';
 import 'data/repository/category_repository.dart';
 import 'views/splash/app_initializer.dart';
-
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  
+  // ✅ Enable Crashlytics collection
+await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+
+// ✅ Catch Flutter framework errors
+FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+// ✅ Catch async/background errors
+PlatformDispatcher.instance.onError = (error, stack) {
+  FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  return true;
+};
 
   // Lock to portrait
   await SystemChrome.setPreferredOrientations(

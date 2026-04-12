@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'api_service.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class NetworkClient {
   // Singleton instance
@@ -107,6 +108,14 @@ class NetworkClient {
   InterceptorsWrapper _createErrorInterceptor() => InterceptorsWrapper(
         onError: (error, handler) {
           _handleDioError(error);
+          final request = error.requestOptions;
+
+    FirebaseCrashlytics.instance.recordError(
+      error,
+      error.stackTrace ,
+      reason: "API ERROR: ${request.method} ${request.uri} | STATUS: ${error.response?.statusCode} | RESPONSE: ${error.response?.data}",
+    );
+
           handler.next(error);
         },
       );
