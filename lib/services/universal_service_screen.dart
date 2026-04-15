@@ -1257,8 +1257,29 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
                             ],
                           ),
                           SizedBox(height: 6.h * scaleFactor),
-                          Text(service.formattedPrice, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp * scaleFactor)),
-                        ],
+Row(
+  children: [
+    Text(
+      service.formattedPrice,
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 16.sp * scaleFactor,
+   //     color: Colors.orange.shade700, // Matches your UI brand color
+      ),
+    ),
+    if (service.hasDiscount) ...[
+      SizedBox(width: 8.w * scaleFactor),
+      Text(
+        service.formattedOriginalPrice,
+        style: TextStyle(
+          fontSize: 12.sp * scaleFactor,
+          color: Colors.grey,
+          decoration: TextDecoration.lineThrough, // The strikethrough effect
+        ),
+      ),
+    ],
+  ],
+),                        ],
                       ),
                     ),
 GestureDetector(
@@ -1370,8 +1391,30 @@ GestureDetector(
                         ],
                       ),
                       SizedBox(height: 6.h * scaleFactor),
-                      Text(service.formattedPrice, style: TextStyle(fontSize: 16.sp * scaleFactor, fontWeight: FontWeight.bold, color: Colors.black)),
-                      if (service.description.isNotEmpty) ...[
+Wrap(
+  crossAxisAlignment: WrapCrossAlignment.center,
+  children: [
+    Text(
+      service.formattedPrice,
+      style: TextStyle(
+        fontSize: 18.sp * scaleFactor, // Slightly larger for the big card
+        fontWeight: FontWeight.bold,
+        //color: Colors.orange.shade800,
+      ),
+    ),
+    if (service.hasDiscount) ...[
+      SizedBox(width: 10.w * scaleFactor),
+      Text(
+        service.formattedOriginalPrice,
+        style: TextStyle(
+          fontSize: 14.sp * scaleFactor,
+          color: Colors.grey.shade500,
+          decoration: TextDecoration.lineThrough,
+        ),
+      ),
+    ],
+  ],
+),                      if (service.description.isNotEmpty) ...[
                         SizedBox(height: 8.h * scaleFactor),
                         Text(service.description, style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.black87), maxLines: isExpanded.value ? null : 3, overflow: isExpanded.value ? null : TextOverflow.ellipsis),
                       ],

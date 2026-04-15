@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/local/database.dart';
 import '../../services/notification_service.dart';
+import 'package:app_links/app_links.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
@@ -14,6 +15,8 @@ class AppInitializer extends StatefulWidget {
 class _AppInitializerState extends State<AppInitializer>
     with SingleTickerProviderStateMixin {
   late Future<String> _routeFuture;
+  final AppLinks _appLinks = AppLinks();
+Uri? _deepLinkUri;
 
   // 🔥 Premium Quotes
   final List<String> _quotes = [
@@ -55,6 +58,7 @@ class _AppInitializerState extends State<AppInitializer>
     super.initState();
 
     NotificationService().init();
+  _initApp(); // 👈 use wrapper
 
     // 🔥 Logic untouched
     _routeFuture = _decideRoute();
@@ -94,6 +98,24 @@ class _AppInitializerState extends State<AppInitializer>
     super.dispose();
   }
 
+ Future<void> _initDeepLinks() async {
+  // App opened from killed state
+  final uri = await _appLinks.getInitialLink();
+  if (uri != null) {
+    _deepLinkUri = uri;
+  }
+
+  // App running in background
+  _appLinks.uriLinkStream.listen((uri) {
+    _handleDeepLink(uri);
+  });
+}
+void _initApp() async {
+  await _initDeepLinks(); // 👈 WAIT for deep link first
+
+  _routeFuture = _decideRoute();
+  _handleNavigation();
+}
   /// 🎯 Logic unchanged
   Future<String> _decideRoute() async {
     try {
@@ -127,10 +149,28 @@ class _AppInitializerState extends State<AppInitializer>
 
     await Future.delayed(const Duration(milliseconds: 500));
 
-    if (mounted) {
-      Get.offAllNamed(route);
+     if (!mounted) return;
+
+  // 🔥 If deep link exists → override normal flow
+  if (_deepLinkUri != null) {
+    _handleDeepLink(_deepLinkUri!);
+    return;
+  }
+
+  // Normal flow
+  Get.offAllNamed(route);
+  }
+ void _handleDeepLink(Uri uri) {
+  print("Deep link: $uri");
+
+  if (uri.path == '/home') {
+    if (Get.currentRoute != '/home') {
+      Get.offAllNamed('/home');
     }
   }
+
+
+}
 
   @override
   Widget build(BuildContext context) {

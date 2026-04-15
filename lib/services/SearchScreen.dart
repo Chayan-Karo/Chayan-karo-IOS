@@ -217,108 +217,137 @@ class SearchScreen extends StatelessWidget {
   }
 
   // --- REVISED PROFESSIONAL CARD ITEM ---
-  Widget _buildSearchResultItem(BuildContext context, SearchResult item, double scaleFactor) {
-    // We use a transparent container with decoration, but put Material inside
-    // to enable the InkWell ripple effect (Professional Touch)
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.transparent, // Color moves to Material
-        boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Material(
-        color: Colors.white,
+Widget _buildSearchResultItem(BuildContext context, SearchResult item, double scaleFactor) {
+  // --- Calculation Logic ---
+ final double originalPrice = item.price ?? 0;
+final double discountPercent = item.discountPercentage ?? 0;
+final bool hasDiscount = discountPercent > 0;
+
+// Use .floor() to ensure 199.5 becomes 199
+final double discountedPrice = hasDiscount 
+    ? (originalPrice * (1 - (discountPercent / 100))) 
+    : originalPrice;
+
+final String displayPrice = discountedPrice.floor().toString();
+final String displayOriginal = originalPrice.toStringAsFixed(0);
+
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.transparent,
+      boxShadow: [
+        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+      ],
+    ),
+    child: Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8.r),
+      child: InkWell(
         borderRadius: BorderRadius.circular(8.r),
-        // ClipRRect is implicit in Material with borderRadius
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8.r), // Limits ripple to corners
-          onTap: () async {
-            // --- UI FIX FOR KEYBOARD ---
-            // 1. Instantly kill focus (closes keyboard)
-            FocusScope.of(context).unfocus();
-            
-            // 2. Small delay to let keyboard animation start (Smoothness)
-            await Future.delayed(const Duration(milliseconds: 100));
-
-            try {
-              final categoryController = Get.find<CategoryController>();
-              
-              final foundCategory = categoryController.categories.firstWhereOrNull(
-                (cat) => cat.categoryId == item.categoryId
-              );
-
-              if (foundCategory != null) {
-                Get.to(() => CategoryServiceScreen(
-                  category: foundCategory,
-                  highlightServiceId: item.id,
-                ));
-              } else {
-                 print("Category info not found locally");
-              }
-            } catch (e) {
-              print("Error navigating: $e");
+        onTap: () async {
+          FocusScope.of(context).unfocus();
+          await Future.delayed(const Duration(milliseconds: 100));
+          try {
+            final categoryController = Get.find<CategoryController>();
+            final foundCategory = categoryController.categories.firstWhereOrNull(
+              (cat) => cat.categoryId == item.categoryId
+            );
+            if (foundCategory != null) {
+              Get.to(() => CategoryServiceScreen(
+                category: foundCategory,
+                highlightServiceId: item.id,
+              ));
             }
-          },
-          child: Container(
-            // Use Container here for Border only, padding moves inside
-            decoration: BoxDecoration(
-               borderRadius: BorderRadius.circular(8.r),
-               border: Border.all(color: Colors.grey.shade200),
-            ),
-            padding: EdgeInsets.all(12.w * scaleFactor),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6.r),
-                  child: CachedNetworkImage(
-                    imageUrl: item.imgLink ?? "",
-                    width: 80.w * scaleFactor,
-                    height: 80.w * scaleFactor,
-                    fit: BoxFit.cover,
-                    errorWidget: (context, url, error) => Container(
-                      width: 80.w, height: 80.w, color: Colors.grey[200], child: const Icon(Icons.broken_image),
+          } catch (e) {
+            print("Error navigating: $e");
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+             borderRadius: BorderRadius.circular(8.r),
+             border: Border.all(color: Colors.grey.shade200),
+          ),
+          padding: EdgeInsets.all(12.w * scaleFactor),
+          child: Row(
+            children: [
+              // Image Section
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6.r),
+                child: CachedNetworkImage(
+                  imageUrl: item.imgLink ?? "",
+                  width: 80.w * scaleFactor,
+                  height: 80.w * scaleFactor,
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) => Container(
+                    width: 80.w, height: 80.w, color: Colors.grey[200], child: const Icon(Icons.broken_image),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12.w * scaleFactor),
+              // Content Section
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name ?? "Service",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 16.sp * scaleFactor, fontWeight: FontWeight.w600),
                     ),
-                  ),
-                ),
-                SizedBox(width: 12.w * scaleFactor),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.name ?? "Service",
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 16.sp * scaleFactor, fontWeight: FontWeight.w600),
-                      ),
-                      SizedBox(height: 4.h * scaleFactor),
-                      Text(
-                        item.description ?? "",
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.grey[600]),
-                      ),
-                      SizedBox(height: 8.h * scaleFactor),
-                      Text(
-                        "₹${item.price?.toStringAsFixed(0) ?? '0'}", 
-                        style: TextStyle(
-                          fontSize: 14.sp * scaleFactor,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFFE47830),
-                          fontFamily: 'SF Pro',
+                    SizedBox(height: 4.h * scaleFactor),
+                    Text(
+                      item.description ?? "",
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12.sp * scaleFactor, color: Colors.grey[600]),
+                    ),
+                    SizedBox(height: 8.h * scaleFactor),
+                    
+                    // --- Price Section with Discount ---
+                    Row(
+                      children: [
+                        Text(
+                          "₹$displayPrice",
+                          style: TextStyle(
+                            fontSize: 15.sp * scaleFactor,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFE47830),
+                            fontFamily: 'SF Pro',
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        if (hasDiscount) ...[
+                          SizedBox(width: 8.w),
+                          Text(
+                            "₹$displayOriginal",
+                            style: TextStyle(
+                              fontSize: 12.sp * scaleFactor,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough, // The Strikethrough
+                              fontFamily: 'SF Pro',
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            "${discountPercent.toInt()}% OFF",
+                            style: TextStyle(
+                              fontSize: 10.sp * scaleFactor,
+                              color: Colors.green[700],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   List<Widget> _buildSearchTags(double scaleFactor, SearchPageController controller) {
     final List<String> tags = ['Deep Tissue Massage', 'Manicure','Pedicure', 'Cleaning'];

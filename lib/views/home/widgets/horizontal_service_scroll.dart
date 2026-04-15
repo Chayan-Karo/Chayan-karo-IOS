@@ -75,16 +75,22 @@ class HorizontalServiceScroll extends StatelessWidget {
                 final service = services[index];
 
                 // Price Logic
-                final double currentPrice = service.price ?? 0;
-                final double discount = service.discountPercentage ?? 0;
-                double originalPriceVal;
-                if (discount > 0) {
-                  originalPriceVal = currentPrice / ((100 - discount) / 100);
-                } else {
-                  originalPriceVal = currentPrice * 1.25;
-                }
-                final int finalOldPrice = originalPriceVal.toInt();
-                
+      // 1. service.price ko hum 'Original Price' maan rahe hain (e.g., 399)
+final double originalPrice = service.price ?? 0;
+final double discountPercent = service.discountPercentage ?? 0;
+
+// 2. Discounted Price calculate karein (e.g., 399 - 50% = 199.5)
+double discountedPriceVal;
+if (discountPercent > 0) {
+  discountedPriceVal = originalPrice - (originalPrice * discountPercent / 100);
+} else {
+  discountedPriceVal = originalPrice;
+}
+
+// 3. Final Integers for UI
+final int finalShowPrice = discountedPriceVal.toInt(); // Ye bada dikhega (199)
+final int finalStrikePrice = originalPrice.toInt();    // Ye cut karke dikhega (399)
+
                 // Get Real Rating
                 final String ratingText = _getRatingText(service.averageRating);
 
@@ -164,28 +170,32 @@ class HorizontalServiceScroll extends StatelessWidget {
                         SizedBox(height: 4.h * scaleFactor),
                         
                         // Price
-                        Row(
-                          children: [
-                            Text(
-                              "₹${currentPrice.toInt()}",
-                              style: TextStyle(
-                                fontSize: priceFontSize,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFFFA9441),
-                              ),
-                            ),
-                            SizedBox(width: 6.w * scaleFactor),
-                            Text(
-                              "₹$finalOldPrice",
-                              style: TextStyle(
-                                fontSize: oldPriceFontSize,
-                                fontWeight: FontWeight.w400,
-                                decoration: TextDecoration.lineThrough,
-                                color: const Color(0xFFB0B0B0),
-                              ),
-                            ),
-                          ],
-                        ),
+                      // Price
+Row(
+  children: [
+    Text(
+"₹$finalShowPrice",
+      style: TextStyle(
+        fontSize: priceFontSize,
+        fontWeight: FontWeight.bold, // Switched to bold for consistency
+        color: const Color(0xFFFA9441),
+      ),
+    ),
+    // ✅ Updated: Only show original price if a discount exists
+    if (discountPercent > 0) ...[
+      SizedBox(width: 6.w * scaleFactor),
+      Text(
+       "₹$finalStrikePrice",
+        style: TextStyle(
+          fontSize: oldPriceFontSize,
+          fontWeight: FontWeight.w400,
+          decoration: TextDecoration.lineThrough,
+          color: const Color(0xFFB0B0B0),
+        ),
+      ),
+    ],
+  ],
+),
                       ],
                     ),
                   ),

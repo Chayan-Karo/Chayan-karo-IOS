@@ -97,12 +97,13 @@ class _AllMostUsedServicesScreenState extends State<AllMostUsedServicesScreen> {
       parentCatName = matchedCategory.categoryName;
     }
 
-    double originalPriceVal = service.price;
-    if (service.discountPercentage > 0) {
-       originalPriceVal = service.price / ((100 - service.discountPercentage) / 100);
-    } else {
-       originalPriceVal = service.price * 1.25;
-    }
+  double originalPriceVal = service.price; // Ye 399 hai
+  double discountedPrice = service.price;
+
+  if (service.discountPercentage > 0) {
+    // Discounted Price = 399 - (399 * 50 / 100) = 199.5
+    discountedPrice = originalPriceVal - (originalPriceVal * service.discountPercentage / 100);
+  }
     
     // Rating Logic: If 0.0, show "New"
     String ratingStr = service.averageRating > 0 ? service.averageRating.toString() : "New";
@@ -111,7 +112,7 @@ class _AllMostUsedServicesScreenState extends State<AllMostUsedServicesScreen> {
     final item = service_models.CartItem(
       id: service.id,
       name: service.name, 
-      price: service.price, 
+      price: discountedPrice,
       originalPrice: originalPriceVal, 
       image: service.imgLink,
       duration: service.formattedDuration, // ✅ FIX: Use formatted duration (e.g. "1hr 30min")
@@ -507,13 +508,17 @@ class _AllMostUsedServicesScreenState extends State<AllMostUsedServicesScreen> {
                                 : "New";
 
                             // Calculate Prices
-                            double originalPriceVal;
-                            if (service.discountPercentage > 0) {
-                              originalPriceVal = service.price / ((100 - service.discountPercentage) / 100);
-                            } else {
-                              originalPriceVal = service.price * 1.25;
-                            }
-                            final int finalOldPrice = originalPriceVal.toInt();
+                        final double originalPrice = service.price; // e.g. 399
+  final double discount = service.discountPercentage;
+  
+  double discountedPrice = originalPrice;
+  if (discount > 0) {
+    discountedPrice = originalPrice - (originalPrice * discount / 100);
+  }
+
+  // Final Integers for display
+  final int finalShowPrice = discountedPrice.toInt(); // Ye 199 dikhayega
+  final int finalStrikePrice = originalPrice.toInt();
 
                             return GestureDetector(
                               onTap: () {
@@ -614,34 +619,37 @@ class _AllMostUsedServicesScreenState extends State<AllMostUsedServicesScreen> {
                                             ),
 
                                             // Price & Button Row
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              crossAxisAlignment: CrossAxisAlignment.end,
-                                              children: [
-                                                Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      '₹$finalOldPrice',
-                                                      style: TextStyle(
-                                                        fontSize: oldPriceFontSize,
-                                                        decoration: TextDecoration.lineThrough,
-                                                        color: Colors.grey[400],
-                                                        height: 1.0,
-                                                      ),
-                                                    ),
-                                                    SizedBox(height: 2.h),
-                                                    Text(
-                                                      '₹${service.price.toInt()}',
-                                                      style: TextStyle(
-                                                        fontSize: newPriceFontSize,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.black87,
-                                                        height: 1.0,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ✅ Show Strikethrough ONLY if discount > 0
+                if (discount > 0) ...[
+                  Text(
+                    '₹$finalStrikePrice', // Original Price (399)
+                    style: TextStyle(
+                      fontSize: oldPriceFontSize,
+                      decoration: TextDecoration.lineThrough,
+                      color: Colors.grey[400],
+                      height: 1.0,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                ],
+                Text(
+                  '₹$finalShowPrice', // Discounted Price (199)
+                  style: TextStyle(
+                    fontSize: newPriceFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: discount > 0 ? _themeOrange : Colors.black87,
+                    height: 1.0,
+                  ),
+                ),
+              ],
+            ),
                                                 
                                                 // Quantity Selector
                                                 _buildQuantitySelector(service, scaleFactor),
