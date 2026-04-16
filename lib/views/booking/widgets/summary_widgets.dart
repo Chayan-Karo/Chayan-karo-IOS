@@ -14,6 +14,7 @@ import '../../../views/login/widgets/legal_content.dart';
 import '../../../models/coupon_models.dart';
 import '../../../controllers/coupon_controller.dart';
 import '../../../widgets/app_snackbar.dart';
+import '../../../widgets/app_network_image.dart';
 
 // --- ENUMS & MODELS ---
 
@@ -272,22 +273,16 @@ class _SummaryServiceItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- IMAGE BLOCK ---
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12 * scale),
-            child: Image.network(
-              cartItem.image,
-              width: 60.w * scale,
-              height: 60.h * scale,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 60.w * scale,
-                height: 60.h * scale,
-                color: Colors.grey[300],
-                child: Icon(Icons.image, color: Colors.grey, size: 30 * scale),
-              ),
-            ),
-          ),
+         ClipRRect(
+  borderRadius: BorderRadius.circular(12 * scale),
+  child: AppNetworkImage(
+    imageUrl: cartItem.image,
+    width: 60.w * scale,
+    height: 60.h * scale,
+    fit: BoxFit.cover,
+    borderRadius: 12 * scale,
+  ),
+),
           SizedBox(width: 12.w * scale),
 
           // --- DETAILS BLOCK ---

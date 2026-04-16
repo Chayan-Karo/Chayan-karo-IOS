@@ -1,4 +1,5 @@
 // screens/category_service_screen.dart
+import 'package:chayankaro/widgets/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -977,6 +978,19 @@ Widget _buildShimmerLoading(double scaleFactor) {
   } */
 
 Widget _buildServiceCategoryGrid(double scaleFactor) {
+    // ✅ TEMP FIX: move "AC Service" to top in UI (remove later)
+  final originalList = widget.category.serviceCategory;
+
+  final acIndex = originalList.indexWhere((e) =>
+    (e.serviceCategoryName ?? '').toLowerCase().trim() == 'ac service'
+  );
+
+  final services = acIndex > 0
+      ? [
+          originalList[acIndex],
+          ...originalList.where((e) => e != originalList[acIndex]),
+        ]
+      : originalList;
   return Padding(
     padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
     child: Column(
@@ -997,7 +1011,9 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
           padding: EdgeInsets.zero, 
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: widget.category.serviceCategory.length,
+         // itemCount: widget.category.serviceCategory.length,
+            itemCount: services.length,
+
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             mainAxisSpacing: 18 * scaleFactor,
@@ -1005,7 +1021,9 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
             childAspectRatio: 0.82, 
           ),
           itemBuilder: (context, index) {
-            final serviceCategory = widget.category.serviceCategory[index];
+          //  final serviceCategory = widget.category.serviceCategory[index];
+                      final serviceCategory = services[index];
+
             return GestureDetector(
               onTap: () => _scrollToServiceCategory(serviceCategory.serviceCategoryId),
               child: Container(
@@ -1077,11 +1095,26 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
 
   Widget _buildServiceCategorySections(double scaleFactor) {
     return Obx(() {
+        // ✅ TEMP FIX: move "AC Service" to top in UI (remove later)
+    final originalList = widget.category.serviceCategory;
+
+    final acIndex = originalList.indexWhere((e) =>
+      (e.serviceCategoryName ?? '').toLowerCase().trim() == 'ac service'
+    );
+
+    final services = acIndex > 0
+        ? [
+            originalList[acIndex],
+            ...originalList.where((e) => e != originalList[acIndex]),
+          ]
+        : originalList;
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: widget.category.serviceCategory.map((serviceCategory) {
+          //children: widget.category.serviceCategory.map((serviceCategory) {
+                  children: services.map((serviceCategory) {
+
             return Container(
               key: _serviceCategoryKeys[serviceCategory.serviceCategoryId],
               margin: EdgeInsets.only(bottom: 24.h * scaleFactor),
@@ -1226,13 +1259,13 @@ Widget _buildServiceCategoryGrid(double scaleFactor) {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildNetworkImage(
+                    AppNetworkImage(
                       imageUrl: service.imgLink,
                       width: 70.w * scaleFactor,
                       height: 70.h * scaleFactor,
                       fit: BoxFit.cover,
                       borderRadius: 8 * scaleFactor,
-                      scaleFactor: scaleFactor,
+                      //scaleFactor: scaleFactor,
                     ),
                     SizedBox(width: 12.w * scaleFactor),
                     Expanded(
@@ -1349,13 +1382,13 @@ GestureDetector(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12 * scaleFactor)),
                   child: AspectRatio(
                     aspectRatio: 7 / 3,
-                    child: _buildNetworkImage(
+                    child: AppNetworkImage(
                       imageUrl: service.imgLink,
                       width: double.infinity,
                       height: 300.h * scaleFactor,
                       fit: BoxFit.cover,
                       borderRadius: 0,
-                      scaleFactor: scaleFactor,
+                      //scaleFactor: scaleFactor,
                     ),
                   ),
                 ),

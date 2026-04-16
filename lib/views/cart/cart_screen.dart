@@ -20,6 +20,7 @@ import '../booking/Summaryscreen.dart';
 import './widgets/read_more_text.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../data/local/database.dart';
+import '../../widgets/app_network_image.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -344,38 +345,15 @@ Widget _buildCartItemCard(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(8 * scaleFactor),
-                child: Image.network(
-                  cartItem.image,
-                  width: 70.w * scaleFactor,
-                  height: 70.h * scaleFactor,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 70.w * scaleFactor,
-                    height: 70.h * scaleFactor,
-                    color: Colors.grey[300],
-                    child: Icon(
-                      Icons.image_not_supported,
-                      color: Colors.grey[500],
-                      size: 30 * scaleFactor,
-                    ),
-                  ),
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      width: 70.w * scaleFactor,
-                      height: 70.h * scaleFactor,
-                      color: Colors.grey[200],
-                     child: Center(
-  child: ThreeDotLoader(
-    size: 6 * scaleFactor, // 👈 adjust size nicely
-    color: const Color(0xFFE47830),
+  borderRadius: BorderRadius.circular(8 * scaleFactor),
+  child: AppNetworkImage(
+    imageUrl: cartItem.image,
+    width: 70.w * scaleFactor,
+    height: 70.h * scaleFactor,
+    fit: BoxFit.cover,
+    borderRadius: 8 * scaleFactor,
   ),
 ),
-                    );
-                  },
-                ),
-              ),
               SizedBox(width: 16.w * scaleFactor),
               Expanded(
                 child: Column(

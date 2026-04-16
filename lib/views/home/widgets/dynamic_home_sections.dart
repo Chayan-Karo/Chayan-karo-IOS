@@ -117,6 +117,19 @@ class DynamicHomeSections extends StatelessWidget {
     double cardHeight = 164.h * scaleFactor;
     double spacing = 12.w * scaleFactor;
     final String categorySlug = category.categoryName.toLowerCase().replaceAll(' ', '_');
+     // ✅ TEMP FIX: move "AC Service" subcategory to top in UI (remove later)
+  final originalList = category.serviceCategory;
+
+  final acIndex = originalList.indexWhere((e) =>
+    (e.serviceCategoryName ?? '').toLowerCase().trim() == 'ac service'
+  );
+
+  final services = acIndex > 0
+      ? [
+          originalList[acIndex],
+          ...originalList.where((e) => e != originalList[acIndex]),
+        ]
+      : originalList;
 
     return SizedBox(
       height: cardHeight + (22.h * scaleFactor),
@@ -124,10 +137,14 @@ class DynamicHomeSections extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         // Zero padding allows list to start exactly where the title starts
         padding: EdgeInsets.zero,
-        itemCount: category.serviceCategory.length,
+       // itemCount: category.serviceCategory.length,
+             itemCount: services.length,
+
         separatorBuilder: (_, __) => SizedBox(width: spacing),
         itemBuilder: (context, index) {
-          final serviceCategory = category.serviceCategory[index];
+         // final serviceCategory = category.serviceCategory[index];
+                 final serviceCategory = services[index];
+
           return _DynamicServiceCard(
             serviceCategory: serviceCategory,
             parentCategory: category,
