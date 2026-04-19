@@ -79,7 +79,7 @@ class BookingReadController extends GetxController {
         final mode = (b.paymentMode ?? '').toLowerCase();
         final status = (b.paymentStatus ?? '').toLowerCase();
         bool isInvalidOnlineBooking = mode == 'online' && 
-                                     (status == 'unpaid' || status == 'not paid');
+                                     (status == 'unpaid' || status == 'not paid' || status =='initiated');
         return !isInvalidOnlineBooking;
       }).toList();
 

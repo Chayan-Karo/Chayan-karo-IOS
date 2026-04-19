@@ -30,9 +30,11 @@ class NotificationService {
   );
 
   bool _isInitialized = false;
+  bool _isInitializing = false;
 
-  Future<void> init() async {
-    if (_isInitialized) return;
+ Future<void> init() async {
+  if (_isInitialized || _isInitializing) return; // 👈 PATCH: Exit if already running
+  _isInitializing = true;
 
     try {
       // 1. Request Permissions (This triggers the Apple Pop-up!)
@@ -84,9 +86,15 @@ class NotificationService {
       
       _isInitialized = true;
       
-    } catch (e) {
+   } catch (e) {
       print("🚨 CRITICAL ERROR in NotificationService init: $e");
+      // We set initialized to true even on error to stop the loop, 
+      // but the 'finally' block handles the lock.
       _isInitialized = true; 
+    } finally {
+      // 🔥 PATCH: Ensure the lock is ALWAYS released so the method can be 
+      // called again if the first attempt failed before setting _isInitialized.
+      _isInitializing = false;
     }
   }
 

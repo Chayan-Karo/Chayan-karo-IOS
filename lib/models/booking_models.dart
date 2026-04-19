@@ -9,6 +9,8 @@ class BookingServiceItem {
   final int discountPercentage;
   final num price;
   final num discountPrice;
+  final int quantity;
+
 
   BookingServiceItem({
     required this.categoryId,
@@ -16,6 +18,8 @@ class BookingServiceItem {
     required this.discountPercentage,
     required this.price,
     required this.discountPrice,
+    required this.quantity,
+
   });
 
   factory BookingServiceItem.fromJson(Map<String, dynamic> json) => _$BookingServiceItemFromJson(json);

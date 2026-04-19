@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../data/local/database.dart';
 import '../../services/notification_service.dart';
 import 'package:app_links/app_links.dart';
+import '../../widgets/app_update_service.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
@@ -61,8 +62,7 @@ Uri? _deepLinkUri;
   _initApp(); // 👈 use wrapper
 
     // 🔥 Logic untouched
-    _routeFuture = _decideRoute();
-    _handleNavigation();
+  
 
     // 🎯 Shuffle quotes
     _quotes.shuffle();
@@ -111,10 +111,23 @@ Uri? _deepLinkUri;
   });
 }
 void _initApp() async {
-  await _initDeepLinks(); // 👈 WAIT for deep link first
+  // 1. Check for deep links first
+  await _initDeepLinks();
 
-  _routeFuture = _decideRoute();
-  _handleNavigation();
+  // 2. Force the update check (Wait for it to finish/be closed)
+  if (mounted) {
+    await AppUpdateService.checkForUpdate(context);
+  }
+
+  // 3. CRITICAL FIX: 
+  // If a deep link was caught during the update/init process, 
+  // do NOT proceed with the normal navigation.
+  if (_deepLinkUri != null) {
+    _handleDeepLink(_deepLinkUri!);
+  } else {
+    _routeFuture = _decideRoute();
+    _handleNavigation();
+  }
 }
   /// 🎯 Logic unchanged
   Future<String> _decideRoute() async {

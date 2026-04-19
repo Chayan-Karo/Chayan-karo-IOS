@@ -39,6 +39,7 @@ class _Agg {
   final int discountPct;
   num price = 0;
   num discountPrice = 0;
+  int quantity = 0;
 }
 
 class SummaryScreen extends StatefulWidget {
@@ -477,6 +478,8 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items, {int coupo
         () => _Agg(categoryId: it.categoryId, serviceId: it.id, discountPct: totalDiscountPct),
       );
       
+      entry.quantity += q; // ✅ ADD THIS
+
       entry.price += pricePerUnit * q;
       
       // 4. Calculate final discountPrice for this item after Coupon
@@ -493,6 +496,7 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items, {int coupo
       discountPercentage: a.discountPct, // Combined %
       price: a.price,                   // Original Total
       discountPrice: a.discountPrice,   // Final price user paid for this item
+      quantity:a.quantity,
     )).toList();
   }
   @override

@@ -13,6 +13,7 @@ BookingServiceItem _$BookingServiceItemFromJson(Map<String, dynamic> json) =>
       discountPercentage: (json['discountPercentage'] as num).toInt(),
       price: json['price'] as num,
       discountPrice: json['discountPrice'] as num,
+      quantity: (json['quantity'] as num).toInt(),
     );
 
 Map<String, dynamic> _$BookingServiceItemToJson(BookingServiceItem instance) =>
@@ -22,6 +23,7 @@ Map<String, dynamic> _$BookingServiceItemToJson(BookingServiceItem instance) =>
       'discountPercentage': instance.discountPercentage,
       'price': instance.price,
       'discountPrice': instance.discountPrice,
+      'quantity': instance.quantity,
     };
 
 BookingAmount _$BookingAmountFromJson(Map<String, dynamic> json) =>
