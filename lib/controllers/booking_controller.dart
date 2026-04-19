@@ -7,6 +7,9 @@ import '../models/booking_models.dart';
 import '../models/reschedule_models.dart';
 import '../models/cancel_models.dart';
 import '../models/service_timing_model.dart';
+import '../widgets/facebook_analytics.dart';
+import 'package:facebook_app_events/facebook_app_events.dart';
+
 
 // ADD: imports to trigger background refresh safely
 import 'dart:async' show unawaited;            // for fire-and-forget
@@ -83,6 +86,12 @@ Future<AddBookingResponse> placeBooking({
     );
 
     final res = await _repo.addBooking(req);
+    if (res.success) {
+      FBAnalytics.logPurchase(
+        actualAmount.toDouble(), 
+        res.bookingId ?? "CK-UNKNOWN",
+      );
+    }
 
     try {
       final readCtrl = Get.find<BookingReadController>();
@@ -221,7 +230,15 @@ Future<AddBookingResponse> placeBooking({
       // repository returns envelope
       final RescheduleBookingEnvelope res = await _repo.rescheduleBooking(req);
       final bool ok = res.success;
-
+      if (ok) {
+        FacebookAppEvents().logEvent(
+          name: 'booking_rescheduled',
+          parameters: {
+            'booking_id': payload['bookingId'],
+            'new_date': payload['bookingDate'],
+          },
+        );
+      }
       // Background refresh
       if (ok) {
         try {
@@ -306,6 +323,16 @@ final msg = e.toString();
       });
 
       final bool ok = res.success;
+
+      if (ok) {
+        FacebookAppEvents().logEvent(
+          name: 'booking_cancelled',
+          parameters: {
+            'booking_id': bookingId,
+            'reason': reason,
+          },
+        );
+      }
 
       // Background refresh
       if (ok) {

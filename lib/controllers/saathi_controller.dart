@@ -2,6 +2,9 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart'; 
 import '../data/repository/saathi_repository.dart';
 import '../models/saathi_models.dart';
+import 'package:facebook_app_events/facebook_app_events.dart';
+import '../widgets/facebook_analytics.dart';
+
 
 class SaathiController extends GetxController {
   final SaathiRepository _repo;
@@ -207,6 +210,16 @@ class SaathiController extends GetxController {
 
     final item = saathiList.firstWhereOrNull((e) => e.id == serviceProviderId);
     if (item == null) return null;
+
+  FacebookAppEvents().logEvent(
+      name: 'saathi_selected',
+      parameters: {
+        'saathi_name': item.name ?? 'Unknown',
+        'saathi_id': serviceProviderId,
+        // We assume it's a rebooking if it came from a "Previous Saathi" context
+        'is_rebooked': item.id == lastLockedProviderId.value, 
+      },
+    );
 
     if (!isProviderAvailable(item)) {
       return null; 

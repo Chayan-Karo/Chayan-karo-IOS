@@ -229,7 +229,7 @@ class AboutChaynkaroServicesScreen extends StatelessWidget {
               _buildContactItem(
                 icon: Icons.phone,
                 label: 'WhatsApp',
-                value: '+91 8299217231',
+                value: '+91 8188887385',
                 scaleFactor: scaleFactor,
               ),
               SizedBox(height: 12.h * scaleFactor),

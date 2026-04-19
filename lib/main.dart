@@ -28,10 +28,13 @@ import 'data/local/database.dart';
 import 'data/repository/category_repository.dart';
 import 'views/splash/app_initializer.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:facebook_app_events/facebook_app_events.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   // ✅ Enable Crashlytics collection
+  final facebookAppEvents = FacebookAppEvents();
+  await facebookAppEvents.activateApp();
 await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
 
 // ✅ Catch Flutter framework errors

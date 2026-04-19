@@ -109,6 +109,7 @@ final duration = _durationLabel(svc.serviceDuration ?? 0);
             duration: duration,
             details: details,
             scaleFactor: scaleFactor,
+            quantity: svc.quantity, // ✅ Pass quantity to
           );
         }).toList();
 
@@ -259,75 +260,94 @@ if (isCancelled && booking.paymentMode?.toUpperCase() == 'ONLINE')
     return parts.join(', ');
   }
 
-  // Dot-leading service card (matching Upcoming)
   Widget _bookingCard({
-    required String title,
-    required String duration,
-    required String details,
-    required double scaleFactor,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-      child: Container(
-        padding: EdgeInsets.all(12.r * scaleFactor),
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFF3F3F3), width: 2.w),
-          borderRadius: BorderRadius.circular(14 * scaleFactor),
-          color: Colors.white,
-        ),
-        child: Row(
-          children: [
-            // Leading dot like Upcoming
-            Container(
-              width: 8.w * scaleFactor,
-              height: 8.h * scaleFactor,
-              decoration: const BoxDecoration(color: Color(0xFFE47830), shape: BoxShape.circle),
-            ),
-            SizedBox(width: 10.w * scaleFactor),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14.sp * scaleFactor,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SizedBox(height: 4.h * scaleFactor),
-                  // Details and duration in one line
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          details,
-                          softWrap: true,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12.sp * scaleFactor, color: const Color(0xFF757575)),
+  required String title,
+  required String duration,
+  required String details,
+  required double scaleFactor,
+  required int quantity, // ✅ ADD THIS
+}) {
+  return Padding(
+    padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+    child: Container(
+      padding: EdgeInsets.all(12.r * scaleFactor),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFFF3F3F3), width: 2.w),
+        borderRadius: BorderRadius.circular(14 * scaleFactor),
+        color: Colors.white,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8.w * scaleFactor,
+            height: 8.h * scaleFactor,
+            decoration: const BoxDecoration(color: Color(0xFFE47830), shape: BoxShape.circle),
+          ),
+          SizedBox(width: 10.w * scaleFactor),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row( // ✅ Wrap title in Row for Quantity
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.sp * scaleFactor,
+                          color: Colors.black,
                         ),
                       ),
-                      SizedBox(width: 8.w * scaleFactor),
-                      Text(
-                        duration,
+                    ),
+                    // ✅ Dynamic Quantity Badge
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      child: Text(
+                        "Qty: $quantity",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11.sp * scaleFactor,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4.h * scaleFactor),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        details,
+                        softWrap: true,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12.sp * scaleFactor, color: const Color(0xFF757575)),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                    SizedBox(width: 8.w * scaleFactor),
+                    Text(
+                      duration,
+                      style: TextStyle(fontSize: 12.sp * scaleFactor, color: const Color(0xFF757575)),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // Cancel reason section
   Widget _cancelReasonSection(double scaleFactor) {
@@ -370,41 +390,45 @@ if (isCancelled && booking.paymentMode?.toUpperCase() == 'ONLINE')
     );
   }
 Widget _refundInfoSection(double scaleFactor) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-      child: Container(
-        width: double.infinity,
-        margin: EdgeInsets.only(top: 8.h * scaleFactor),
-        padding: EdgeInsets.all(14.r * scaleFactor),
-        decoration: ShapeDecoration(
-          color: const Color(0xFFF0F7FF), // Light Blue
-          shape: RoundedRectangleBorder(
-            side: BorderSide(width: 2.w * scaleFactor, color: const Color(0xFFD0E3FF)),
-            borderRadius: BorderRadius.circular(10 * scaleFactor),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.info_outline, size: 18.sp * scaleFactor, color: const Color(0xFF0056D2)),
-            SizedBox(width: 10.w * scaleFactor),
-            Expanded(
-              child: Text(
-                "Your refund will be processed to your bank account soon.",
-                style: TextStyle(
-                  fontSize: 13.sp * scaleFactor,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF0056D2),
-                ),
-              ),
-            ),
-          ],
+  // ✅ Check if refundStatus is provided by API, otherwise use fallback text
+  final String statusText = (booking.refundStatus != null && booking.refundStatus!.isNotEmpty)
+      ? "Refund Status: ${booking.refundStatus}"
+      : "Your refund will be processed to your bank account soon.";
+
+  return Padding(
+    padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
+    child: Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(top: 8.h * scaleFactor),
+      padding: EdgeInsets.all(14.r * scaleFactor),
+      decoration: ShapeDecoration(
+        color: const Color(0xFFF0F7FF),
+        shape: RoundedRectangleBorder(
+          side: BorderSide(width: 2.w * scaleFactor, color: const Color(0xFFD0E3FF)),
+          borderRadius: BorderRadius.circular(10 * scaleFactor),
         ),
       ),
-    );
-  }  
-
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 18.sp * scaleFactor, color: const Color(0xFF0056D2)),
+          SizedBox(width: 10.w * scaleFactor),
+          Expanded(
+            child: Text(
+              statusText, // ✅ Now dynamic
+              style: TextStyle(
+                fontSize: 13.sp * scaleFactor,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF0056D2),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   // Updated Billing: 80% per service + 20% platform + 18% GST (on platform)
  Widget _billingSection(
   double scaleFactor, {

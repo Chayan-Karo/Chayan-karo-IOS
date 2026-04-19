@@ -482,12 +482,8 @@ List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items, {int coupo
 
       entry.price += pricePerUnit * q;
       
-      // 4. Calculate final discountPrice for this item after Coupon
-      double effectiveItemPrice = it.price.toDouble(); 
-      if (couponPct > 0) {
-        effectiveItemPrice = effectiveItemPrice * (1 - (couponPct / 100));
-      }
-      entry.discountPrice += effectiveItemPrice * q;
+    final discountAmountPerUnit = (pricePerUnit * totalDiscountPct) / 100;
+entry.discountPrice += discountAmountPerUnit * q;
     }
 
     return agg.values.map((a) => BookingServiceItem(

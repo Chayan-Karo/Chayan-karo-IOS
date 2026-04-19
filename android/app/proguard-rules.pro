@@ -23,3 +23,10 @@
 -keep class com.google.android.play.core.splitcompat.** { *; }
 -keep class com.google.android.play.core.splitinstall.** { *; }
 -keep class com.google.android.play.core.tasks.** { *; }
+
+# ✅ ADD THIS: Facebook SDK (App Events)
+-keep class com.facebook.** { *; }
+-keepattributes Signature
+
+# If you use the bidding features/mediation
+-keep class com.google.ads.mediation.facebook.** { *; }

@@ -290,6 +290,7 @@ final inr = NumberFormat.currency(
                                   subtitle: s.categoryName,
                                   durationMinutes: s.serviceDuration ?? 0,
                                   scaleFactor: scaleFactor,
+                                  quantity: s.quantity, // ✅ Pass the model value here
                                 ),
                               ),
                             )
@@ -299,6 +300,7 @@ final inr = NumberFormat.currency(
                               subtitle: 'Includes lorem ipsum',
                               durationMinutes: 120,
                               scaleFactor: scaleFactor,
+                              quantity: 1,
                             ),
                             SizedBox(height: 12.h * scaleFactor),
                             _serviceLine(
@@ -306,6 +308,7 @@ final inr = NumberFormat.currency(
                               subtitle: 'Includes lorem',
                               durationMinutes: 30,
                               scaleFactor: scaleFactor,
+                              quantity: 1,
                             ),
                           ],
                           if (hasData && (booking?.totalDuration ?? 0) > 0)
@@ -760,6 +763,7 @@ _billingRow(
     required String subtitle,
     required int durationMinutes,
     required double scaleFactor,
+    required int quantity, // ✅ Required parameter
   }) {
     return Container(
       padding: EdgeInsets.all(12.r * scaleFactor),
@@ -768,8 +772,7 @@ _billingRow(
           color: const Color(0xFFF3F3F3),
           width: 2.w,
         ),
-        borderRadius:
-            BorderRadius.circular(14 * scaleFactor),
+        borderRadius: BorderRadius.circular(14 * scaleFactor),
         color: Colors.white,
       ),
       child: Row(
@@ -785,18 +788,41 @@ _billingRow(
           SizedBox(width: 10.w * scaleFactor),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14.sp * scaleFactor,
-                    color: Colors.black,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.sp * scaleFactor,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    // ✅ Always shows Quantity Badge
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(4.r),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Text(
+                        "Qty: $quantity",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 11.sp * scaleFactor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 4.h * scaleFactor),
                 Row(
@@ -807,8 +833,7 @@ _billingRow(
                         softWrap: true,
                         style: TextStyle(
                           fontSize: 12.sp * scaleFactor,
-                          color:
-                              const Color(0xFF757575),
+                          color: const Color(0xFF757575),
                         ),
                       ),
                     ),
@@ -817,8 +842,7 @@ _billingRow(
                       "$durationMinutes mins",
                       style: TextStyle(
                         fontSize: 12.sp * scaleFactor,
-                        color:
-                            const Color(0xFF757575),
+                        color: const Color(0xFF757575),
                       ),
                     ),
                   ],

@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import '../widgets/app_snackbar.dart';
 import '../data/repository/category_repository.dart';
 import '../models/category_models.dart';
+import '../widgets/facebook_analytics.dart';
+import 'package:facebook_app_events/facebook_app_events.dart'; 
+
 
 class CategoryController extends GetxController {
   // Singleton repository
@@ -97,6 +100,13 @@ class CategoryController extends GetxController {
   void searchCategories(String query) {
     _searchQuery.value = query;
     _applySearchFilter();
+    if (query.length >= 3) {
+      // Using raw FacebookAppEvents for custom 'search' event
+      FacebookAppEvents().logEvent(
+        name: 'fb_mobile_search',
+        parameters: {'search_string': query},
+      );
+    }
   }
 
   // Apply search filter
@@ -139,6 +149,7 @@ class CategoryController extends GetxController {
   void navigateToCategoryDetails(String categoryId) {
     final category = getCategoryById(categoryId);
     if (category != null) {
+      FBAnalytics.logViewService(category.categoryName);
       Get.toNamed('/category-details', arguments: {
         'category': category,
         'categoryId': categoryId,

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../data/repository/service_repository.dart';
 import '../models/service_models.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/facebook_analytics.dart';
 
 class ServiceController extends GetxController {
   // Singleton repository
@@ -166,6 +167,7 @@ final services = forceRefresh
   void navigateToServiceDetails(String serviceId) {
     final service = getServiceById(serviceId);
     if (service != null) {
+      FBAnalytics.logViewService("${service.name} (ID: $serviceId)");
       Get.toNamed('/service-details', arguments: {
         'service': service,
         'serviceId': serviceId,

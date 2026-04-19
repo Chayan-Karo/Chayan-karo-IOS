@@ -38,7 +38,7 @@ android {
         applicationId = "com.chayankaroindia.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36 // Matches your compileSdk
-        versionCode = 53
+        versionCode = 54
         versionName = "1.0.2"
     }
 
@@ -70,4 +70,5 @@ flutter {
 dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+   implementation("com.facebook.android:facebook-android-sdk:latest.release")
 }

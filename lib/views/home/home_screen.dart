@@ -209,6 +209,7 @@ return PopScope(
 
           SizedBox(height: 16.h * scaleFactor),
 
+
           RepaintBoundary(
             child: CategoriesGridWidget(
               scaleFactor: scaleFactor,

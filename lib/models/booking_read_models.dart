@@ -117,6 +117,7 @@ class BookingServiceRead {
   final num price;
   final num discountPrice;
   final int? serviceDuration;
+  final int quantity; // ✅ NEW FIELD
 
   BookingServiceRead({
     required this.id,
@@ -129,6 +130,7 @@ class BookingServiceRead {
     required this.price,
     required this.discountPrice,
     this.serviceDuration,
+    required this.quantity, // ✅ ADD THIS
 
   });
 
@@ -178,6 +180,7 @@ class CustomerBooking {
   // NEW FIELDS from backend
   final String? paymentMode;   // "ONLINE", "CASH"
   final String? paymentStatus; // "Paid", "UnPaid"
+  final String? refundStatus; // ✅ NEW FIELD
   final BookingAmount? bookingAmount;
   final Coupon? coupon;
   @JsonKey(defaultValue: false)
@@ -204,6 +207,7 @@ class CustomerBooking {
     required this.bookingPin,
     this.paymentMode,
     this.paymentStatus,
+    this.refundStatus, // ✅ ADD THIS
     this.bookingAmount, // ✅ ADD THIS
     this.coupon, // ✅ ADD THIS
     this.feedbackSubmitted = false, // ✅

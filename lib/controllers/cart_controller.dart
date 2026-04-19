@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import '../widgets/app_snackbar.dart';
 import '../data/local/database.dart';
 import '../models/service_models.dart';
+import '../widgets/facebook_analytics.dart';
+import 'package:facebook_app_events/facebook_app_events.dart';
 
 class CartController extends GetxController {
   final AppDatabase _database = Get.find();
@@ -103,6 +105,7 @@ class CartController extends GetxController {
     } else {
       _itemsList.add(item); // keeps insertion order
     }
+    FBAnalytics.logAddToCart(item.name, item.price);
     _showItemAddedFeedback(
         _itemsList[_indexOfId(item.id)]); // updated instance
   }
@@ -135,6 +138,7 @@ class CartController extends GetxController {
         enforcedCategoryId != cartItem.categoryId) {
       cartItem = cartItem.copyWith(categoryId: enforcedCategoryId);
     }
+    FBAnalytics.logAddToCart(service.name, service.price);
 
     _itemsList.add(cartItem); // new item goes to end, stable
     _showItemAddedFeedback(cartItem);
@@ -242,6 +246,15 @@ class CartController extends GetxController {
         return false;
       }
     }
+    FacebookAppEvents().logEvent(
+      name: 'fb_mobile_initiated_checkout',
+      parameters: {
+        'fb_content_id': _itemsList.map((e) => e.name).join(', '),
+        'fb_num_items': cartItemCount,
+        'fb_value': totalPrice,
+        'fb_currency': 'INR',
+      },
+    );
 
     return true;
   }

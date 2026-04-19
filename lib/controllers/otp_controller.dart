@@ -7,6 +7,7 @@ import '../data/repository/location_repository.dart';
 import '../data/local/database.dart';
 import '../controllers/profile_controller.dart'; 
 import '../../services/notification_service.dart'; // Ensure path is correct
+import '../widgets/facebook_analytics.dart';
 
 class OtpController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
@@ -410,6 +411,7 @@ void handleBackspace(int index) {
               message?.toLowerCase().contains('verified') == true ||
               message?.toLowerCase().contains('login') == true)) {
         print('✅ OTP verified successfully');
+        FBAnalytics.logLogin(_isExistingUser.value ? "Existing User" : "New Registration");
 
         // Prepare auth data
         final authData = <String, dynamic>{

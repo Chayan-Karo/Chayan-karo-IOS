@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="replace" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.VIBRATE"/>
@@ -28,6 +29,16 @@
         <meta-data
         android:name="com.google.firebase.messaging.default_notification_icon"
         android:resource="@mipmap/ic_launcher" />
+        <meta-data 
+        android:name="com.facebook.sdk.ApplicationId" 
+        android:value="1551617839820498" /> 
+    <meta-data 
+        android:name="com.facebook.sdk.ClientToken" 
+        android:value="af4a926e5617964cfda54b3a654bfcc8" />
+
+    <meta-data 
+        android:name="com.facebook.sdk.AutoLogAppEventsEnabled" 
+        android:value="true" />
 
     <meta-data
         android:name="com.google.firebase.messaging.default_notification_channel_id"
