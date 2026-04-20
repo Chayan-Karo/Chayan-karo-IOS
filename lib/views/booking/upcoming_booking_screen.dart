@@ -153,24 +153,30 @@ class UpcomingBookingScreen extends StatelessWidget {
         // Pricing: forward-calculated billing
        // --- Updated Financial Logic ---
 // --- Updated Financial Logic ---
+// --- Updated Financial Logic ---
 final bool hasAmountData = booking?.bookingAmount != null;
 
-// 1. Total of items before any discount (Sum of 'price')
+// 1. Original Item Total (e.g., 125) - The base for your Tax
 final double itemTotal = services.fold<double>(0, (s, e) => s + e.price.toDouble());
 
-// 2. The amount after item-level/coupon discount
+// 2. Total Discount Value (Sum of discount prices, e.g., 10)
+final double totalDiscountValue = services.fold<double>(0, (s, e) => s + e.discountPrice.toDouble());
+
+// 3. Amount after discount (e.g., 115)
 final double actualAmount = hasAmountData 
     ? booking!.bookingAmount!.actualAmount.toDouble() 
-    : services.fold<double>(0, (s, e) => s + e.discountPrice.toDouble());
+    : (itemTotal - totalDiscountValue);
 
-// 3. Coupon Savings (Difference between original price and actual amount)
+// 4. Coupon Discount (The savings to show in the UI)
 final double couponDiscount = itemTotal - actualAmount;
 
-// 4. Taxes & Fees (prioritize backend value)
+// 5. Taxes & Fees (Calculated from itemTotal ALWAYS)
+// (125 * 0.20) * 0.18 = 4.5 -> rounds to 5
 final int gstOnPlatform = hasAmountData 
     ? booking!.bookingAmount!.gstAmount.toInt() 
-    : ((itemTotal * 0.20) * 0.18).round();
-// 5. Grand Total (Actual amount + taxes)
+    : ((itemTotal * 0.20) * 0.18).round(); 
+
+// 6. Grand Total
 final int total = (actualAmount + gstOnPlatform).round();
 
 final inr = NumberFormat.currency(

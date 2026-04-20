@@ -437,24 +437,30 @@ Widget _refundInfoSection(double scaleFactor) {
   final services = booking.bookingService ?? [];
 
   // 1. Prioritize backend-calculated amounts
- final bool hasAmountData = booking.bookingAmount != null;
+ // --- Updated Financial Logic ---
+final bool hasAmountData = booking.bookingAmount != null;
 
-// 1. Total of items before any discount (Sum of 'price')
+// 1. Total of items before any discount (e.g., 125)
 final double itemTotal = services.fold<double>(0, (s, e) => s + e.price.toDouble());
 
-// 2. The amount after item-level/coupon discount
+// 2. Sum of the discount values sent by the backend (e.g., 10)
+final double totalDiscountValue = services.fold<double>(0, (s, e) => s + e.discountPrice.toDouble());
+
+// 3. The amount after subtraction (e.g., 115)
 final double actualAmount = hasAmountData 
     ? booking.bookingAmount!.actualAmount.toDouble() 
-    : services.fold<double>(0, (s, e) => s + e.discountPrice.toDouble());
+    : (itemTotal - totalDiscountValue);
 
-// 3. Coupon Savings (Difference between original price and actual amount)
+// 4. Coupon Savings variable for UI
 final double couponDiscount = itemTotal - actualAmount;
 
-// 4. Taxes & Fees (prioritize backend value)
+// 5. Taxes & Fees (ALWAYS calculated from 20% of Original Item Price)
+// (125 * 0.20) * 0.18 = 4.5 -> rounds to 5
 final int gstOnPlatform = hasAmountData 
     ? booking.bookingAmount!.gstAmount.toInt() 
     : ((itemTotal * 0.20) * 0.18).round();
-// 5. Grand Total (Actual amount + taxes)
+
+// 6. Grand Total
 final int total = (actualAmount + gstOnPlatform).round();
 
   final inr = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);

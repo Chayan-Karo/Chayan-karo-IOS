@@ -449,52 +449,76 @@ Coupon? _selectedCoupon;
     return totalMinutes;
   }
 
-List<BookingServiceItem> _mapCartToBookingItems(List<CartItem> items, {int couponPct = 0}) {
-    final cart = Get.find<CartController>();
-    final Map<String, _Agg> agg = {};
-    
-    for (final it in items) {
-      final q = widget.isRebooking 
-          ? cart.getRebookingQuantity(it.id) 
-          : cart.getQuantity(it.id);
+List<BookingServiceItem> _mapCartToBookingItems(
+  List<CartItem> items, {
+  double flatCouponAmount = 0.0,
+}) {
+  final cart = Get.find<CartController>();
+  final Map<String, _Agg> agg = {};
 
-      if (q <= 0) continue;
+  // Pre-calculate total discounted price for proportional coupon split
+  double totalDiscountedPrice = 0;
+  for (final it in items) {
+    final q = widget.isRebooking
+        ? cart.getRebookingQuantity(it.id)
+        : cart.getQuantity(it.id);
+    totalDiscountedPrice += it.price * q;
+  }
 
-      final key = '${it.categoryId}::${it.id}';
-      
-      // 1. Original Price (The "Price" field in API)
-      final pricePerUnit = it.hasDiscount ? it.originalPrice : it.price;
-      
-      // 2. Base Discount from Item (e.g. 10% off on the menu)
-      int itemDiscountPct = it.hasDiscount && it.originalPrice > 0
-          ? (((it.originalPrice - it.price) / it.originalPrice) * 100).round()
-          : 0;
-          
-      // 3. Total Discount Percentage (Item Discount + Coupon Discount)
-      final totalDiscountPct = itemDiscountPct + couponPct;
+  for (final it in items) {
+    final q = widget.isRebooking
+        ? cart.getRebookingQuantity(it.id)
+        : cart.getQuantity(it.id);
 
-      final entry = agg.putIfAbsent(
-        key,
-        () => _Agg(categoryId: it.categoryId, serviceId: it.id, discountPct: totalDiscountPct),
-      );
-      
-      entry.quantity += q; // ✅ ADD THIS
+    if (q <= 0) continue;
 
-      entry.price += pricePerUnit * q;
-      
-    final discountAmountPerUnit = (pricePerUnit * totalDiscountPct) / 100;
-entry.discountPrice += discountAmountPerUnit * q;
+    final key = '${it.categoryId}::${it.id}';
+
+    // Always use original price as base
+    final pricePerUnit = it.hasDiscount ? it.originalPrice : it.price;
+
+    // Item discount in rupees per unit (e.g. 549 - 349 = 200)
+    final double itemDiscountPerUnit = pricePerUnit - it.price;
+
+    // Item discount % (only item's own discount, no coupon mixed in)
+    final int itemDiscountPct = it.hasDiscount && it.originalPrice > 0
+        ? (((pricePerUnit - it.price) / pricePerUnit) * 100).round()
+        : 0;
+
+    // Proportional coupon share for this item based on its weight
+    double couponShareForItem = 0;
+    if (flatCouponAmount > 0 && totalDiscountedPrice > 0) {
+      final double itemWeight = (it.price * q) / totalDiscountedPrice;
+      couponShareForItem = flatCouponAmount * itemWeight;
     }
 
-    return agg.values.map((a) => BookingServiceItem(
-      categoryId: a.categoryId,
-      serviceId: a.serviceId,
-      discountPercentage: a.discountPct, // Combined %
-      price: a.price,                   // Original Total
-      discountPrice: a.discountPrice,   // Final price user paid for this item
-      quantity:a.quantity,
-    )).toList();
+    final entry = agg.putIfAbsent(
+      key,
+      () => _Agg(
+        categoryId: it.categoryId,
+        serviceId: it.id,
+        discountPct: itemDiscountPct,
+      ),
+    );
+
+    entry.quantity += q;
+    entry.price += pricePerUnit * q;
+
+    // discountPrice = item discount (rupees) + coupon share (rupees)
+    // No percentage conversion, no base mismatch
+    entry.discountPrice += (itemDiscountPerUnit * q) + couponShareForItem;
   }
+
+  return agg.values.map((a) => BookingServiceItem(
+    categoryId: a.categoryId,
+    serviceId: a.serviceId,
+    discountPercentage: a.discountPct,
+    price: a.price,
+    discountPrice: a.discountPrice,
+    quantity: a.quantity,
+  )).toList();
+}
+
   @override
   Widget build(BuildContext context) {
     final CartController cartController = Get.find<CartController>();
@@ -825,17 +849,14 @@ final int total = totalRaw > 0 ? totalRaw : 0;
                                 
 // --- ADD THIS LOGIC TO SYNC WITH BUILD CALCULATIONS ---
 // --- SYNC WITH UPDATED CALCULATIONS ---
-int couponPctForMapper = 0;
-if (selected != null) {
-  if (selected.discountType == "PERCENTAGE") {
-    couponPctForMapper = selected.discountPercentage.toInt();
-  } else {
-    // UPDATED: Use itemTotal as the denominator instead of subTotal
-    couponPctForMapper = ((discountAmount / itemTotal) * 100).round();
-  }
-}
+final double flatCouponForMapper = (selected != null && itemTotal > 0)
+    ? discountAmount
+    : 0.0;
 
-final bookingItems = _mapCartToBookingItems(currentPageItems, couponPct: couponPctForMapper);
+final bookingItems = _mapCartToBookingItems(
+  currentPageItems,
+  flatCouponAmount: flatCouponForMapper,
+);
                                 final totalDuration = _estimateTotalDurationMinutes(currentPageItems);
                                 final spId = saathi!['id'].toString();
                                 final addressId = _addressId!;
