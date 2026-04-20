@@ -61,7 +61,7 @@ class _MergedBookingSheetState extends State<_MergedBookingSheet> {
   TimeOfDay? _selectedTime;
   String _dynamicEndTime = "20:00";
   // Configuration constant
-  final int _bufferMinutes = 45;
+  final int _bufferMinutes = 90;
 
   @override
   void initState() {

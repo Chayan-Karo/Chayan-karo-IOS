@@ -106,7 +106,7 @@ dev_dependencies:
 # App Icon Configuration
 flutter_icons:
   android: true
-  ios: false
+  ios: true
   image_path: "assets/icons/app_icon.png"
   min_sdk_android: 21
 

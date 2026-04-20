@@ -19,13 +19,15 @@ class UpcomingBookingScreen extends StatelessWidget {
 
   // --- HELPER START: Robust Date Parser ---
   // If the model's getter fails (null), we force parse the string string.
-  DateTime? _getValidDateTime(CustomerBooking b) {
-    // 1. Try the extension getter
+DateTime? _getValidDateTime(CustomerBooking b) {
     if (b.displayDateTimeLocal != null) return b.displayDateTimeLocal;
 
-    // 2. Try parsing the bookingDate string manually (e.g. "2025-12-10")
     if (b.bookingDate.isNotEmpty) {
       try {
+        // Use substring to avoid timezone shifts from full ISO strings
+        if (b.bookingDate.length >= 10) {
+          return DateTime.parse(b.bookingDate.substring(0, 10));
+        }
         return DateTime.parse(b.bookingDate);
       } catch (_) {
         return null;
@@ -33,39 +35,31 @@ class UpcomingBookingScreen extends StatelessWidget {
     }
     return null;
   }
-  // --- HELPER END ---
 
-  // --- FIX 1: Display Date (e.g., 10 Dec, 2025) ---
+  // --- HELPER 2: Fix for the 'undefined_method' error ---
   String _displayDate(CustomerBooking b) {
     final dt = _getValidDateTime(b);
     if (dt == null) {
-      // Last resort fallback
       return (b.bookingDate.length >= 10)
           ? b.bookingDate.substring(0, 10)
           : b.bookingDate;
     }
-    // Formats strictly as "10 Dec, 2025"
     return DateFormat('dd MMM, yyyy').format(dt);
   }
 
-  // --- FIX 2: Day Header (Today / Tomorrow / Wednesday) ---
+  // --- HELPER 3: Fix for Day Name ---
   String _displayDayHeader(CustomerBooking b) {
     final dt = _getValidDateTime(b);
     if (dt == null) return '—';
 
-    // Normalize everything to midnight for accurate comparison
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
     final dateToCheck = DateTime(dt.year, dt.month, dt.day);
 
-    if (dateToCheck == today) {
-      return 'Today';
-    } else if (dateToCheck == tomorrow) {
-      return 'Tomorrow';
-    }
+    if (dateToCheck.isAtSameMomentAs(today)) return 'Today';
+    if (dateToCheck.isAtSameMomentAs(tomorrow)) return 'Tomorrow';
     
-    // Otherwise return full day name (e.g. "Wednesday")
     return DateFormat('EEEE').format(dt);
   }
 
