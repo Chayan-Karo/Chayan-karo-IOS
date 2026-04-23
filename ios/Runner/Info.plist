@@ -80,5 +80,25 @@
 		<false/>
 		<key>UIUserInterfaceStyle</key>
 		<string>Light</string>
+
+<key>FacebookAppID</key>
+<string>1551617839820498</string>
+<key>FacebookClientToken</key>
+<string>af4a926e5617964cfda54b3a654bfcc8</string>
+<key>FacebookDisplayName</key>
+<string>ChayanKaro</string>
+
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>1551617839820498</string>
+    </array>
+  </dict>
+</array>
+<key>NSUserTrackingUsageDescription</key>
+<string>This allows ChayanKaro to provide personalized service recommendations and track your booking status.</string>
+
 	</dict>
 </plist>

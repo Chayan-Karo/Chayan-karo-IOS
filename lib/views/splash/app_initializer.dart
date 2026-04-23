@@ -5,6 +5,8 @@ import '../../data/local/database.dart';
 import '../../services/notification_service.dart';
 import 'package:app_links/app_links.dart';
 import '../../widgets/app_update_service.dart';
+import 'dart:io';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
@@ -17,7 +19,7 @@ class _AppInitializerState extends State<AppInitializer>
     with SingleTickerProviderStateMixin {
   late Future<String> _routeFuture;
   final AppLinks _appLinks = AppLinks();
-Uri? _deepLinkUri;
+  Uri? _deepLinkUri;
 
   // 🔥 Premium Quotes
   final List<String> _quotes = [
@@ -59,10 +61,9 @@ Uri? _deepLinkUri;
     super.initState();
 
     NotificationService().init();
-  _initApp(); // 👈 use wrapper
+    _initApp(); // 👈 use wrapper
 
     // 🔥 Logic untouched
-  
 
     // 🎯 Shuffle quotes
     _quotes.shuffle();
@@ -73,8 +74,10 @@ Uri? _deepLinkUri;
       duration: const Duration(milliseconds: 700),
     );
 
-    _fadeAnimation =
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
 
     _controller.forward();
 
@@ -98,37 +101,51 @@ Uri? _deepLinkUri;
     super.dispose();
   }
 
- Future<void> _initDeepLinks() async {
-  // App opened from killed state
-  final uri = await _appLinks.getInitialLink();
-  if (uri != null) {
-    _deepLinkUri = uri;
+  Future<void> _initDeepLinks() async {
+    // App opened from killed state
+    final uri = await _appLinks.getInitialLink();
+    if (uri != null) {
+      _deepLinkUri = uri;
+    }
+
+    // App running in background
+    _appLinks.uriLinkStream.listen((uri) {
+      _handleDeepLink(uri);
+    });
   }
 
-  // App running in background
-  _appLinks.uriLinkStream.listen((uri) {
-    _handleDeepLink(uri);
-  });
-}
-void _initApp() async {
-  // 1. Check for deep links first
-  await _initDeepLinks();
+  void _initApp() async {
+    // 1. Check for deep links first
+    await _initDeepLinks();
 
-  // 2. Force the update check (Wait for it to finish/be closed)
-  if (mounted) {
-    await AppUpdateService.checkForUpdate(context);
+    // 2. Force the update check (Wait for it to finish/be closed)
+    if (mounted) {
+      await AppUpdateService.checkForUpdate(context);
+    }
+
+    if (Platform.isIOS) {
+      // Check current status
+      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+
+      // Only show if the user hasn't made a choice yet (Not Determined)
+      if (status == TrackingStatus.notDetermined) {
+        // Small 500ms delay to let the Splash UI settle
+        await Future.delayed(const Duration(milliseconds: 500));
+        await AppTrackingTransparency.requestTrackingAuthorization();
+      }
+    }
+
+    // 3. CRITICAL FIX:
+    // If a deep link was caught during the update/init process,
+    // do NOT proceed with the normal navigation.
+    if (_deepLinkUri != null) {
+      _handleDeepLink(_deepLinkUri!);
+    } else {
+      _routeFuture = _decideRoute();
+      _handleNavigation();
+    }
   }
 
-  // 3. CRITICAL FIX: 
-  // If a deep link was caught during the update/init process, 
-  // do NOT proceed with the normal navigation.
-  if (_deepLinkUri != null) {
-    _handleDeepLink(_deepLinkUri!);
-  } else {
-    _routeFuture = _decideRoute();
-    _handleNavigation();
-  }
-}
   /// 🎯 Logic unchanged
   Future<String> _decideRoute() async {
     try {
@@ -162,28 +179,27 @@ void _initApp() async {
 
     await Future.delayed(const Duration(milliseconds: 500));
 
-     if (!mounted) return;
+    if (!mounted) return;
 
-  // 🔥 If deep link exists → override normal flow
-  if (_deepLinkUri != null) {
-    _handleDeepLink(_deepLinkUri!);
-    return;
+    // 🔥 If deep link exists → override normal flow
+    if (_deepLinkUri != null) {
+      _handleDeepLink(_deepLinkUri!);
+      return;
+    }
+
+    // Normal flow
+    Get.offAllNamed(route);
   }
 
-  // Normal flow
-  Get.offAllNamed(route);
-  }
- void _handleDeepLink(Uri uri) {
-  print("Deep link: $uri");
+  void _handleDeepLink(Uri uri) {
+    print("Deep link: $uri");
 
-  if (uri.path == '/home') {
-    if (Get.currentRoute != '/home') {
-      Get.offAllNamed('/home');
+    if (uri.path == '/home') {
+      if (Get.currentRoute != '/home') {
+        Get.offAllNamed('/home');
+      }
     }
   }
-
-
-}
 
   @override
   Widget build(BuildContext context) {
