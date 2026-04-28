@@ -4,8 +4,8 @@ import '../widgets/app_snackbar.dart';
 import '../data/repository/category_repository.dart';
 import '../models/category_models.dart';
 import '../widgets/facebook_analytics.dart';
-import 'package:facebook_app_events/facebook_app_events.dart'; 
-
+import 'package:facebook_app_events/facebook_app_events.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class CategoryController extends GetxController {
   // Singleton repository
@@ -45,7 +45,7 @@ class CategoryController extends GetxController {
   // Load categories
   Future<void> loadCategories() async {
     if (_isLoading.value) return;
-    
+
     print('📂 Loading categories...');
     _isLoading.value = true;
     _errorMessage.value = '';
@@ -54,16 +54,16 @@ class CategoryController extends GetxController {
       final categories = await _categoryRepository.getCategories();
       _categories.assignAll(categories);
       _filteredCategories.assignAll(categories);
-      
+
       print('✅ Categories loaded successfully: ${categories.length}');
-      
+
       if (categories.isEmpty) {
         _errorMessage.value = 'No categories available';
       }
     } catch (e) {
       print('❌ Error loading categories: $e');
       _errorMessage.value = 'Failed to load categories: ${e.toString()}';
-      
+
       AppSnackbar.showError('Failed to load categories. Please try again.');
     } finally {
       _isLoading.value = false;
@@ -73,7 +73,7 @@ class CategoryController extends GetxController {
   // Refresh categories
   Future<void> refreshCategories() async {
     if (_isRefreshing.value) return;
-    
+
     print('🔄 Refreshing categories...');
     _isRefreshing.value = true;
     _errorMessage.value = '';
@@ -82,15 +82,17 @@ class CategoryController extends GetxController {
       final categories = await _categoryRepository.refreshCategories();
       _categories.assignAll(categories);
       _applySearchFilter();
-      
+
       print('✅ Categories refreshed successfully: ${categories.length}');
-      
+
       AppSnackbar.showSuccess('Categories updated successfully');
     } catch (e) {
       print('❌ Error refreshing categories: $e');
       _errorMessage.value = 'Failed to refresh categories: ${e.toString()}';
-      
-      AppSnackbar.showWarning('Could not refresh categories. Please check your connection.');
+
+      AppSnackbar.showWarning(
+        'Could not refresh categories. Please check your connection.',
+      );
     } finally {
       _isRefreshing.value = false;
     }
@@ -106,6 +108,8 @@ class CategoryController extends GetxController {
         name: 'fb_mobile_search',
         parameters: {'search_string': query},
       );
+      // ✅ 2. Firebase: Standard search event
+      FirebaseAnalytics.instance.logSearch(searchTerm: query);
     }
   }
 
@@ -114,9 +118,19 @@ class CategoryController extends GetxController {
     if (_searchQuery.value.isEmpty) {
       _filteredCategories.assignAll(_categories);
     } else {
-      final filtered = _categories.where((category) =>
-        category.categoryName.toLowerCase().contains(_searchQuery.value.toLowerCase())
-      ).toList();
+      final filtered = _categories
+          .where(
+            (category) => category.categoryName.toLowerCase().contains(
+              _searchQuery.value.toLowerCase(),
+            ),
+          )
+          .toList();
+      if (filtered.isEmpty) {
+        FirebaseAnalytics.instance.logEvent(
+          name: 'search_no_results',
+          parameters: {'search_term': _searchQuery.value},
+        );
+      }
       _filteredCategories.assignAll(filtered);
     }
   }
@@ -150,10 +164,23 @@ class CategoryController extends GetxController {
     final category = getCategoryById(categoryId);
     if (category != null) {
       FBAnalytics.logViewService(category.categoryName);
-      Get.toNamed('/category-details', arguments: {
-        'category': category,
-        'categoryId': categoryId,
-      });
+      FirebaseAnalytics.instance.logSelectContent(
+        contentType: 'service_category',
+        itemId: categoryId,
+      );
+      FirebaseAnalytics.instance.logViewItem(
+        items: [
+          AnalyticsEventItem(
+            itemId: categoryId,
+            itemName: category.categoryName,
+            itemCategory: 'Home Services',
+          ),
+        ],
+      );
+      Get.toNamed(
+        '/category-details',
+        arguments: {'category': category, 'categoryId': categoryId},
+      );
     } else {
       AppSnackbar.showError('Category not found');
     }

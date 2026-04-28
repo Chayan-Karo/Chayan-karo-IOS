@@ -18,6 +18,7 @@ import '../controllers/coupon_controller.dart';
 import '../data/repository/coupon_repository.dart';
 import 'package:shimmer/shimmer.dart';
 import '../widgets/three_dot_loader.dart';
+import 'category_service_search_screen.dart';
 
 
 class CategoryServiceScreen extends StatefulWidget {
@@ -579,6 +580,31 @@ Widget _buildHeader(BuildContext context, double scaleFactor) {
 
 // Pushes the back section to the left and the Cart icon (below) to the right
 const Spacer(),
+// 🔍 SEARCH ICON
+GestureDetector(
+  onTap: () {
+    Get.to(() => CategoryServiceSearchScreen(
+          category: widget.category,
+          servicesByCategory: _servicesByCategory,
+          onServiceSelected: (serviceId) {
+            _activeHighlightId = serviceId;
+
+            // 🔥 trigger animation reset
+            setState(() {});
+
+            _scrollToService(serviceId);
+          },
+        ));
+  },
+  child: Padding(
+    padding: EdgeInsets.only(right: 12.w * scaleFactor),
+    child: Icon(
+      Icons.search,
+      size: 22 * scaleFactor,
+      color: Colors.black,
+    ),
+  ),
+),
           
           // 3. Cart Icon
           Obx(() => GestureDetector(
@@ -629,6 +655,16 @@ const Spacer(),
       ),
     ),
   );
+}
+void _scrollToService(String serviceId) {
+  for (var entry in _servicesByCategory.entries) {
+    final found = entry.value.any((s) => s.id == serviceId);
+
+    if (found) {
+      _scrollToServiceCategory(entry.key);
+      break;
+    }
+  }
 }
 
 Widget _buildTopBanner(double scaleFactor) {
@@ -897,85 +933,6 @@ Widget _buildShimmerLoading(double scaleFactor) {
   );
 }
 
- /* Widget _buildCustomPackageSection(double scaleFactor) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-      child: Container(
-        width: double.infinity,
-        height: 100.h * scaleFactor,
-        padding: EdgeInsets.symmetric(horizontal: 16.w * scaleFactor),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFE47830), Color(0xFFFA9441)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12 * scaleFactor),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x33E47830),
-              blurRadius: 8 * scaleFactor,
-              offset: Offset(0, 4 * scaleFactor),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                SvgPicture.asset(
-                  'assets/icons/package.svg',
-                  width: 58.w * scaleFactor,
-                  height: 62.h * scaleFactor,
-                ),
-                SizedBox(width: 12.w * scaleFactor),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 205.67.w * scaleFactor,
-                      child: Text(
-                        'Create a Custom Package',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp * scaleFactor,
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 4.h * scaleFactor),
-                    SizedBox(
-                      width: 156.31.w * scaleFactor,
-                      child: Opacity(
-                        opacity: 0.50,
-                        child: Text(
-                          'Specifically for your needs',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13.sp * scaleFactor,
-                            fontFamily: 'Roboto',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white,
-              size: 16 * scaleFactor,
-            ),
-          ],
-        ),
-      ),
-    );
-  } */
 
 Widget _buildServiceCategoryGrid(double scaleFactor) {
     // ✅ TEMP FIX: move "AC Service" to top in UI (remove later)

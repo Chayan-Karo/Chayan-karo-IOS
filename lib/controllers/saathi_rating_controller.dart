@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../data/repository/saathi_rating_repository.dart';
 import '../models/saathi_rating_model.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class SaathiRatingController extends GetxController {
   final SaathiRatingRepository _repo;
@@ -24,6 +25,13 @@ class SaathiRatingController extends GetxController {
       // Leaving error as '' tells the UI this is a successful fetch with 0 results.
       
       reviews.assignAll(data);
+      FirebaseAnalytics.instance.logEvent(
+  name: 'saathi_ratings_viewed',
+  parameters: {
+    'provider_id': serviceProviderId,
+    'review_count': data.length,
+  },
+);
     } catch (e) {
       // Only set error text for actual failures (500, Network, etc.)
       error.value = "Failed to load reviews. Please try again.";

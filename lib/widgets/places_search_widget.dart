@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import '../../utils/test_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 
 class PlacesSearchWidget extends StatefulWidget {
   final TextEditingController controller;
@@ -40,8 +42,11 @@ class _PlacesSearchWidgetState extends State<PlacesSearchWidget> {
   String _sessionToken = '';
   bool _isLoading = false;
 
-  static const int _radiusMeters = 30000; // 30km
-
+int _getDynamicRadius(String query) {
+  if (query.length <= 3) return 5000;
+  if (query.length <= 6) return 10000;
+  return 20000;
+}
   @override
   void initState() {
     super.initState();
@@ -80,9 +85,11 @@ class _PlacesSearchWidgetState extends State<PlacesSearchWidget> {
 
     try {
       final bias = widget.locationBias;
-      final locationParams = bias != null
-          ? '&location=${bias.latitude},${bias.longitude}&radius=$_radiusMeters'
-          : '';
+      final radius = _getDynamicRadius(input);
+
+final locationParams = bias != null
+    ? '&location=${bias.latitude},${bias.longitude}&radius=$radius'
+    : '';
 
       final uri = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/autocomplete/json'
@@ -90,7 +97,7 @@ class _PlacesSearchWidgetState extends State<PlacesSearchWidget> {
         '&key=${widget.googleApiKey}'
         '&sessiontoken=$_sessionToken'
         '&components=country:in'
-        '&types=geocode|establishment'
+        ''
         '$locationParams'
         '&language=en',
       );
@@ -98,28 +105,33 @@ class _PlacesSearchWidgetState extends State<PlacesSearchWidget> {
       final res = await http.get(uri);
       final body = json.decode(res.body);
 
-      if (body['status'] != 'OK') {
-        setState(() {
-          _predictions.clear();
-          _isLoading = false;
-        });
-        return;
-      }
+     if (body['status'] != 'OK' || body['predictions'].isEmpty) {
+  await _fetchNearbyPlaces(input);
+  setState(() {
+    _isLoading = false;
+  });
+  return;
+}
 
       final List list = body['predictions'];
 
       setState(() {
-        _predictions
-          ..clear()
-          ..addAll(list.map((p) => {
-                'placeId': p['place_id'],
-                'main': p['structured_formatting']['main_text'],
-                'secondary':
-                    p['structured_formatting']['secondary_text'] ?? '',
-                'types': p['types'] ?? [],
-              }));
-        _isLoading = false;
-      });
+  _predictions
+    ..clear()
+    ..addAll(list.map((p) => {
+          'placeId': p['place_id'],
+          'main': p['structured_formatting']['main_text'],
+          'secondary':
+              p['structured_formatting']['secondary_text'] ?? '',
+          'types': p['types'] ?? [],
+        }));
+});
+
+await _sortByDistance();
+
+setState(() {
+  _isLoading = false;
+});
     } catch (_) {
       setState(() {
         _predictions.clear();
@@ -334,4 +346,86 @@ class _PlacesSearchWidgetState extends State<PlacesSearchWidget> {
       ],
     );
   }
+  double _distanceMeters(double lat1, double lng1, double lat2, double lng2) {
+  const earthRadius = 6371000;
+
+  final dLat = (lat2 - lat1) * (pi / 180);
+  final dLng = (lng2 - lng1) * (pi / 180);
+
+  final a =
+      sin(dLat / 2) * sin(dLat / 2) +
+      cos(lat1 * (pi / 180)) *
+          cos(lat2 * (pi / 180)) *
+          sin(dLng / 2) *
+          sin(dLng / 2);
+
+  final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  return earthRadius * c;
+}
+Future<LatLng?> _getLatLng(String placeId) async {
+  final uri = Uri.parse(
+    'https://maps.googleapis.com/maps/api/place/details/json'
+    '?place_id=$placeId'
+    '&key=${widget.googleApiKey}'
+    '&fields=geometry',
+  );
+
+  final res = await http.get(uri);
+  final body = json.decode(res.body);
+
+  if (body['status'] != 'OK') return null;
+
+  final loc = body['result']['geometry']['location'];
+  return LatLng(loc['lat'], loc['lng']);
+}
+Future<void> _sortByDistance() async {
+  if (widget.locationBias == null) return;
+
+  final origin = widget.locationBias!;
+
+  for (var p in _predictions.take(5)) {
+    final latLng = await _getLatLng(p['placeId']);
+    if (latLng != null) {
+      p['distance'] = _distanceMeters(
+        origin.latitude,
+        origin.longitude,
+        latLng.latitude,
+        latLng.longitude,
+      );
+    }
+  }
+
+  _predictions.sort((a, b) =>
+      (a['distance'] ?? 999999).compareTo(b['distance'] ?? 999999));
+}
+Future<void> _fetchNearbyPlaces(String input) async {
+  final bias = widget.locationBias;
+  if (bias == null) return;
+
+  final uri = Uri.parse(
+    'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+    '?location=${bias.latitude},${bias.longitude}'
+    '&radius=5000'
+    '&keyword=${Uri.encodeComponent(input)}'
+    '&key=${widget.googleApiKey}',
+  );
+
+  final res = await http.get(uri);
+  final body = json.decode(res.body);
+
+  if (body['status'] != 'OK') return;
+
+  final results = body['results'];
+
+  setState(() {
+    _predictions
+      ..clear()
+      ..addAll(results.map((r) => {
+            'placeId': r['place_id'],
+            'main': r['name'],
+            'secondary': r['vicinity'] ?? '',
+            'types': r['types'] ?? [],
+          }));
+  });
+}
 }

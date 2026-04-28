@@ -4,6 +4,7 @@ import '../widgets/app_snackbar.dart';
 import '../data/local/database.dart';
 import '../models/service_models.dart';
 import '../widgets/facebook_analytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:facebook_app_events/facebook_app_events.dart';
 
 class CartController extends GetxController {
@@ -24,7 +25,8 @@ class CartController extends GetxController {
 
   Future<void> _loadFromDb() async {
     try {
-      final items = await _database.getAllNewCartItems(); // returns List<CartItem>
+      final items = await _database
+          .getAllNewCartItems(); // returns List<CartItem>
       _itemsList.assignAll(items);
       print('✅ Loaded ${_itemsList.length} items from database');
     } catch (e) {
@@ -40,7 +42,7 @@ class CartController extends GetxController {
             price: legacyItem.price,
             originalPrice:
                 double.tryParse(legacyItem.originalPrice ?? '0') ??
-                    legacyItem.price,
+                legacyItem.price,
             image: legacyItem.image,
             duration: legacyItem.duration ?? '',
             rating: legacyItem.rating ?? '0.0',
@@ -88,8 +90,7 @@ class CartController extends GetxController {
   int getQuantity(String id) =>
       _itemsList.firstWhereOrNull((i) => i.id == id)?.quantity ?? 0;
 
-  bool isInCart(String id) =>
-      _itemsList.any((element) => element.id == id);
+  bool isInCart(String id) => _itemsList.any((element) => element.id == id);
 
   int _indexOfId(String id) =>
       _itemsList.indexWhere((element) => element.id == id);
@@ -100,14 +101,14 @@ class CartController extends GetxController {
     final index = _indexOfId(item.id);
     if (index != -1) {
       final existing = _itemsList[index];
-      _itemsList[index] =
-          existing.copyWith(quantity: existing.quantity + item.quantity);
+      _itemsList[index] = existing.copyWith(
+        quantity: existing.quantity + item.quantity,
+      );
     } else {
       _itemsList.add(item); // keeps insertion order
     }
     FBAnalytics.logAddToCart(item.name, item.price);
-    _showItemAddedFeedback(
-        _itemsList[_indexOfId(item.id)]); // updated instance
+    _showItemAddedFeedback(_itemsList[_indexOfId(item.id)]); // updated instance
   }
 
   void addServiceToCart(
@@ -139,6 +140,18 @@ class CartController extends GetxController {
       cartItem = cartItem.copyWith(categoryId: enforcedCategoryId);
     }
     FBAnalytics.logAddToCart(service.name, service.price);
+    FirebaseAnalytics.instance.logAddToCart(
+      currency: 'INR',
+      value: service.price,
+      items: [
+        AnalyticsEventItem(
+          itemId: cartItem.id,
+          itemName: cartItem.name,
+          price: cartItem.price,
+          quantity: cartItem.quantity,
+        ),
+      ],
+    );
 
     _itemsList.add(cartItem); // new item goes to end, stable
     _showItemAddedFeedback(cartItem);
@@ -156,8 +169,7 @@ class CartController extends GetxController {
     if (index == -1) return;
     final item = _itemsList[index];
     if (item.quantity > 1) {
-      _itemsList[index] =
-          item.copyWith(quantity: item.quantity - 1);
+      _itemsList[index] = item.copyWith(quantity: item.quantity - 1);
     } else {
       await removeService(id);
     }
@@ -180,6 +192,18 @@ class CartController extends GetxController {
     final service = _itemsList[index];
     _itemsList.removeAt(index);
     await _database.removeCartItem(id);
+    FirebaseAnalytics.instance.logRemoveFromCart(
+      currency: 'INR',
+      value: service.price,
+      items: [
+        AnalyticsEventItem(
+          itemId: service.id,
+          itemName: service.name,
+          price: service.price,
+          quantity: service.quantity,
+        ),
+      ],
+    );
     _showRemoveFeedback(service.name);
   }
 
@@ -255,18 +279,49 @@ class CartController extends GetxController {
         'fb_currency': 'INR',
       },
     );
+    FirebaseAnalytics.instance.logBeginCheckout(
+      currency: 'INR',
+      value: totalPrice,
+      items: _itemsList
+          .map(
+            (item) => AnalyticsEventItem(
+              itemId: item.id,
+              itemName: item.name,
+              price: item.price,
+              quantity: item.quantity,
+            ),
+          )
+          .toList(),
+    );
 
     return true;
   }
 
   Future<void> completeCheckout() async {
     if (await validateCartForCheckout()) {
-      AppSnackbar.showInfo('Processing $cartItemCount items worth $formattedTotalPrice');
+      AppSnackbar.showInfo(
+        'Processing $cartItemCount items worth $formattedTotalPrice',
+      );
 
       await Future.delayed(const Duration(seconds: 2));
       await clearCart();
 
       AppSnackbar.showSuccess('Your order has been placed successfully!');
+      FirebaseAnalytics.instance.logPurchase(
+        currency: 'INR',
+        value: totalPrice,
+        transactionId: DateTime.now().millisecondsSinceEpoch.toString(),
+        items: _itemsList
+            .map(
+              (item) => AnalyticsEventItem(
+                itemId: item.id,
+                itemName: item.name,
+                price: item.price,
+                quantity: item.quantity,
+              ),
+            )
+            .toList(),
+      );
     }
   }
 
@@ -283,11 +338,12 @@ class CartController extends GetxController {
   void _showSimpleFeedback(String message) {
     AppSnackbar.showWarning(message);
   }
-Future<void> clearCartOnBookingSuccess() async {
-  // optional: log
-  debugPrint('🧺 Clearing cart after booking success');
-  await clearCart();
-}
+
+  Future<void> clearCartOnBookingSuccess() async {
+    // optional: log
+    debugPrint('🧺 Clearing cart after booking success');
+    await clearCart();
+  }
   // ============ EXTRA STATS / HELPERS ============
 
   Future<void> forceRefreshFromDb() async {
@@ -301,29 +357,25 @@ Future<void> clearCartOnBookingSuccess() async {
       'totalItems': cartItemCount,
       'uniqueItems': _itemsList.length,
       'totalPrice': totalPrice,
-      'averageItemPrice':
-          _itemsList.isEmpty ? 0.0 : totalPrice / cartItemCount,
+      'averageItemPrice': _itemsList.isEmpty ? 0.0 : totalPrice / cartItemCount,
       'categories': groupedItems.keys.toList(),
       'categoryCount': groupedItems.length,
       'mostExpensiveItem': _itemsList.isEmpty
           ? null
-          : _itemsList
-              .reduce((a, b) => a.price > b.price ? a : b),
+          : _itemsList.reduce((a, b) => a.price > b.price ? a : b),
       'cheapestItem': _itemsList.isEmpty
           ? null
-          : _itemsList
-              .reduce((a, b) => a.price < b.price ? a : b),
-      'hasDiscounts':
-          _itemsList.any((item) => item.hasDiscount),
+          : _itemsList.reduce((a, b) => a.price < b.price ? a : b),
+      'hasDiscounts': _itemsList.any((item) => item.hasDiscount),
       'totalSavings': _itemsList.fold(
-          0.0, (sum, item) => sum + item.totalSavings),
+        0.0,
+        (sum, item) => sum + item.totalSavings,
+      ),
     };
   }
 
   List<CartItem> getCartItemsBySource(String sourcePage) {
-    return _itemsList
-        .where((item) => item.sourcePage == sourcePage)
-        .toList();
+    return _itemsList.where((item) => item.sourcePage == sourcePage).toList();
   }
 
   int getSourceItemCount(String sourcePage) {
@@ -341,8 +393,7 @@ Future<void> clearCartOnBookingSuccess() async {
   bool hasService(String serviceId) =>
       _itemsList.any((item) => item.id == serviceId);
 
-  CartItem? getCartItemByServiceId(String serviceId) =>
-      getCartItem(serviceId);
+  CartItem? getCartItemByServiceId(String serviceId) => getCartItem(serviceId);
 
   String getCartDisplaySummary() {
     if (isCartEmpty) return 'Cart is empty';
@@ -354,30 +405,26 @@ Future<void> clearCartOnBookingSuccess() async {
         '${sources == 1 ? 'source' : 'sources'} • $formattedTotalPrice';
   }
 
-  bool get hasMultipleSources =>
-      getItemsGroupedBySource().length > 1;
+  bool get hasMultipleSources => getItemsGroupedBySource().length > 1;
 
-  double get totalSavings => _itemsList.fold(
-      0.0, (sum, item) => sum + item.totalSavings);
+  double get totalSavings =>
+      _itemsList.fold(0.0, (sum, item) => sum + item.totalSavings);
 
   String get formattedTotalSavings {
     final savings = totalSavings;
     return savings > 0 ? '₹${savings.toInt()}' : '';
   }
 
-  bool get hasDiscountedItems =>
-      _itemsList.any((item) => item.hasDiscount);
+  bool get hasDiscountedItems => _itemsList.any((item) => item.hasDiscount);
 
   CartItem? get mostExpensiveItem {
     if (_itemsList.isEmpty) return null;
-    return _itemsList
-        .reduce((a, b) => a.price > b.price ? a : b);
+    return _itemsList.reduce((a, b) => a.price > b.price ? a : b);
   }
 
   CartItem? get cheapestItem {
     if (_itemsList.isEmpty) return null;
-    return _itemsList
-        .reduce((a, b) => a.price < b.price ? a : b);
+    return _itemsList.reduce((a, b) => a.price < b.price ? a : b);
   }
   // ============ REBOOKING FLOW ACTIONS ============
 
@@ -393,7 +440,9 @@ Future<void> clearCartOnBookingSuccess() async {
     if (index != -1) {
       // Increment quantity in rebooking list
       final existing = _rebookingItemsList[index];
-      _rebookingItemsList[index] = existing.copyWith(quantity: existing.quantity + 1);
+      _rebookingItemsList[index] = existing.copyWith(
+        quantity: existing.quantity + 1,
+      );
     } else {
       // Create new item with REBOOK context
       final cartItem = service.toCartItem(
@@ -403,9 +452,10 @@ Future<void> clearCartOnBookingSuccess() async {
         bookingSource: 'REBOOK',
         providerId: providerId,
       );
+      
       _rebookingItemsList.add(cartItem);
     }
-    // Optional: Add simple Get.snackbar feedback here if needed, 
+    // Optional: Add simple Get.snackbar feedback here if needed,
     // or rely on UI state update.
   }
 
@@ -422,7 +472,9 @@ Future<void> clearCartOnBookingSuccess() async {
     }
     final index = _rebookingItemsList.indexWhere((i) => i.id == id);
     if (index != -1) {
-      _rebookingItemsList[index] = _rebookingItemsList[index].copyWith(quantity: quantity);
+      _rebookingItemsList[index] = _rebookingItemsList[index].copyWith(
+        quantity: quantity,
+      );
     }
   }
 
@@ -436,21 +488,20 @@ Future<void> clearCartOnBookingSuccess() async {
   // ✅ NEW: Public getters for Rebooking UI
   List<CartItem> get rebookingItems => List.unmodifiable(_rebookingItemsList);
   bool get isRebookingCartEmpty => _rebookingItemsList.isEmpty;
-  
-  int get rebookingItemCount => 
+
+  int get rebookingItemCount =>
       _rebookingItemsList.fold(0, (sum, item) => sum + item.quantity);
 
-  double get rebookingTotalPrice => 
+  double get rebookingTotalPrice =>
       _rebookingItemsList.fold(0.0, (sum, item) => sum + item.totalPrice);
-      
+
   String get formattedRebookingTotalPrice => '₹${rebookingTotalPrice.toInt()}';
 
   // ✅ NEW: Get service IDs for API call
-  List<String> get rebookingServiceIds => 
+  List<String> get rebookingServiceIds =>
       _rebookingItemsList.map((e) => e.id).toList();
 
   // ✅ NEW: Check if specific service is in rebooking cart
   int getRebookingQuantity(String id) =>
       _rebookingItemsList.firstWhereOrNull((i) => i.id == id)?.quantity ?? 0;
 }
-

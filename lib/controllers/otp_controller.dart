@@ -8,6 +8,7 @@ import '../data/local/database.dart';
 import '../controllers/profile_controller.dart'; 
 import '../../services/notification_service.dart'; // Ensure path is correct
 import '../widgets/facebook_analytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class OtpController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
@@ -290,12 +291,17 @@ void handleBackspace(int index) {
   _errorMessage.value = '';
 
   try {
+  
     // --- ADD THESE LINES TO GET FCM TOKEN ---
     String? fcmToken = await _notificationService.getToken();
     print('🚀 FCM Token for Login: $fcmToken');
     // ----------------------------------------
 
     print('🔐 Verifying OTP: ${_otp.value} for phone: ${_phoneNumber.value}');
+      await FirebaseAnalytics.instance.logEvent(
+      name: 'otp_verify_attempt',
+      parameters: {'phone_number': _phoneNumber.value},
+    );
 
     // --- UPDATE THIS CALL TO PASS FCM TOKEN ---
     final response = await _authRepository.verifyOtp(
@@ -412,6 +418,10 @@ void handleBackspace(int index) {
               message?.toLowerCase().contains('login') == true)) {
         print('✅ OTP verified successfully');
         FBAnalytics.logLogin(_isExistingUser.value ? "Existing User" : "New Registration");
+        await FirebaseAnalytics.instance.setUserProperty(
+         name: 'user_status',
+         value: _isExistingUser.value ? 'existing_customer' : 'new_customer',
+          );
 
         // Prepare auth data
         final authData = <String, dynamic>{

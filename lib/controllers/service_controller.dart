@@ -5,6 +5,7 @@ import '../data/repository/service_repository.dart';
 import '../models/service_models.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/facebook_analytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class ServiceController extends GetxController {
   // Singleton repository
@@ -17,7 +18,6 @@ class ServiceController extends GetxController {
   final RxString _errorMessage = ''.obs;
   final RxString _currentServiceCategoryId = ''.obs;
   final RxBool _isEmpty = false.obs; // Track if category is empty (404)
-  
 
   // Getters
   List<Service> get services => _services;
@@ -39,13 +39,16 @@ class ServiceController extends GetxController {
     print('🔧 ServiceController ready');
   }
 
-  Future<void> loadServices(String serviceCategoryId,{bool forceRefresh = false}) async {
-    if (!forceRefresh && 
-      _currentServiceCategoryId.value == serviceCategoryId && 
-      _services.isNotEmpty) {
-    print('ℹ️ Services already loaded, skipping API call');
-    return; 
-  }
+  Future<void> loadServices(
+    String serviceCategoryId, {
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh &&
+        _currentServiceCategoryId.value == serviceCategoryId &&
+        _services.isNotEmpty) {
+      print('ℹ️ Services already loaded, skipping API call');
+      return;
+    }
 
     _isLoading.value = true;
     _hasError.value = false;
@@ -55,18 +58,20 @@ class ServiceController extends GetxController {
 
     try {
       print('🔄 Loading services for category: $serviceCategoryId');
-      
-final services = forceRefresh
-    ? await _serviceRepository.refreshServices(serviceCategoryId)
-    : await _serviceRepository.getServices(serviceCategoryId);
-          _services.assignAll(services);
-      
+
+      final services = forceRefresh
+          ? await _serviceRepository.refreshServices(serviceCategoryId)
+          : await _serviceRepository.getServices(serviceCategoryId);
+      _services.assignAll(services);
+
       print('✅ Loaded ${_services.length} services');
-      
+
       if (services.isEmpty) {
         _isEmpty.value = true;
         _errorMessage.value = 'No services available for this category yet';
-        print('ℹ️ Category $serviceCategoryId is empty - no services available');
+        print(
+          'ℹ️ Category $serviceCategoryId is empty - no services available',
+        );
       }
     } on DioException catch (e) {
       // Check if it's a 404 (already handled in repository, but double-check)
@@ -80,14 +85,14 @@ final services = forceRefresh
         print('❌ Error loading services: $e');
         _hasError.value = true;
         _errorMessage.value = 'Failed to load services. Please try again.';
-        
+
         AppSnackbar.showError('Failed to load services. Please try again.');
       }
     } catch (e) {
       print('❌ Error loading services: $e');
       _hasError.value = true;
       _errorMessage.value = 'Failed to load services: ${e.toString()}';
-      
+
       AppSnackbar.showError('Failed to load services. Please try again.');
     } finally {
       _isLoading.value = false;
@@ -97,42 +102,54 @@ final services = forceRefresh
   // Refresh services
   Future<void> refreshServices() async {
     if (_currentServiceCategoryId.value.isEmpty) return;
-    
-    print('🔄 Refreshing services for category: ${_currentServiceCategoryId.value}');
+
+    print(
+      '🔄 Refreshing services for category: ${_currentServiceCategoryId.value}',
+    );
     _hasError.value = false;
     _isEmpty.value = false;
     _errorMessage.value = '';
 
     try {
-      final services = await _serviceRepository.refreshServices(_currentServiceCategoryId.value);
+      final services = await _serviceRepository.refreshServices(
+        _currentServiceCategoryId.value,
+      );
       _services.assignAll(services);
-      
+
       print('✅ Services refreshed successfully: ${services.length}');
-      
+
       if (services.isEmpty) {
         _isEmpty.value = true;
-        print('ℹ️ Category ${_currentServiceCategoryId.value} is empty after refresh');
+        print(
+          'ℹ️ Category ${_currentServiceCategoryId.value} is empty after refresh',
+        );
       } else {
         AppSnackbar.showSuccess('Services updated successfully');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        print('ℹ️ 404: No services for category ${_currentServiceCategoryId.value}');
+        print(
+          'ℹ️ 404: No services for category ${_currentServiceCategoryId.value}',
+        );
         _isEmpty.value = true;
         _services.clear();
       } else {
         print('❌ Error refreshing services: $e');
         _hasError.value = true;
         _errorMessage.value = 'Failed to refresh services: ${e.toString()}';
-        
-        AppSnackbar.showWarning('Could not refresh services. Please check your connection.');
+
+        AppSnackbar.showWarning(
+          'Could not refresh services. Please check your connection.',
+        );
       }
     } catch (e) {
       print('❌ Error refreshing services: $e');
       _hasError.value = true;
       _errorMessage.value = 'Failed to refresh services: ${e.toString()}';
-      
-      AppSnackbar.showWarning('Could not refresh services. Please check your connection.');
+
+      AppSnackbar.showWarning(
+        'Could not refresh services. Please check your connection.',
+      );
     }
   }
 
@@ -156,11 +173,18 @@ final services = forceRefresh
 
   List<Service> searchServices(String query) {
     if (query.isEmpty) return _services;
-    
-    return _services.where((service) =>
-        service.name.toLowerCase().contains(query.toLowerCase()) ||
-        service.description.toLowerCase().contains(query.toLowerCase())
-    ).toList();
+    FirebaseAnalytics.instance.logEvent(
+      name: 'service_list_search',
+      parameters: {'query': query, 'category': _currentServiceCategoryId.value},
+    );
+
+    return _services
+        .where(
+          (service) =>
+              service.name.toLowerCase().contains(query.toLowerCase()) ||
+              service.description.toLowerCase().contains(query.toLowerCase()),
+        )
+        .toList();
   }
 
   // Navigate to service details
@@ -168,10 +192,22 @@ final services = forceRefresh
     final service = getServiceById(serviceId);
     if (service != null) {
       FBAnalytics.logViewService("${service.name} (ID: $serviceId)");
-      Get.toNamed('/service-details', arguments: {
-        'service': service,
-        'serviceId': serviceId,
-      });
+      FirebaseAnalytics.instance.logViewItem(
+        currency: 'INR',
+        value: service.price?.toDouble(), // If your model has a price
+        items: [
+          AnalyticsEventItem(
+            itemId: service.id,
+            itemName: service.name,
+            itemCategory: _currentServiceCategoryId.value,
+            price: service.price?.toDouble(),
+          ),
+        ],
+      );
+      Get.toNamed(
+        '/service-details',
+        arguments: {'service': service, 'serviceId': serviceId},
+      );
     } else {
       AppSnackbar.showError('Service not found');
     }

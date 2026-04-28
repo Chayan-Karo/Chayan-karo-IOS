@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
-
+import 'package:firebase_analytics/firebase_analytics.dart';
 // Screens
 import 'views/splash/splash_screen.dart';
 import 'widgets/OnboardingScreen.dart';
@@ -29,49 +29,52 @@ import 'data/repository/category_repository.dart';
 import 'views/splash/app_initializer.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:facebook_app_events/facebook_app_events.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   // ✅ Enable Crashlytics collection
   final facebookAppEvents = FacebookAppEvents();
   await facebookAppEvents.activateApp();
-await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
 
-// ✅ Catch Flutter framework errors
-FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  // ✅ Catch Flutter framework errors
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
-// ✅ Catch async/background errors
-PlatformDispatcher.instance.onError = (error, stack) {
-  FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-  return true;
-};
+  // ✅ Catch async/background errors
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
 
   // Lock to portrait
-  await SystemChrome.setPreferredOrientations(
-    [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown],
-  );
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   // FIX 1: Start the app IMMEDIATELY so it paints the screen.
   runApp(ChayanKaroApp());
 
   // FIX 2: Run this in the background AFTER runApp so it doesn't block the UI
-  NotificationService().init(); 
+  NotificationService().init();
 }
 
 // =======================================================
 // APP ROOT
 // =======================================================
 class ChayanKaroApp extends StatelessWidget {
-   ChayanKaroApp({super.key});
-  
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  ChayanKaroApp({super.key});
+
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   @override
   Widget build(BuildContext context) {
-    // FIX 3: Removed the LayoutBuilder hack. 
+    // FIX 3: Removed the LayoutBuilder hack.
     // ScreenUtil is smart enough to handle physical sizes inside its own builder.
     // Since you are locked to Portrait, we enforce the 390x844 base design size.
     return ScreenUtilInit(
-      designSize: const Size(390, 844), 
+      designSize: const Size(390, 844),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -79,6 +82,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
           navigatorKey: navigatorKey, // ✅ ADD THIS
           debugShowCheckedModeBanner: false,
           title: "ChayanKaro",
+          navigatorObservers: [
+            FirebaseAnalyticsObserver(analytics: analytics),
+          ],
 
           // FIX 4: Ensured widget isn't null before wrapping in MediaQuery
           builder: (context, widget) {
@@ -101,20 +107,35 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
           initialRoute: '/', // <-- Ensure OnboardingScreen uses a Scaffold!
 
           getPages: [
-           // GetPage(name: '/', page: () => const SplashScreen()),
-          GetPage(name: '/', page: () => const AppInitializer()),
+            // GetPage(name: '/', page: () => const SplashScreen()),
+            GetPage(name: '/', page: () => const AppInitializer()),
             GetPage(name: '/onboarding', page: () => const OnboardingScreen()),
             GetPage(name: '/login', page: () => const LoginScreen()),
             GetPage(name: '/otp', page: () => const OtpVerificationScreen()),
             GetPage(name: '/home', page: () => const HomeScreen()),
             GetPage(name: '/profile', page: () => const ProfileScreen()),
             GetPage(name: '/cart', page: () => CartScreen()),
-            GetPage(name: '/location_popup', page: () => const LocationPopupScreen()),
+            GetPage(
+              name: '/location_popup',
+              page: () => const LocationPopupScreen(),
+            ),
             GetPage(name: '/choice', page: () => const ChooseLocationSheet()),
-            GetPage(name: '/service_area_info', page: () => const ServiceAreaInfoScreen()),
-            GetPage(name: '/payment-success', page: () => const PaymentSuccessScreen()),
-            GetPage(name: '/payment-failed', page: () => const PaymentFailedScreen()),
-            GetPage(name: '/feedback_screen', page: () => const FeedbackScreen()),
+            GetPage(
+              name: '/service_area_info',
+              page: () => const ServiceAreaInfoScreen(),
+            ),
+            GetPage(
+              name: '/payment-success',
+              page: () => const PaymentSuccessScreen(),
+            ),
+            GetPage(
+              name: '/payment-failed',
+              page: () => const PaymentFailedScreen(),
+            ),
+            GetPage(
+              name: '/feedback_screen',
+              page: () => const FeedbackScreen(),
+            ),
             GetPage(
               name: '/edit-profile',
               page: () => EditProfileScreen(customer: Get.arguments),

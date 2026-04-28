@@ -1,27 +1,27 @@
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repository/saathi_repository.dart';
 import '../models/saathi_models.dart';
 import 'package:facebook_app_events/facebook_app_events.dart';
 import '../widgets/facebook_analytics.dart';
-
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class SaathiController extends GetxController {
   final SaathiRepository _repo;
 
   SaathiController({SaathiRepository? repo})
-      : _repo = repo ?? SaathiRepository();
+    : _repo = repo ?? SaathiRepository();
 
   // ---------------------------------------------------------
   // CONSTANTS
   // ---------------------------------------------------------
   static const String _kLockedProviderKey = 'locked_spid';
-  
+
   // NEW: Key to store the time we locked the provider
-  static const String _kLockedTimeKey = 'locked_timestamp'; 
+  static const String _kLockedTimeKey = 'locked_timestamp';
 
   // NEW: Auto-clear limit (set to 10 minutes)
-  static const int _kLockDurationMinutes = 10; 
+  static const int _kLockDurationMinutes = 10;
 
   // ---------------------------------------------------------
   // VARIABLES
@@ -41,8 +41,9 @@ class SaathiController extends GetxController {
   final RxString lockingProviderId = ''.obs;
 
   /// Response of last lock
-  final Rx<LockProviderResponse?> lastLockResponse =
-      Rx<LockProviderResponse?>(null);
+  final Rx<LockProviderResponse?> lastLockResponse = Rx<LockProviderResponse?>(
+    null,
+  );
 
   /// Last locked ID (Acts as the active Session ID)
   final RxnString lastLockedProviderId = RxnString(null);
@@ -60,18 +61,14 @@ class SaathiController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    
+
     // 1. RESTORE SESSION: Checks storage AND expiration time
     _restoreLockedSession();
 
-    _debouncer = debounce<String>(
-      _tapSelection,
-      (spid) async {
-        if (spid.isEmpty) return;
-        await _lockNow(spid);
-      },
-      time: const Duration(milliseconds: 400),
-    );
+    _debouncer = debounce<String>(_tapSelection, (spid) async {
+      if (spid.isEmpty) return;
+      await _lockNow(spid);
+    }, time: const Duration(milliseconds: 400));
   }
 
   @override
@@ -90,9 +87,8 @@ class SaathiController extends GetxController {
       final prefs = await SharedPreferences.getInstance();
       final savedId = prefs.getString(_kLockedProviderKey);
       final savedTimeStr = prefs.getString(_kLockedTimeKey); // NEW: Get time
-      
+
       if (savedId != null && savedId.isNotEmpty) {
-        
         // CHECK EXPIRATION LOGIC
         if (savedTimeStr != null) {
           final savedTime = DateTime.tryParse(savedTimeStr);
@@ -102,15 +98,15 @@ class SaathiController extends GetxController {
             // If older than 10 minutes, CLEAR IT and stop.
             if (difference >= _kLockDurationMinutes) {
               print("Session expired (> 10 mins). Clearing.");
-              await clearBookingSession(); 
-              return; 
+              await clearBookingSession();
+              return;
             }
           }
         }
 
         // If valid (less than 10 mins), restore it
         lastLockedProviderId.value = savedId;
-        myLockedProviders.add(savedId); 
+        myLockedProviders.add(savedId);
       }
     } catch (e) {
       print("Error restoring locked session: $e");
@@ -135,7 +131,7 @@ class SaathiController extends GetxController {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_kLockedProviderKey);
       await prefs.remove(_kLockedTimeKey); // NEW: Remove time key
-      
+
       lastLockedProviderId.value = null;
       lockingProviderId.value = '';
       myLockedProviders.clear();
@@ -167,7 +163,7 @@ class SaathiController extends GetxController {
     required String addressId,
     required DateTime bookingDate,
     required int currentBookingDuration,
-    String? bookingTime, 
+    String? bookingTime,
   }) async {
     try {
       isLoading.value = true;
@@ -187,7 +183,7 @@ class SaathiController extends GetxController {
         addressId: addressId,
         bookingDate: bookingDate,
         currentBookingDuration: currentBookingDuration,
-        bookingTime: bookingTime, 
+        bookingTime: bookingTime,
       );
 
       saathiList.assignAll(items);
@@ -211,18 +207,26 @@ class SaathiController extends GetxController {
     final item = saathiList.firstWhereOrNull((e) => e.id == serviceProviderId);
     if (item == null) return null;
 
-  FacebookAppEvents().logEvent(
+    FacebookAppEvents().logEvent(
       name: 'saathi_selected',
       parameters: {
         'saathi_name': item.name ?? 'Unknown',
         'saathi_id': serviceProviderId,
         // We assume it's a rebooking if it came from a "Previous Saathi" context
-        'is_rebooked': item.id == lastLockedProviderId.value, 
+        'is_rebooked': item.id == lastLockedProviderId.value,
+      },
+    );
+    FirebaseAnalytics.instance.logEvent(
+      name: 'saathi_selected',
+      parameters: {
+        'saathi_name': item.name ?? 'Unknown',
+        'saathi_id': serviceProviderId,
+        'is_rebooked': item.id == lastLockedProviderId.value,
       },
     );
 
     if (!isProviderAvailable(item)) {
-      return null; 
+      return null;
     }
 
     if (bookingDate != null) {
@@ -232,10 +236,7 @@ class SaathiController extends GetxController {
     lockingProviderId.value = serviceProviderId;
 
     if (preferImmediateLock.value) {
-      final res = await _lockNow(
-        serviceProviderId,
-        dateOverride: bookingDate,
-      );
+      final res = await _lockNow(serviceProviderId, dateOverride: bookingDate);
 
       if (res?.isSuccess == true) {
         _markProviderAsMine(serviceProviderId);
@@ -253,9 +254,9 @@ class SaathiController extends GetxController {
   // -------------------------------------------------------------
   void onProviderSelected(String serviceProviderId) {
     if (serviceProviderId.trim().isEmpty) return;
-    
+
     final item = saathiList.firstWhereOrNull((e) => e.id == serviceProviderId);
-    
+
     if (item != null && !isProviderAvailable(item)) return;
 
     lockingProviderId.value = serviceProviderId;
@@ -266,8 +267,8 @@ class SaathiController extends GetxController {
   // Manual Lock
   // -------------------------------------------------------------
   Future<LockProviderResponse?> lockProviderNow(
-      String serviceProviderId) async {
-    
+    String serviceProviderId,
+  ) async {
     final item = saathiList.firstWhereOrNull((e) => e.id == serviceProviderId);
     if (item != null && !isProviderAvailable(item)) return null;
 
@@ -320,7 +321,7 @@ class SaathiController extends GetxController {
   void _markProviderAsMine(String id) {
     myLockedProviders.add(id);
     lastLockedProviderId.value = id;
-    
+
     // Save to local storage with timestamp
     _saveLockedSession(id);
   }

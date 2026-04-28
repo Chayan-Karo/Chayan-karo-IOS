@@ -9,21 +9,22 @@ import '../models/cancel_models.dart';
 import '../models/service_timing_model.dart';
 import '../widgets/facebook_analytics.dart';
 import 'package:facebook_app_events/facebook_app_events.dart';
-
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 // ADD: imports to trigger background refresh safely
-import 'dart:async' show unawaited;            // for fire-and-forget
-import 'booking_read_controller.dart';         // to find and refresh the list
+import 'dart:async' show unawaited; // for fire-and-forget
+import 'booking_read_controller.dart'; // to find and refresh the list
 
 class BookingController extends GetxController {
   final BookingRepository _repo;
-  BookingController({BookingRepository? repo}) : _repo = repo ?? BookingRepository();
-final RxBool isRefunding = false.obs;
+  BookingController({BookingRepository? repo})
+    : _repo = repo ?? BookingRepository();
+  final RxBool isRefunding = false.obs;
   final RxBool isPlacing = false.obs;
   final RxString error = ''.obs;
   final Rx<ServiceTimingModel?> currentTiming = Rx<ServiceTimingModel?>(null);
   final RxString serviceEndTime = ''.obs;
-// --- NEW: Network Error Helpers ---
+  // --- NEW: Network Error Helpers ---
   bool _isNetworkError(String msg) {
     final m = msg.toLowerCase();
     return m.contains('connectionerror') ||
@@ -34,78 +35,86 @@ final RxBool isRefunding = false.obs;
   }
 
   void _showNetworkErrorSnackbar() {
-    AppSnackbar.showError('No internet connection or server is unreachable. Please check your settings.');
+    AppSnackbar.showError(
+      'No internet connection or server is unreachable. Please check your settings.',
+    );
   }
 
   void _showErrorSnackbar(String title, String message) {
     AppSnackbar.showError(message.replaceFirst('Exception: ', ''));
   }
- // lib/controllers/booking_controller.dart
+  // lib/controllers/booking_controller.dart
 
-Future<AddBookingResponse> placeBooking({
-  required String spId,
-  required String addressId,
-  required DateTime slot,
-  required String paymentMode,
-  required List<BookingServiceItem> services,
-  required num actualAmount,   // <--- Added
-  required num plateFormFee,  // <--- Added
-  required num gstAmount,      // <--- Added
-  required num gstPercentage,  // <--- Added
-  required int totalDuration,
-  String? couponId,
-}) async {
-  try {
-    isPlacing.value = true;
-    error.value = '';
-
-    final bookingDate =
-        "${slot.year.toString().padLeft(4, '0')}-${slot.month.toString().padLeft(2, '0')}-${slot.day.toString().padLeft(2, '0')}";
-    // OLD
-// "${slot.hour.toString().padLeft(2, '0')}${slot.minute.toString().padLeft(2, '0')}";
-
-// NEW
-    final bookingTime =
-         "${slot.hour.toString().padLeft(2, '0')}:${slot.minute.toString().padLeft(2, '0')}";
-
-    final req = AddBookingRequest(
-      spId: spId,
-      totalDuration: totalDuration,
-      addressId: addressId,
-      bookingTime: bookingTime,
-      bookingDate: bookingDate,
-      paymentMode: paymentMode,
-      couponId: couponId,
-      bookingService: services,
-      bookingAmount: BookingAmount( // <--- Constructing the new object
-        actualAmount: actualAmount,
-        plateFormFee: plateFormFee,
-        gstAmount: gstAmount,
-        gstPercentage: gstPercentage,
-      ),
-    );
-
-    final res = await _repo.addBooking(req);
-    if (res.success) {
-      FBAnalytics.logPurchase(
-        actualAmount.toDouble(), 
-        res.bookingId ?? "CK-UNKNOWN",
-      );
-    }
-
+  Future<AddBookingResponse> placeBooking({
+    required String spId,
+    required String addressId,
+    required DateTime slot,
+    required String paymentMode,
+    required List<BookingServiceItem> services,
+    required num actualAmount, // <--- Added
+    required num plateFormFee, // <--- Added
+    required num gstAmount, // <--- Added
+    required num gstPercentage, // <--- Added
+    required int totalDuration,
+    String? couponId,
+  }) async {
     try {
-      final readCtrl = Get.find<BookingReadController>();
-      unawaited(readCtrl.fetchCustomerBookings());
-    } catch (_) {}
+      isPlacing.value = true;
+      error.value = '';
 
-    return res;
-} catch (e) {
+      final bookingDate =
+          "${slot.year.toString().padLeft(4, '0')}-${slot.month.toString().padLeft(2, '0')}-${slot.day.toString().padLeft(2, '0')}";
+      // OLD
+      // "${slot.hour.toString().padLeft(2, '0')}${slot.minute.toString().padLeft(2, '0')}";
+
+      // NEW
+      final bookingTime =
+          "${slot.hour.toString().padLeft(2, '0')}:${slot.minute.toString().padLeft(2, '0')}";
+
+      final req = AddBookingRequest(
+        spId: spId,
+        totalDuration: totalDuration,
+        addressId: addressId,
+        bookingTime: bookingTime,
+        bookingDate: bookingDate,
+        paymentMode: paymentMode,
+        couponId: couponId,
+        bookingService: services,
+        bookingAmount: BookingAmount(
+          // <--- Constructing the new object
+          actualAmount: actualAmount,
+          plateFormFee: plateFormFee,
+          gstAmount: gstAmount,
+          gstPercentage: gstPercentage,
+        ),
+      );
+
+      final res = await _repo.addBooking(req);
+      if (res.success) {
+        FBAnalytics.logPurchase(
+          actualAmount.toDouble(),
+          res.bookingId ?? "CK-UNKNOWN",
+        );
+        FirebaseAnalytics.instance.logPurchase(
+          currency: 'INR',
+          value: actualAmount.toDouble(),
+          transactionId: res.bookingId ?? "CK-UNKNOWN",
+        );
+      }
+
+      try {
+        final readCtrl = Get.find<BookingReadController>();
+        unawaited(readCtrl.fetchCustomerBookings());
+      } catch (_) {}
+
+      return res;
+    } catch (e) {
       final msg = e.toString();
       error.value = msg;
 
       // 1. CHECK FOR NETWORK ERROR (New)
       if (_isNetworkError(msg)) {
-      //  _showNetworkErrorSnackbar();
+        //  _showNetworkErrorSnackbar();
         // Return a safe error response so UI doesn't crash
         return AddBookingResponse(
           type: 'Error',
@@ -144,8 +153,7 @@ Future<AddBookingResponse> placeBooking({
     } finally {
       isPlacing.value = false;
     }
-}
-
+  }
 
   // Helper for ONLINE flow: returns bookingId directly
   Future<String> placeOnlineBookingAndGetId({
@@ -154,11 +162,11 @@ Future<AddBookingResponse> placeBooking({
     required DateTime slot,
     required List<BookingServiceItem> services,
     required int totalDuration,
-    required num actualAmount,   // <--- ADDED
-    required num plateFormFee,  // <--- ADDED
-    required num gstAmount,      // <--- ADDED
-    required num gstPercentage,  // <--- ADDED
-    String? couponId,            // Added for completeness
+    required num actualAmount, // <--- ADDED
+    required num plateFormFee, // <--- ADDED
+    required num gstAmount, // <--- ADDED
+    required num gstPercentage, // <--- ADDED
+    String? couponId, // Added for completeness
   }) async {
     final res = await placeBooking(
       spId: spId,
@@ -167,18 +175,18 @@ Future<AddBookingResponse> placeBooking({
       paymentMode: 'ONLINE',
       services: services,
       totalDuration: totalDuration,
-      actualAmount: actualAmount,     // <--- PASSING NEW PARAMETERS
+      actualAmount: actualAmount, // <--- PASSING NEW PARAMETERS
       plateFormFee: plateFormFee,
       gstAmount: gstAmount,
       gstPercentage: gstPercentage,
       couponId: couponId,
-      
     );
 
     // If placeBooking threw, this is never reached; if we are here, we have a response.
     if (!(res.success) || (res.bookingId ?? '').isEmpty) {
-      final msg =
-          res.message.isNotEmpty ? res.message : 'Failed to create online booking';
+      final msg = res.message.isNotEmpty
+          ? res.message
+          : 'Failed to create online booking';
       throw Exception(msg);
     }
 
@@ -221,10 +229,11 @@ Future<AddBookingResponse> placeBooking({
         bookingId: bookingId,
         spId: spId,
         addressId: addressId,
-        bookingDate: bookingDate,   // expects YYYY-MM-DD
-        bookingTime: bookingTime,   // expects HHmm string
-        rescheduleReason:
-            rescheduleReason.isEmpty ? 'Change of time' : rescheduleReason,
+        bookingDate: bookingDate, // expects YYYY-MM-DD
+        bookingTime: bookingTime, // expects HHmm string
+        rescheduleReason: rescheduleReason.isEmpty
+            ? 'Change of time'
+            : rescheduleReason,
       );
 
       // repository returns envelope
@@ -232,6 +241,13 @@ Future<AddBookingResponse> placeBooking({
       final bool ok = res.success;
       if (ok) {
         FacebookAppEvents().logEvent(
+          name: 'booking_rescheduled',
+          parameters: {
+            'booking_id': payload['bookingId'],
+            'new_date': payload['bookingDate'],
+          },
+        );
+        FirebaseAnalytics.instance.logEvent(
           name: 'booking_rescheduled',
           parameters: {
             'booking_id': payload['bookingId'],
@@ -246,14 +262,16 @@ Future<AddBookingResponse> placeBooking({
           unawaited(readCtrl.fetchCustomerBookings());
         } catch (_) {}
       } else {
-        error.value = res.message.isNotEmpty ? res.message : 'Failed to reschedule';
+        error.value = res.message.isNotEmpty
+            ? res.message
+            : 'Failed to reschedule';
         AppSnackbar.showError(error.value);
       }
 
       return ok;
     } catch (e) {
-final msg = e.toString();
-      error.value = msg;      
+      final msg = e.toString();
+      error.value = msg;
       // UPDATED: Check for network error specific to reschedule
       if (_isNetworkError(msg)) {
         _showNetworkErrorSnackbar();
@@ -280,12 +298,12 @@ final msg = e.toString();
 
     // TIME: HHmm string
     // OLD
-// "${preferred.hour.toString().padLeft(2, '0')}${preferred.minute.toString().padLeft(2, '0')}";
+    // "${preferred.hour.toString().padLeft(2, '0')}${preferred.minute.toString().padLeft(2, '0')}";
 
-// NEW
+    // NEW
     final bookingTime =
-         "${preferred.hour.toString().padLeft(2, '0')}:${preferred.minute.toString().padLeft(2, '0')}";
-         
+        "${preferred.hour.toString().padLeft(2, '0')}:${preferred.minute.toString().padLeft(2, '0')}";
+
     return rescheduleBooking({
       'bookingId': bookingId,
       'spId': spId,
@@ -327,10 +345,11 @@ final msg = e.toString();
       if (ok) {
         FacebookAppEvents().logEvent(
           name: 'booking_cancelled',
-          parameters: {
-            'booking_id': bookingId,
-            'reason': reason,
-          },
+          parameters: {'booking_id': bookingId, 'reason': reason},
+        );
+        FirebaseAnalytics.instance.logEvent(
+          name: 'booking_cancelled',
+          parameters: {'booking_id': bookingId, 'reason': reason},
         );
       }
 
@@ -341,7 +360,9 @@ final msg = e.toString();
           unawaited(readCtrl.fetchCustomerBookings());
         } catch (_) {}
       } else {
-        error.value = res.message.isNotEmpty ? res.message : 'Failed to cancel booking';
+        error.value = res.message.isNotEmpty
+            ? res.message
+            : 'Failed to cancel booking';
         AppSnackbar.showError(error.value);
       }
 
@@ -369,44 +390,51 @@ final msg = e.toString();
   }) async {
     return cancelBooking(bookingId: bookingId, reason: reason);
   }
-  // 2. Add the refund method
-Future<bool> processRefund({
-  required String bookingId,
-  required String refundBankId,
-}) async {
-  try {
-    isRefunding.value = true;
-    
-    final payload = {
-      "bookingId": bookingId.trim(),
-      "refundBankId": refundBankId.trim(),
-    };
 
-    await _repo.refundBookingAmount(payload);
-    return true;
-  } catch (e) {
-    final msg = e.toString();
-    // Handle errors similar to cancel/reschedule
-    if (_isNetworkError(msg)) {
-      _showNetworkErrorSnackbar();
-    } else {
-      _showErrorSnackbar('Refund Failed', 'We couldn\'t process your refund request. Please contact support.');
+  // 2. Add the refund method
+  Future<bool> processRefund({
+    required String bookingId,
+    required String refundBankId,
+  }) async {
+    try {
+      isRefunding.value = true;
+
+      final payload = {
+        "bookingId": bookingId.trim(),
+        "refundBankId": refundBankId.trim(),
+      };
+
+      await _repo.refundBookingAmount(payload);
+      return true;
+    } catch (e) {
+      final msg = e.toString();
+      // Handle errors similar to cancel/reschedule
+      if (_isNetworkError(msg)) {
+        _showNetworkErrorSnackbar();
+      } else {
+        _showErrorSnackbar(
+          'Refund Failed',
+          'We couldn\'t process your refund request. Please contact support.',
+        );
+      }
+      return false;
+    } finally {
+      isRefunding.value = false;
     }
-    return false;
-  } finally {
-    isRefunding.value = false;
   }
-}
-Future<void> fetchCategoryTiming(String categoryId) async {
+
+  Future<void> fetchCategoryTiming(String categoryId) async {
     try {
       isPlacing.value = true; // Reusing loading state
       final timing = await _repo.getServiceTiming(categoryId);
-      
+
       if (timing != null) {
-        debugPrint("📡 API SUCCESS: Category: ${timing.id}, EndTime: ${timing.endTime}");
+        debugPrint(
+          "📡 API SUCCESS: Category: ${timing.id}, EndTime: ${timing.endTime}",
+        );
         currentTiming.value = timing;
         // Also update the string for the UI blocking check
-        serviceEndTime.value = timing.endTime; 
+        serviceEndTime.value = timing.endTime;
       }
     } finally {
       isPlacing.value = false;
@@ -415,14 +443,13 @@ Future<void> fetchCategoryTiming(String categoryId) async {
 
   bool isBookingClosedToday() {
     if (currentTiming.value == null) return false;
-    
+
     final now = DateTime.now();
     final endTimeParts = currentTiming.value!.endTime.split(':');
     final endHour = int.parse(endTimeParts[0]);
     final endMin = int.parse(endTimeParts[1]);
-    
+
     final endDateTime = DateTime(now.year, now.month, now.day, endHour, endMin);
     return now.isAfter(endDateTime);
   }
 }
-

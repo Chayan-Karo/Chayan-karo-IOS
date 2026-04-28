@@ -6,6 +6,7 @@ import '../profile/profile_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/chayan_header.dart';
 import 'package:in_app_review/in_app_review.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class RatingScreen extends StatefulWidget {
   const RatingScreen({super.key});
@@ -39,7 +40,8 @@ class _RatingScreenState extends State<RatingScreen> {
       ),
     );
   }
-Future<void> _requestStoreReview() async {
+
+  Future<void> _requestStoreReview() async {
     try {
       if (await inAppReview.isAvailable()) {
         await inAppReview.requestReview();
@@ -54,10 +56,15 @@ Future<void> _requestStoreReview() async {
     if (selectedRating >= 4) {
       await _requestStoreReview();
     }
-    
+    FirebaseAnalytics.instance.logEvent(
+      name: 'review_submitted',
+      parameters: {'rating': selectedRating},
+    );
+
     // Show your custom success popup regardless
     _showReviewSubmittedDialog();
   }
+
   // Helper to launch URLs with Top-SnackBar Error
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
@@ -85,7 +92,7 @@ Future<void> _requestStoreReview() async {
             behavior: SnackBarBehavior.floating,
             // Pushes the SnackBar to the Top by adding huge bottom margin
             margin: EdgeInsets.only(
-              bottom: screenHeight - 140, 
+              bottom: screenHeight - 140,
               left: 20,
               right: 20,
             ),
@@ -119,7 +126,8 @@ Future<void> _requestStoreReview() async {
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                        horizontal: 16.w * scaleFactor),
+                      horizontal: 16.w * scaleFactor,
+                    ),
                     child: Column(
                       children: [
                         SizedBox(height: 40.h * scaleFactor),
@@ -146,11 +154,13 @@ Future<void> _requestStoreReview() async {
                           width: 343.w * scaleFactor,
                           height: 42.h * scaleFactor,
                           padding: EdgeInsets.symmetric(
-                              horizontal: 40.w * scaleFactor),
+                            horizontal: 40.w * scaleFactor,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE47830),
-                            borderRadius:
-                                BorderRadius.circular(25 * scaleFactor),
+                            borderRadius: BorderRadius.circular(
+                              25 * scaleFactor,
+                            ),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -191,15 +201,18 @@ Future<void> _requestStoreReview() async {
                           decoration: BoxDecoration(
                             color: const Color(0xFFD9D9D9),
                             border: Border.all(
-                                color: Colors.black.withOpacity(0.46)),
-                            borderRadius:
-                                BorderRadius.circular(16 * scaleFactor),
+                              color: Colors.black.withOpacity(0.46),
+                            ),
+                            borderRadius: BorderRadius.circular(
+                              16 * scaleFactor,
+                            ),
                           ),
                           child: const TextField(
                             maxLines: null,
                             expands: true,
                             decoration: InputDecoration.collapsed(
-                                hintText: 'Write your review here'),
+                              hintText: 'Write your review here',
+                            ),
                           ),
                         ),
                         SizedBox(height: 30.h * scaleFactor),
@@ -209,7 +222,9 @@ Future<void> _requestStoreReview() async {
                             ElevatedButton(
                               // ✅ CHANGED: Validation Check
                               // If selectedRating is 0, onPressed is null (Disabled)
-                              onPressed: selectedRating > 0 ? _handleSubmit : null,
+                              onPressed: selectedRating > 0
+                                  ? _handleSubmit
+                                  : null,
                               style: ElevatedButton.styleFrom(
                                 // ✅ CHANGED: Visual Feedback
                                 // Grey if disabled, Orange if enabled
@@ -217,8 +232,9 @@ Future<void> _requestStoreReview() async {
                                     ? const Color(0xFFE47830)
                                     : Colors.grey,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(10 * scaleFactor),
+                                  borderRadius: BorderRadius.circular(
+                                    10 * scaleFactor,
+                                  ),
                                 ),
                                 fixedSize: Size(
                                   166 * scaleFactor,
@@ -239,16 +255,18 @@ Future<void> _requestStoreReview() async {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) =>
-                                          const ProfileScreen()),
+                                    builder: (context) => const ProfileScreen(),
+                                  ),
                                 );
                               },
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(
-                                    color: Color(0xFFE47830)),
+                                  color: Color(0xFFE47830),
+                                ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(10 * scaleFactor),
+                                  borderRadius: BorderRadius.circular(
+                                    10 * scaleFactor,
+                                  ),
                                 ),
                                 fixedSize: Size(
                                   166 * scaleFactor,
