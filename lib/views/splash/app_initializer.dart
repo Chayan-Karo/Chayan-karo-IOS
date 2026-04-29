@@ -20,6 +20,7 @@ class _AppInitializerState extends State<AppInitializer>
   late Future<String> _routeFuture;
   final AppLinks _appLinks = AppLinks();
   Uri? _deepLinkUri;
+  bool? _showGif; // 👈 nullable
 
   // 🔥 Premium Quotes
   final List<String> _quotes = [
@@ -116,6 +117,16 @@ class _AppInitializerState extends State<AppInitializer>
 
   void _initApp() async {
     // 1. Check for deep links first
+      final database = Get.find<AppDatabase>();
+
+  final hasEnteredApp = await database.hasEnteredApp();
+  final isLoggedIn = await database.isUserLoggedIn();
+
+  if (mounted) {
+    setState(() {
+_showGif = !(hasEnteredApp || isLoggedIn);
+    });
+  }
     await _initDeepLinks();
 
     // 2. Force the update check (Wait for it to finish/be closed)
@@ -138,12 +149,17 @@ class _AppInitializerState extends State<AppInitializer>
     // 3. CRITICAL FIX:
     // If a deep link was caught during the update/init process,
     // do NOT proceed with the normal navigation.
-    if (_deepLinkUri != null) {
-      _handleDeepLink(_deepLinkUri!);
-    } else {
-      _routeFuture = _decideRoute();
-      _handleNavigation();
-    }
+   if (_deepLinkUri != null) {
+  _handleDeepLink(_deepLinkUri!);
+} else {
+  _routeFuture = _decideRoute();
+
+if (_showGif == true) {    // 🎬 Wait for GIF duration
+    await Future.delayed(const Duration(milliseconds: 4200));
+  }
+
+  _handleNavigation();
+}
   }
 
   /// 🎯 Logic unchanged
@@ -166,6 +182,12 @@ class _AppInitializerState extends State<AppInitializer>
         }
         return '/home';
       }
+      print('hasSeenOnboarding=$hasSeenOnboarding');
+print('hasEnteredApp=$hasEnteredApp');
+print('isLoggedIn=$isLoggedIn');
+print('isSessionValid=$isSessionValid');
+//print('_showGif=$showGif');
+//print('route=$route');
 
       return '/login';
     } catch (_) {
@@ -177,7 +199,9 @@ class _AppInitializerState extends State<AppInitializer>
   void _handleNavigation() async {
     final route = await _routeFuture;
 
-    await Future.delayed(const Duration(milliseconds: 500));
+  //  await Future.delayed(const Duration(milliseconds: 500));
+      await WidgetsBinding.instance.endOfFrame;
+
 
     if (!mounted) return;
 
@@ -201,52 +225,55 @@ class _AppInitializerState extends State<AppInitializer>
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: const Color(0xFFF5F5F5),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          children: [
-            const Spacer(),
+ @override
+Widget build(BuildContext context) {
+  if (_showGif == null) {
+    // 🔥 NOTHING renders → no flicker
+    return const Scaffold(
+      backgroundColor: Color(0xFFF5F5F5),
+      body: SizedBox(),
+    );
+  }
 
-            /// 🔥 LOGO
-            Image.asset(
-              'assets/icons/splash_logo.png',
-              width: 170,
+  return Scaffold(
+    backgroundColor: const Color(0xFFF5F5F5),
+    body: Center(
+      child: _showGif!
+          ? Image.asset(
+              'assets/chayankaro_logo.gif',
+              width: 220,
               fit: BoxFit.contain,
-            ),
+            )
+          : Column(
+              children: [
+                const Spacer(),
+                Image.asset(
+                  'assets/icons/splash_logo.png',
+                  width: 170,
+                  fit: BoxFit.contain,
 
-            const SizedBox(height: 36),
-
-            /// ✨ Animated Quote
-            FadeTransition(
-              opacity: _fadeAnimation,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  _quotes[_currentIndex],
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
+                ),
+                const SizedBox(height: 36),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      _quotes[_currentIndex],
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
                     fontSize: 17,
                     height: 1.5,
                     fontWeight: FontWeight.w500,
                     color: Colors.black87,
                   ),
+                    ),
+                  ),
                 ),
-              ),
+                const Spacer(),
+              ],
             ),
-
-            const Spacer(),
-
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
+    ),
+  );
 }
+    }

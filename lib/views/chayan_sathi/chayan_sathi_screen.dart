@@ -1,3 +1,4 @@
+import 'package:chayankaro/controllers/profile_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -17,6 +18,7 @@ import './widgets/bouncy_card.dart';
 import '../../widgets/three_dot_loader.dart'; // Custom loader widget
 import '../../widgets/app_snackbar.dart';
 import 'previouschayansathiscreen.dart';
+import '../../controllers/payment_controller.dart';
 
 class ChayanSathiScreen extends StatefulWidget {
   final String categoryId;
@@ -432,117 +434,222 @@ Widget _buildSaathiCard(SaathiItem saathi, double scaleFactor) {
 
 Widget _buildEmptySaathiState(BuildContext context, double scaleFactor) {
   final screenHeight = MediaQuery.of(context).size.height;
+  final ProfileController profileController = Get.find<ProfileController>(); // Fetch Controller
+  bool isNotified = false;
 
-  return SingleChildScrollView(
-    child: SizedBox(
-      height: screenHeight * 0.75.h,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 110.w * scaleFactor,
-            height: 110.h * scaleFactor,
-            child: ClipOval(
-              child: SvgPicture.asset(
-                "assets/icons/chayansathi.svg",
-                fit: BoxFit.cover,
-                width: 110.w * scaleFactor,
-                height: 110.h * scaleFactor,
-              ),
-            ),
-          ),
-          SizedBox(height: 20.h * scaleFactor),
-          Text(
-            'No Service Providers Found',
-            style: TextStyle(
-              fontSize: 20.sp * scaleFactor,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'SF Pro',
-              color: Colors.black,
-            ),
-          ),
-          SizedBox(height: 5.h * scaleFactor),
-          Opacity(
-            opacity: 0.8,
-            child: Text(
-              'No service provider is currently available in your area.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18.sp * scaleFactor,
-                fontWeight: FontWeight.w400,
-                fontFamily: 'SF Pro',
-                color: Colors.black,
-              ),
-            ),
-          ),
-          SizedBox(height: 30.h * scaleFactor),
+  // Determine Image based on Gender
+  String genderImage = profileController.customer?.gender?.toLowerCase() == 'male' 
+      ? "assets/male.png" 
+      : "assets/female.png";
 
-          // --- 1. Go Back Button (Same Design) ---
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-            },
-            child: Container(
-              width: 175.w * scaleFactor,
-              height: 45.h * scaleFactor,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8 * scaleFactor),
-                border: Border.all(
-                  color: const Color(0xFFE47830),
-                  width: 2.w * scaleFactor,
+  return StatefulBuilder(
+    builder: (context, setState) {
+      return SingleChildScrollView(
+        child: SizedBox(
+          height: screenHeight * 0.8,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // --- 1. Gender-Based Gamified Illustration ---
+              SizedBox(
+                width: 280.w * scaleFactor,
+                height: 220.h * scaleFactor,
+                child: Image.asset(
+                  genderImage, // Using PNG instead of SvgPicture.asset
+                  fit: BoxFit.contain,
                 ),
               ),
-              alignment: Alignment.center,
-              child: Text(
-                'Go Back',
+              SizedBox(height: 24.h * scaleFactor),
+
+              // --- 2. Gamified Title ---
+              Text(
+                'All our experts are currently busy.',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16.sp * scaleFactor,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 22.sp * scaleFactor,
+                  fontWeight: FontWeight.w700,
                   fontFamily: 'SF Pro',
-                  color: const Color(0xFFE47830),
+                  color: Colors.black,
                 ),
               ),
-            ),
+              SizedBox(height: 8.h * scaleFactor),
+
+              // --- 3. Subtext ---
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.w),
+                child: Opacity(
+                  opacity: 0.6,
+                  child: Text(
+                    "We'll notify you as soon as one becomes available.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15.sp * scaleFactor,
+                      fontWeight: FontWeight.w400,
+                      fontFamily: 'SF Pro',
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 30.h * scaleFactor),
+
+              // --- 4. Notify Me Card ---
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 24.w),
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12 * scaleFactor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: const Color(0xFFFEF3EB),
+                      radius: 22.r,
+                      child: Icon(Icons.notifications_active,
+                          color: const Color(0xFFE47830), size: 24.sp),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Expert Alert',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14.sp),
+                          ),
+                          Text(
+                            'We will notify you shortly.',
+                            style:
+                                TextStyle(fontSize: 12.sp, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isNotified = !isNotified;
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 8.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE47830),
+                          borderRadius:
+                              BorderRadius.circular(8 * scaleFactor),
+                        ),
+                      child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isNotified) ...[
+          Icon(
+            Icons.notifications_active,
+            color: Colors.white,
+            size: 16.sp,
           ),
-
-          SizedBox(height: 15.h * scaleFactor),
-
-          // --- 2. Explore Services Button ---
-          GestureDetector(
-            onTap: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => HomeScreen()),
-              );
-            },
-            child: Container(
-              width: 175.w * scaleFactor,
-              height: 45.h * scaleFactor,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8 * scaleFactor),
-                border: Border.all(
-                  color: const Color(0xFFE47830),
-                  width: 2.w * scaleFactor,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                'Explore Services',
-                style: TextStyle(
-                  fontSize: 16.sp * scaleFactor,
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'SF Pro',
-                  color: const Color(0xFFE47830),
-                ),
-              ),
-            ),
-          ).withId('chayan_sathi_empty_explore_btn'),
+          SizedBox(width: 6.w),
         ],
-      ),
+        Text(
+          isNotified ? 'Notified' : 'Notify Me',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13.sp,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'SF Pro',
+          ),
+        ),
+      ],
     ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 15.h * scaleFactor),
+
+              // --- 5. Navigation Buttons ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 155.w * scaleFactor,
+                      height: 48.h * scaleFactor,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8 * scaleFactor),
+                        border: Border.all(
+                          color: const Color(0xFFE47830),
+                          width: 1.5.w * scaleFactor,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Go Back',
+                        style: TextStyle(
+                          fontSize: 15.sp * scaleFactor,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'SF Pro',
+                          color: const Color(0xFFE47830),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w * scaleFactor),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => HomeScreen()),
+                      );
+                    },
+                    child: Container(
+                      width: 155.w * scaleFactor,
+                      height: 48.h * scaleFactor,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE47830),
+                        borderRadius: BorderRadius.circular(8 * scaleFactor),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Explore More',
+                        style: TextStyle(
+                          fontSize: 15.sp * scaleFactor,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
   );
 }
-
   void _onItemTapped(
       BuildContext context, SaathiController controller, int index) {
     controller.onItemTapped(index);

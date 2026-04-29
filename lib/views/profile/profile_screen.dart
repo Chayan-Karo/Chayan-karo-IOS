@@ -28,6 +28,9 @@ import '../../widgets/chayan_header.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../data/local/database.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -242,6 +245,26 @@ Widget _buildUserProfile(double scaleFactor) {
       );
     });
   }
+  void openStoreListing() async {
+  final androidUrl = Uri.parse(
+    "https://play.google.com/store/apps/details?id=com.chayankaroindia.app",
+  );
+
+  final iosUrl = Uri.parse(
+    "https://apps.apple.com/in/app/chayan-karo/id6761263096",
+  );
+
+  final url = Platform.isAndroid ? androidUrl : iosUrl;
+
+  if (await canLaunchUrl(url)) {
+    await launchUrl(
+      url,
+      mode: LaunchMode.externalApplication,
+    );
+  } else {
+    throw 'Could not launch $url';
+  }
+}
 
 Future<void> _handleLogout() async {
   FocusManager.instance.primaryFocus?.unfocus();
@@ -423,8 +446,8 @@ Future<void> _handleLogout() async {
                       // Pass customer data to edit screen
                       Get.to(() =>FinancialDetailsScreen ());
                     }),
-                    buildListItem('assets/icons/rate.svg', "Rate us", scaleFactor,testId: 'profile_item_rate', onTap: () {
-                      Get.to(() => RatingScreen());
+                    buildListItem('assets/icons/rate.svg', "Rate us", scaleFactor,testId: 'profile_item_rate',  onTap: () {
+    openStoreListing();
                     }),
                     buildListItem('assets/icons/edit.svg', "Edit Profile", scaleFactor,testId: 'profile_item_edit', onTap: () {
                       // Pass customer data to edit screen

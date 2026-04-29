@@ -463,7 +463,19 @@ class CartController extends GetxController {
   void removeServiceFromRebooking(String id) {
     _rebookingItemsList.removeWhere((item) => item.id == id);
   }
-
+  // Add this to CartController class
+Future<void> clearCartBySource(String sourceTitle) async {
+  // 1. Get items to be removed
+  final itemsToRemove = _itemsList.where((item) => item.sourceTitle == sourceTitle).toList();
+  
+  // 2. Remove from Database
+  for (var item in itemsToRemove) {
+    await _database.removeCartItem(item.id);
+  }
+  
+  // 3. Remove from UI List
+  _itemsList.removeWhere((item) => item.sourceTitle == sourceTitle);
+}
   // ✅ NEW: Update Quantity in Rebooking Context
   void updateRebookingQuantity(String id, int quantity) {
     if (quantity <= 0) {

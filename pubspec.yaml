@@ -153,6 +153,9 @@ flutter:
     - assets/onboard3.webp
     - assets/chayankaro_logo.gif
     - assets/banner_woman.webp
+    - assets/male.png
+    - assets/female.png
+    - assets/cartempty.png
     - assets/a1.webp    
     - assets/a2.webp
     - assets/a3.webp

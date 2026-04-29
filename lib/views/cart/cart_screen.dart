@@ -21,6 +21,7 @@ import './widgets/read_more_text.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../data/local/database.dart';
 import '../../widgets/app_network_image.dart';
+import './widgets/category_selection_sheet.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -180,86 +181,104 @@ onBack: () {
     );
   }
 
-  Widget _buildEmptyCart(BuildContext context, double scaleFactor) {
-    final screenHeight = MediaQuery.of(context).size.height;
+ Widget _buildEmptyCart(BuildContext context, double scaleFactor) {
+  final screenHeight = MediaQuery.of(context).size.height;
 
-    return SingleChildScrollView(
-      child: SizedBox(
-        height: screenHeight * 0.75.h,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 110.w * scaleFactor,
-              height: 110.h * scaleFactor,
-              child: ClipOval(
-                child: SvgPicture.asset(
-                  "assets/icons/cart_empty.svg",
-                  fit: BoxFit.cover,
-                  width: 110.w * scaleFactor,
-                  height: 110.h * scaleFactor,
-                ),
-              ),
+  return SingleChildScrollView(
+    child: SizedBox(
+      height: screenHeight * 0.75, // Centered layout
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // --- 1. Empty Cart Illustration ---
+          SizedBox(
+            width: 320.w * scaleFactor,
+            height: 240.h * scaleFactor,
+            child: Image.asset(
+              "assets/cartempty.png",
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => 
+                  Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey[300]),
             ),
-            SizedBox(height: 20.h * scaleFactor),
-            Text(
-              'Your Cart is Empty',
-              style: TextStyle(
-                fontSize: 20.sp * scaleFactor,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'SF Pro',
-                color: Colors.black,
-              ),
+          ),
+          SizedBox(height: 24.h * scaleFactor),
+
+          // --- 2. Gamified Title ---
+          Text(
+            'Your Cart is Empty',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22.sp * scaleFactor,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'SF Pro',
+              color: Colors.black,
             ),
-            SizedBox(height: 5.h * scaleFactor),
-            Opacity(
-              opacity: 0.8,
+          ),
+          SizedBox(height: 8.h * scaleFactor),
+
+          // --- 3. Encouraging Subtext ---
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40.w),
+            child: Opacity(
+              opacity: 0.6,
               child: Text(
                 'Lets add some services',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 20.sp * scaleFactor,
+                  fontSize: 16.sp * scaleFactor,
                   fontWeight: FontWeight.w400,
                   fontFamily: 'SF Pro',
                   color: Colors.black,
+                  height: 1.4,
                 ),
               ),
             ),
-            SizedBox(height: 30.h * scaleFactor),
-            GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => HomeScreen()),
-                );
-              },
-              child: Container(
-                width: 175.w * scaleFactor,
-                height: 45.h * scaleFactor,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8 * scaleFactor),
-                  border: Border.all(
-                    color: const Color(0xFFE47830),
-                    width: 2.w * scaleFactor,
-                  ),
+          ),
+          SizedBox(height: 15.h * scaleFactor),
+
+          // --- 4. Action Button (Elevated Outlined Style) ---
+          GestureDetector(
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => HomeScreen()),
+              );
+            },
+            child: Container(
+              width: 180.w * scaleFactor,
+              height: 48.h * scaleFactor,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+                border: Border.all(
+                  color: const Color(0xFFE47830),
+                  width: 1.5.w * scaleFactor,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Explore Services',
-                  style: TextStyle(
-                    fontSize: 16.sp * scaleFactor,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'SF Pro',
-                    color: Color(0xFFE47830),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'Explore Services',
+                style: TextStyle(
+                  fontSize: 16.sp * scaleFactor,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'SF Pro',
+                  color: const Color(0xFFE47830),
                 ),
               ),
-            ).withId('cart_empty_explore_btn'),
-          ],
-        ),
+            ),
+          ).withId('cart_empty_explore_btn'),
+        ],
       ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildCartWithItems(BuildContext context, double scaleFactor) {
     return Column(
       children: [
@@ -634,6 +653,7 @@ Widget _buildCartItemCard(
     ),
   );
 }
+
   void _showClearCartDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -747,53 +767,63 @@ Widget _buildCartItemCard(
   }
 
   void _proceedToCheckout(BuildContext context) async {
-    final database = Get.find<AppDatabase>();
-    final bool isLoggedIn = await database.isUserLoggedIn();
+  final database = Get.find<AppDatabase>();
+  final bool isLoggedIn = await database.isUserLoggedIn();
 
-    if (!isLoggedIn) {
-      // Show a friendly snackbar first so they know why they are being redirected
-      AppSnackbar.showInfo('Please login to continue with your booking');
-      
-      // Redirect to login. 
-      // After login, they will naturally land back on Home, or you can handle specific return logic.
-     Get.toNamed('/login'); 
-      return;
-    }
-    final groupedItems = cartController.getItemsGroupedBySource();
-    // 1. Restriction: Minimum Order Value Check
-    if (cartController.totalPrice < 99) {
-      AppSnackbar.showWarning(
-  'Minimum order ₹99 required. Please add more items.'
-);
-      return;
-    }
-
-    if (groupedItems.length > 1) {
-     AppSnackbar.showWarning(
-  'You can purchase services from only one category at a time.'
-);
-
-      return;
-    }
-
-    final isValid = await cartController.validateCartForCheckout();
-    if (!isValid) return;
-
-    final List<String> selectedServiceIds = [];
-    for (var items in groupedItems.values) {
-      selectedServiceIds.addAll(items.map((item) => item.id));
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SummaryScreen(
-          currentPageSelectedServices: selectedServiceIds,
-          initialAddress: 'Default Address',
-          initialTimeSlot: 'Select time slot',
-          initialSaathi: null,
-        ),
-      ),
-    );
+  if (!isLoggedIn) {
+    AppSnackbar.showInfo('Please login to continue with your booking');
+    Get.toNamed('/login');
+    return;
   }
+
+  // 1. Get items grouped by source
+  final groupedItems = cartController.getItemsGroupedBySource();
+
+  // 2. Check if the cart is empty (safety check)
+  if (groupedItems.isEmpty) {
+    AppSnackbar.showWarning('Your cart is empty');
+    return;
+  }
+
+  // 3. Handle Multiple Categories vs Single Category
+  if (groupedItems.length > 1) {
+    // Show selection dialog if there are multiple sources
+showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // Important to show rounded corners
+      builder: (context) => CategorySelectionSheet(groupedItems: groupedItems),
+    );  } else {
+    // Only one category exists - validate total for THIS category specifically
+    final String singleSource = groupedItems.keys.first;
+    final List<CartItem> items = groupedItems[singleSource]!;
+    final double categoryTotal = items.fold(0, (sum, item) => sum + item.totalPrice);
+
+    if (categoryTotal < 99) {
+      AppSnackbar.showWarning('Minimum order ₹99 required for $singleSource');
+      return;
+    }
+
+    _navigateToSummary(context, items);
+  }
+}
+void _navigateToSummary(BuildContext context, List<CartItem> selectedItems) async {
+  // Validate items individually (price/qty) before leaving
+  final isValid = await cartController.validateCartForCheckout();
+  if (!isValid) return;
+
+  final List<String> selectedServiceIds = selectedItems.map((item) => item.id).toList();
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SummaryScreen(
+        currentPageSelectedServices: selectedServiceIds,
+        initialAddress: 'Default Address',
+        initialTimeSlot: 'Select time slot',
+        initialSaathi: null,
+      ),
+    ),
+  );
+}
 }

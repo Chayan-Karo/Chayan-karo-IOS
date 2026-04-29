@@ -22,6 +22,8 @@ class PaymentController extends GetxController {
   Map<String, dynamic>? bookingMetadata;
   String? bookingId;
   Map<String, dynamic>? bookingCardData;
+    String? bookedSourceTitle; // NEW
+
   String? currentOrderId;
   String? currentReceipt;
 
@@ -77,11 +79,15 @@ class PaymentController extends GetxController {
     Map<String, dynamic>? metadata,
     String? bookingId,
     Map<String, dynamic>? bookingCard, // <--- Added this parameter
+        String? sourceTitle, // NEW
+
   }) {
     bookingAmount = amount;
     bookingMetadata = metadata;
     this.bookingId = bookingId;
     bookingCardData = bookingCard; // Store it
+     bookedSourceTitle = sourceTitle; // NEW
+
     _debugLog('setBookingDetails.amount', bookingAmount);
     _debugLog('setBookingDetails.bookingId', bookingId);
     _debugLog('setBookingDetails.metadata', bookingMetadata);
@@ -264,6 +270,8 @@ class PaymentController extends GetxController {
         'method': selectedMethod.value ?? 'Online Payment',
         'bookingId': bookingId,
         'bookingCard': bookingCardData,
+        'sourceTitle': bookedSourceTitle,
+
         
         // 2. Extract and pass the bookingReferenceNumber
         'bookingReferenceNumber': apiResponse['result']?['bookingReferenceNumber'], 

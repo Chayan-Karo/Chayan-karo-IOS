@@ -47,6 +47,8 @@ class SummaryScreen extends StatefulWidget {
   final String initialAddress;
   final String initialTimeSlot;
   final Map<String, dynamic>? initialSaathi;
+    final String? selectedSourceTitle;
+
   // ✅ NEW: Rebooking Context Parameters
   final bool isRebooking;
   final String? rebookingLocationId;
@@ -58,6 +60,8 @@ class SummaryScreen extends StatefulWidget {
     this.initialAddress = 'Default Address',
     this.initialTimeSlot = 'Select time slot',
     this.initialSaathi,
+        this.selectedSourceTitle, // NEW
+
     // ✅ NEW: Defaults
     this.isRebooking = false,
     this.rebookingLocationId,
@@ -920,6 +924,8 @@ final bookingItems = _mapCartToBookingItems(
                                             'serviceTitle': title,
                                             'totalDuration': totalDuration,
                                             'imageUrl': imageUrl,
+                                           'selectedSourceTitle': widget.selectedSourceTitle, // ✅ NEW
+
                                           }
                                         }),
                                       ),
@@ -966,6 +972,8 @@ couponId: selectedCouponId, // Null if no coupon applied
                                             serviceTitle: firstItem.name,
                                             durationLabel: dur,
                                             imageUrl: firstItem.image,
+                                            bookedSourceTitle: widget.selectedSourceTitle, // ✅ FORWARDED
+
                                        )));
                                     } else {
                                         // Error Handling

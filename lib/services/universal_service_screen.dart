@@ -791,7 +791,7 @@ Widget _buildCategoryInfoBlock(double scaleFactor) {
                   width: 18.w * scaleFactor, height: 18.h * scaleFactor, color: Colors.black),
               SizedBox(width: 6.w * scaleFactor),
               Text(
-                "4.8 (23k)",
+                "4.8 ",
                 style: TextStyle(fontSize: 14.sp * scaleFactor),
               ),
             ],

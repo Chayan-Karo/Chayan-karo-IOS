@@ -110,50 +110,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             body: Stack(
               children: [
                 Column(
-                  children: [
-                    SizedBox(height: 80.h),
-                    // Static image - stays in place
-                    Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16.r),
-                        child: Image.asset(
-                          _image,
-                          width: 0.95.sw,
-                          height: 0.6.sh,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                    // Negative margin to pull text up
-                    Transform.translate(
-                      offset: Offset(0, -20.h),
-                      child: SizedBox(
-                        height: 120.h,
-                        child: PageView.builder(
-                          controller: _pageController,
-                          itemCount: _titles.length,
-                          onPageChanged: (index) => setState(() => _currentPage = index),
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 24.w),
-                              child: Text(
-                                _titles[index],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: const Color(0xFF1A1D1F),
-                                  fontSize: 28.sp,
-                                  fontFamily: 'SF Pro Display',
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.43,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+  children: [
+    SizedBox(height: 80.h),
+    Expanded(
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: _titles.length,
+        onPageChanged: (index) => setState(() => _currentPage = index),
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16.r),
+                  child: Image.asset(
+                    _image,
+                    width: 0.95.sw,
+                    height: 0.56.sh,
+                    fit: BoxFit.contain,
+                  ),
                 ),
+                SizedBox(height: 8.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Text(
+                    _titles[index],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: const Color(0xFF1A1D1F),
+                      fontSize: 28.sp,
+                      fontFamily: 'SF Pro Display',
+                      fontWeight: FontWeight.w700,
+                      height: 1.43,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    ),
+  ],
+),
 
 
 
@@ -260,52 +260,51 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             backgroundColor: Colors.white,
             body: Stack(
               children: [
-                Column(
-                  children: [
-                    SizedBox(height: 60.h * scaleFactor),
-                    // Static image - stays in place
-                    Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16.r * scaleFactor),
-                        child: Image.asset(
-                          _image,
-                          width: 0.75.sw * scaleFactor,
-                          height: 0.6.sh * scaleFactor,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                    // Negative margin to pull text up
-                    Transform.translate(
-                      offset: Offset(0, -30.h * scaleFactor),
-                      child: SizedBox(
-                        height: 140.h * scaleFactor,
-                        child: PageView.builder(
-                          controller: _pageController,
-                          itemCount: _titles.length,
-                          onPageChanged: (index) => setState(() => _currentPage = index),
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
-                              child: Text(
-                                _titles[index],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: const Color(0xFF1A1D1F),
-                                  fontSize: 34.sp * scaleFactor,
-                                  fontFamily: 'SF Pro Display',
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.43,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+               Column(
+  children: [
+    SizedBox(height: 60.h * scaleFactor),
+    Expanded(
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: _titles.length,
+        onPageChanged: (index) => setState(() => _currentPage = index),
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w * scaleFactor),
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16.r * scaleFactor),
+                  child: Image.asset(
+                    _image,
+                    width: 0.75.sw * scaleFactor,
+                    height: 0.58.sh * scaleFactor,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-
+                SizedBox(height: 10.h * scaleFactor),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w * scaleFactor),
+                  child: Text(
+                    _titles[index],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: const Color(0xFF1A1D1F),
+                      fontSize: 34.sp * scaleFactor,
+                      fontFamily: 'SF Pro Display',
+                      fontWeight: FontWeight.w700,
+                      height: 1.43,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    ),
+  ],
+),
 
 
                 // Skip Button - Scaled for tablets with loading state
@@ -425,4 +424,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
   }
+  @override
+void dispose() {
+  _pageController.dispose();
+  super.dispose();
+}
 }

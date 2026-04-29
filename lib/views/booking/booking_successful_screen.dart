@@ -14,6 +14,8 @@ class BookingSuccessfulScreen extends StatelessWidget {
   final String? durationLabel;  // Fallback string
   final int? durationInMinutes; // NEW: Pass exact minutes (e.g., 90)
   final String? imageUrl;       // optional: service image
+  final String? bookedSourceTitle; // ✅ ADD THIS
+
 
   const BookingSuccessfulScreen({
     super.key,
@@ -23,6 +25,7 @@ class BookingSuccessfulScreen extends StatelessWidget {
     this.durationLabel,
     this.durationInMinutes, // Add to constructor
     this.imageUrl,
+    this.bookedSourceTitle, // ✅ NEW
   });
 
   // Helper method to format minutes into "1 hr 30 m"
@@ -48,8 +51,11 @@ class BookingSuccessfulScreen extends StatelessWidget {
       // safe check to ensure controller exists
       if (Get.isRegistered<CartController>()) {
         final cartController = Get.find<CartController>();
-        cartController.clearCart(); 
-      }
+if (bookedSourceTitle?.isNotEmpty ?? false) {
+  cartController.clearCartBySource(bookedSourceTitle!);
+} else {
+  cartController.clearCart(); // fallback
+}      }
       if (Get.isRegistered<SaathiController>()) {
         Get.find<SaathiController>().clearBookingSession();
       }

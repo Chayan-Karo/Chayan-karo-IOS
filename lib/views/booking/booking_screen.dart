@@ -19,6 +19,7 @@ import '../../widgets/login_required_widget.dart'; // Import your new widget
 // NEW
 import '../../controllers/booking_read_controller.dart';
 import '../../models/booking_read_models.dart';
+import '../../controllers/profile_controller.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key});
@@ -523,96 +524,119 @@ String _displayTime(CustomerBooking b) {
 }
 
 Widget _buildEmptyState(BuildContext context, double scaleFactor, {
-    bool isPrevious = false,
-    String? title,    // NEW: Allow custom title
-    String? message,  // NEW: Allow custom message
-  }) {
-    final screenHeight = MediaQuery.of(context).size.height;
+  bool isPrevious = false,
+  String? title,
+  String? message,
+}) {
+  final screenHeight = MediaQuery.of(context).size.height;
+  final ProfileController profileController = Get.find<ProfileController>();
 
-    // Default texts if custom ones aren't provided
-    final defaultTitle = isPrevious ? 'No Previous Booking Yet' : 'No Upcoming Booking Yet';
+  // Fetch gender-based illustration
+  String genderImage = profileController.customer?.gender?.toLowerCase() == 'male'
+      ? "assets/male.png"
+      : "assets/female.png";
+
+  // Default texts
+  final defaultTitle = isPrevious ? 'No Previous Booking Yet' : 'No Upcoming Booking Yet';
     final defaultMessage = isPrevious
         ? 'You don’t have any previous bookings yet'
         : 'You don’t have any upcoming bookings right now';
 
-    return SingleChildScrollView(
-      child: SizedBox(
-        height: screenHeight * 0.75.h,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 110.w * scaleFactor,
-              height: 110.h * scaleFactor,
-              child: ClipOval(
-                child: SvgPicture.asset(
-                  "assets/icons/bookings.svg",
-                  fit: BoxFit.cover,
-                  width: 110.w * scaleFactor,
-                  height: 110.h * scaleFactor,
-                ),
-              ),
+  return SingleChildScrollView(
+    child: SizedBox(
+      height: screenHeight * 0.75, // Standardized height for centering
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // --- 1. Illustration ---
+          SizedBox(
+            width: 340.w * scaleFactor,
+            height: 260.h * scaleFactor,
+            child: Image.asset(
+              genderImage,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => 
+                  Icon(Icons.calendar_today_outlined, size: 100, color: Colors.grey[300]),
             ),
-            SizedBox(height: 20.h * scaleFactor),
-            Text(
-              title ?? defaultTitle, // Use custom title or fallback
-              style: TextStyle(
-                fontSize: 20.sp * scaleFactor,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'SF Pro',
-                color: Colors.black,
-              ),
+          ),
+          SizedBox(height: 24.h * scaleFactor),
+
+          // --- 2. Title ---
+          Text(
+            title ?? defaultTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20.sp * scaleFactor,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'SF Pro',
+              color: Colors.black,
             ),
-            SizedBox(height: 5.h * scaleFactor),
-            Opacity(
-              opacity: 0.8,
+          ),
+          SizedBox(height: 8.h * scaleFactor),
+
+          // --- 3. Message ---
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 45.w),
+            child: Opacity(
+              opacity: 0.6,
               child: Text(
-                message ?? defaultMessage, // Use custom message or fallback
+                message ?? defaultMessage,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 18.sp * scaleFactor,
+                  fontSize: 16.sp * scaleFactor,
                   fontWeight: FontWeight.w400,
                   fontFamily: 'SF Pro',
                   color: Colors.black,
+                  height: 1.4, // Improved readability
                 ),
               ),
             ),
-            SizedBox(height: 30.h * scaleFactor),
-            GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => HomeScreen()),
-                );
-              },
-              child: Container(
-                width: 175.w * scaleFactor,
-                height: 45.h * scaleFactor,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8 * scaleFactor),
-                  border: Border.all(
-                    color: const Color(0xFFE47830),
-                    width: 2.w * scaleFactor,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Explore Services',
-                  style: TextStyle(
-                    fontSize: 16.sp * scaleFactor,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'SF Pro',
-                    color: const Color(0xFFE47830),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+          SizedBox(height: 15.h * scaleFactor),
 
+          // --- 4. Primary Action Button ---
+          GestureDetector(
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => HomeScreen()),
+              );
+            },
+            child: Container(
+              width: 190.w * scaleFactor,
+              height: 50.h * scaleFactor,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+                border: Border.all(
+                  color: const Color(0xFFE47830),
+                  width: 1.5.w * scaleFactor,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'Explore Services',
+                style: TextStyle(
+                  fontSize: 16.sp * scaleFactor,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'SF Pro',
+                  color: const Color(0xFFE47830),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {

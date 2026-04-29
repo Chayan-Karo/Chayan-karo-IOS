@@ -19,6 +19,8 @@ class PaymentSuccessScreen extends StatelessWidget {
     // --- NEW: Extract Booking Reference Number ---
     // Matches the key "bookingReferenceNumber" seen in your API logs
     final String bookingRef = (args['bookingReferenceNumber'] ?? '').toString(); 
+    final String sourceTitle = (args['sourceTitle'] ?? '').toString(); // ADD HERE
+
 
     // 2. Extract Booking Card Details specifically
     final Map<String, dynamic> bookingCard = 
@@ -163,6 +165,8 @@ class PaymentSuccessScreen extends StatelessWidget {
                                 // Passing integer minutes if available
                                 durationInMinutes: bookingCard['totalDuration'] as int?,
                                 imageUrl: bookingCard['imageUrl']?.toString(),
+                                bookedSourceTitle: sourceTitle, // ADD HERE
+
                               ),
                             ),
                           );
