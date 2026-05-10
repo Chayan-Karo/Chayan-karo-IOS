@@ -19,6 +19,7 @@ class LocationController extends GetxController {
   final RxBool isLoadingAddresses = false.obs;
   final RxBool isMutatingAddress = false.obs;
   final RxString localDefaultAddressId = ''.obs;
+  final RxString selectedDefaultAddressId = ''.obs;
 
   // Carried canonical location id
   final RxString selectedLocationId = ''.obs;
@@ -66,11 +67,13 @@ class LocationController extends GetxController {
   }
 
   Future<void> _loadLocalDefault() async {
-    final id = await _repository.getLocalDefaultAddressId();
-    if (id != null && id.isNotEmpty) {
-      localDefaultAddressId.value = id;
-    }
+  final id = await _repository.getLocalDefaultAddressId();
+
+  if (id != null && id.isNotEmpty) {
+    localDefaultAddressId.value = id;
+    selectedDefaultAddressId.value = id;
   }
+}
 
   Future<void> _loadCachedLocation() async {
     try {
@@ -350,22 +353,44 @@ class LocationController extends GetxController {
       error.value = '';
 
      final fetched = await _repository.getCustomerAddresses() .timeout(const Duration(seconds: 8));
-      final localId = localDefaultAddressId.value;
-      CustomerAddress markDefault(CustomerAddress a) => a.copyWith(
-            isDefault: a.isDefault || (localId.isNotEmpty && a.id == localId),
-          );
+     final localId = localDefaultAddressId.value;
 
-      final list = fetched.map((a) => markDefault(a)).toList();
-      addresses.value = list;
+// ONLY ONE DEFAULT EVER
+String resolvedDefaultId = '';
 
-      CustomerAddress? def;
-      for (final a in list) {
-        if (a.isDefault) {
-          def = a;
-          break;
-        }
-      }
+if (localId.isNotEmpty &&
+    fetched.any((a) => a.id == localId)) {
+  resolvedDefaultId = localId;
+} else {
+  final serverDefault = fetched.firstWhereOrNull(
+    (a) => a.isDefault,
+  );
 
+  resolvedDefaultId = serverDefault?.id ?? '';
+}
+
+// update reactive state
+selectedDefaultAddressId.value = resolvedDefaultId;
+
+// normalize list -> ONLY ONE DEFAULT
+final normalizedList = fetched.map((a) {
+  return a.copyWith(
+    isDefault: a.id == resolvedDefaultId,
+  );
+}).toList();
+
+addresses.assignAll(normalizedList);
+
+// selected default object
+CustomerAddress? def;
+
+if (resolvedDefaultId.isNotEmpty) {
+  try {
+    def = normalizedList.firstWhere(
+      (a) => a.id == resolvedDefaultId,
+    );
+  } catch (_) {}
+}
       if (def != null) {
         final composed =
             '${def.addressLine1}, ${def.addressLine2}, ${def.city}, ${def.state} - ${def.postCode}';
@@ -377,7 +402,9 @@ class LocationController extends GetxController {
 
         if (prev != composed) {
           _syncCachedFromAddress(def);
-          final cl = cachedLocation.value!;
+          final cl = cachedLocation.value;
+
+          if (cl == null) return;
           await _repository.persistActiveLocation(cl);
           await _repository.saveCachedLocationJson(cl);
         }
@@ -395,13 +422,23 @@ class LocationController extends GetxController {
   }
 
   Future<void> setDefaultAddressLocal(String addressId) async {
-    try {
-      isMutatingAddress.value = true;
+      if (isMutatingAddress.value) return;
 
-      addresses.value =
-          addresses.map((a) => a.copyWith(isDefault: a.id == addressId)).toList();
-      localDefaultAddressId.value = addressId;
-      await _repository.saveLocalDefaultAddressId(addressId);
+    try {
+
+     selectedDefaultAddressId.value = addressId;
+localDefaultAddressId.value = addressId;
+
+await _repository.saveLocalDefaultAddressId(addressId);
+
+// normalize list
+final updated = addresses.map((a) {
+  return a.copyWith(
+    isDefault: a.id == addressId,
+  );
+}).toList();
+
+addresses.assignAll(updated);
 
       CustomerAddress? selected;
       for (final a in addresses) {
@@ -419,7 +456,9 @@ class LocationController extends GetxController {
         }
 
         _syncCachedFromAddress(selected);
-        final cl = cachedLocation.value!;
+        final cl = cachedLocation.value;
+
+        if (cl == null) return;
         await _repository.persistActiveLocation(cl);
         await _repository.saveCachedLocationJson(cl);
       }
@@ -443,9 +482,12 @@ class LocationController extends GetxController {
 
         // 3. Cleanup: If user deleted their "Default" address, clear that preference
         if (localDefaultAddressId.value == addressId) {
-          print('⚠️ Deleted local default address; resetting preference.');
-          localDefaultAddressId.value = '';
-          await _repository.saveLocalDefaultAddressId('');
+  print('⚠️ Deleted local default address; resetting preference.');
+
+  localDefaultAddressId.value = '';
+  selectedDefaultAddressId.value = '';
+
+  await _repository.saveLocalDefaultAddressId('');
           
           // Optional: Clear home screen location if it matches the deleted one
           if (selectedLocationId.value == addressId) {

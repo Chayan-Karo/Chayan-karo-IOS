@@ -89,10 +89,13 @@ class FrequentlyAddedBlock extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(14 * scale),
             child: Image.network(
-              service.imgLink,
-              width: 120.w * scale,
-              height: 120.h * scale,
-              fit: BoxFit.cover,
+  service.imgLink,
+  width: 120.w * scale,
+  height: 120.h * scale,
+  fit: BoxFit.cover,
+  cacheWidth: 300,
+  cacheHeight: 300,
+  filterQuality: FilterQuality.low,
               errorBuilder: (ctx, _, __) => Container(
                 width: 120.w * scale,
                 height: 120.h * scale,

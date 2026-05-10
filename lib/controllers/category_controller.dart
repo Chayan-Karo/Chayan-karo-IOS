@@ -71,7 +71,9 @@ class CategoryController extends GetxController {
   }
 
   // Refresh categories
-  Future<void> refreshCategories() async {
+Future<void> refreshCategories({
+  bool silent = false,
+}) async {    
     if (_isRefreshing.value) return;
 
     print('🔄 Refreshing categories...');
@@ -85,14 +87,20 @@ class CategoryController extends GetxController {
 
       print('✅ Categories refreshed successfully: ${categories.length}');
 
-      AppSnackbar.showSuccess('Categories updated successfully');
+     if (!silent) {
+  AppSnackbar.showSuccess(
+    'Categories updated successfully',
+  );
+}
     } catch (e) {
       print('❌ Error refreshing categories: $e');
       _errorMessage.value = 'Failed to refresh categories: ${e.toString()}';
 
-      AppSnackbar.showWarning(
-        'Could not refresh categories. Please check your connection.',
-      );
+if (!silent) {
+  AppSnackbar.showWarning(
+    'Could not refresh categories. Please check your connection.',
+  );
+}
     } finally {
       _isRefreshing.value = false;
     }

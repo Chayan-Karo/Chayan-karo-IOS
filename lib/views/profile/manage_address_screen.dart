@@ -18,7 +18,6 @@ class ManageAddressScreen extends StatefulWidget {
 
 class _ManageAddressScreenState extends State<ManageAddressScreen> {
   final LocationController locationController = Get.find<LocationController>();
-  String? selectedDefaultId;
 
   @override
   void initState() {
@@ -26,21 +25,10 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
     // Fetch after first frame; then align local selection based on data
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await locationController.fetchCustomerAddresses();
-      _alignSelectedDefaultFromData();
     });
   }
 
-  void _alignSelectedDefaultFromData() {
-    final list = locationController.addresses;
-    if (list.isEmpty) return;
-    final defId = list.firstWhereOrNull((a) => a.isDefault)?.id ?? selectedDefaultId ?? list.first.id;
-    if (defId != selectedDefaultId && mounted) {
-      // schedule to avoid setState during Obx build phases
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => selectedDefaultId = defId);
-      });
-    }
-  }
+  
 
  Future<void> _navigateAddOrEditAddress() async {
     // 1. Wait for the location popup to close
@@ -51,13 +39,10 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
     // This clears any "Non-Serviceable" error states that might have been set 
     // in the controller while the user was on the map screen.
     await locationController.fetchCustomerAddresses();
-    _alignSelectedDefaultFromData();
   }
   Future<void> _setAsDefault(CustomerAddress address) async {
-    await locationController.setDefaultAddressLocal(address.id);
-    if (mounted) setState(() => selectedDefaultId = address.id);
-    await locationController.fetchCustomerAddresses(silent: true);
-  }
+  await locationController.setDefaultAddressLocal(address.id);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +116,6 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                                   TextButton(
                                     onPressed: () async {
                                       await locationController.fetchCustomerAddresses();
-                                      _alignSelectedDefaultFromData();
                                     },
                                     child: Text(
                                       'Retry',
@@ -150,14 +134,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                           final list = locationController.addresses;
 
                           // Keep local selection aligned once data is ready
-                          if (list.isNotEmpty) {
-                            final defId = list.firstWhereOrNull((a) => a.isDefault)?.id ?? selectedDefaultId ?? list.first.id;
-                            if (defId != selectedDefaultId) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted) setState(() => selectedDefaultId = defId);
-                              });
-                            }
-                          }
+                        
 
                           if (list.isEmpty) {
                             return Center(
@@ -183,9 +160,12 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                             itemCount: list.length,
                             itemBuilder: (context, index) {
                               final address = list[index];
-                              final isSelectedDefault = address.id == selectedDefaultId;
+final isSelectedDefault =
+    address.id ==
+    locationController.selectedDefaultAddressId.value;
 
                               return Container(
+                                key: ValueKey(address.id),
                                 margin: EdgeInsets.only(bottom: 12.h * scaleFactor),
                                 padding: EdgeInsets.all(16.r * scaleFactor),
                                 decoration: const BoxDecoration(
@@ -240,6 +220,7 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                                         const Spacer(),
                                         PopupMenuButton<String>(
                                           onSelected: (value) async {
+                                              Future.microtask(() async {
                                           /*  if (value == 'edit') {
                                               _showUpdateAddressBottomSheet(scaleFactor, address);
                                             } else */ if (value == 'delete') {
@@ -247,6 +228,8 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                                             } else if (value == 'make_default') {
                                               await _setAsDefault(address);
                                             }
+                                              }
+                                              );
                                           },
                                           itemBuilder: (context) => [
                                            /* PopupMenuItem(
@@ -601,7 +584,6 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                               // Success: Close dialog & Refresh
                               Navigator.pop(dialogContext);
                               AppSnackbar.showSuccess('Address deleted successfully');
-                              _alignSelectedDefaultFromData();
                             } else {
                           // Failure: Stop spinner, keep dialog open for Retry
                           setState(() => isDeleting = false);

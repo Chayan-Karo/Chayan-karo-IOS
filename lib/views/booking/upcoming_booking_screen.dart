@@ -126,6 +126,47 @@ DateTime? _getValidDateTime(CustomerBooking b) {
         return 'Payment mode: N/A';
     }
   }
+ /* bool _canReschedule(CustomerBooking? b) {
+  if (b == null) return false;
+
+  final DateTime? bookingDateTime = _getValidDateTime(b);
+  if (bookingDateTime == null) return false;
+
+  // Parse time properly (reuse your logic)
+  String t = b.bookingTime;
+  int h = 0, m = 0;
+
+  try {
+    if (t.contains(':')) {
+      final parts = t.split(':');
+      h = int.parse(parts[0]);
+      if (parts.length > 1) m = int.parse(parts[1]);
+    } else if (t.contains('.')) {
+      final parts = t.split('.');
+      h = int.parse(parts[0]);
+      if (parts.length > 1) m = int.parse(parts[1]);
+    } else if (t.length == 4) {
+      h = int.parse(t.substring(0, 2));
+      m = int.parse(t.substring(2, 4));
+    }
+  } catch (_) {}
+
+  final DateTime fullBookingDateTime = DateTime(
+    bookingDateTime.year,
+    bookingDateTime.month,
+    bookingDateTime.day,
+    h,
+    m,
+  );
+
+  final now = DateTime.now();
+
+  final difference = fullBookingDateTime.difference(now);
+
+  // ✅ Allow only if more than 90 minutes left
+  return difference.inMinutes > 90;
+}
+*/
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +183,8 @@ DateTime? _getValidDateTime(CustomerBooking b) {
         // --- FIX: Check for In Progress Status ---
         final status = (booking?.status ?? '').toLowerCase();
         final bool isInProgress = status.contains('progress');
+     //   final bool canReschedule = _canReschedule(booking);
+
         // -----------------------------------------
 
         // Pricing: forward-calculated billing
@@ -595,6 +638,8 @@ _billingRow(
                             ),
                           ),
                           SizedBox(width: 12.w * scaleFactor),
+//                              if (canReschedule)
+
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () async {

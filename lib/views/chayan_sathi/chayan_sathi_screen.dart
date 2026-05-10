@@ -521,16 +521,14 @@ Widget _buildEmptySaathiState(BuildContext context, double scaleFactor) {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Expert Alert',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14.sp),
-                          ),
-                          Text(
-                            'We will notify you shortly.',
-                            style:
-                                TextStyle(fontSize: 12.sp, color: Colors.grey),
-                          ),
+                         Text(
+  'Tap to get notified 👉',
+  style: TextStyle(
+    fontSize: 13.sp,
+    color: Colors.black,
+    fontWeight: FontWeight.w700,
+  ),
+),
                         ],
                       ),
                     ),

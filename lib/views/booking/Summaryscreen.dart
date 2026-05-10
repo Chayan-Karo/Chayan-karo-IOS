@@ -219,36 +219,75 @@ Coupon? _selectedCoupon;
     return total;
   }
 
-  // ✅ NEW: Context-Aware Quantity Update
-  Future<void> _updateServiceQty(String itemId, bool increment) async {
-    final cartController = Get.find<CartController>();
-    final currentQty = widget.isRebooking
-        ? cartController.getRebookingQuantity(itemId)
-        : cartController.getQuantity(itemId);
+  double _calculateOriginalPriceTotal(List<CartItem> items) {
+  double total = 0;
 
-    if (increment && currentQty >= 30) return;
+  final cartController = Get.find<CartController>();
 
-    setState(() => _isGlobalLoading = true);
-    await Future.delayed(const Duration(milliseconds: 500)); 
+  for (final item in items) {
+    final qty = widget.isRebooking
+        ? cartController.getRebookingQuantity(item.id)
+        : cartController.getQuantity(item.id);
 
-    if (widget.isRebooking) {
-       // 🎯 REBOOKING UPDATE
-       if (increment) {
-         cartController.updateRebookingQuantity(itemId, currentQty + 1);
-       } else {
-         cartController.updateRebookingQuantity(itemId, currentQty - 1);
-       }
-    } else {
-       // 🛒 NORMAL UPDATE
-       if (increment) {
-         cartController.incrementQuantity(itemId);
-       } else {
-         cartController.decrementQuantity(itemId);
-       }
-    }
+    final double originalPrice =
+        item.hasDiscount ? item.originalPrice : item.price;
 
-    if (mounted) setState(() => _isGlobalLoading = false);
+    total += originalPrice * qty;
   }
+
+  return total;
+}
+
+  // ✅ NEW: Context-Aware Quantity Update
+Future<void> _updateServiceQty(
+  String itemId,
+  bool increment,
+) async {
+  // Prevent duplicate taps
+  if (_isGlobalLoading) return;
+
+  final cartController = Get.find<CartController>();
+
+  final currentQty = widget.isRebooking
+      ? cartController.getRebookingQuantity(itemId)
+      : cartController.getQuantity(itemId);
+
+  if (increment && currentQty >= 30) return;
+
+  if (!mounted) return;
+
+  setState(() => _isGlobalLoading = true);
+
+  await Future.delayed(
+    const Duration(milliseconds: 500),
+  );
+
+  if (!mounted) return;
+
+  if (widget.isRebooking) {
+    if (increment) {
+      cartController.updateRebookingQuantity(
+        itemId,
+        currentQty + 1,
+      );
+    } else {
+      cartController.updateRebookingQuantity(
+        itemId,
+        currentQty - 1,
+      );
+    }
+  } else {
+    if (increment) {
+      cartController.incrementQuantity(itemId);
+    } else {
+      cartController.decrementQuantity(itemId);
+    }
+  }
+
+  if (!mounted) return;
+
+  setState(() => _isGlobalLoading = false);
+}
 
   Future<void> _loadFrequentlyServicesForCurrentCategory() async {
     final cartController = Get.find<CartController>();
@@ -558,12 +597,16 @@ List<BookingServiceItem> _mapCartToBookingItems(
         // --- Financial Calculations (80/20 Scenario) ---
 final double itemTotal = _calculateCurrentPageTotal(currentPageItems);
 final int servicePriceInclusive = itemTotal.round(); // Actual Service Price (100%)
+final double gstBaseTotal =
+    _calculateOriginalPriceTotal(currentPageItems);
 
 // 1. Calculate the Platform's 20% share
-final double platformShare = servicePriceInclusive * 0.20;
+//final double platformShare = servicePriceInclusive * 0.20;
+final double platformShare = gstBaseTotal * 0.20;
 
 // 2. Calculate 18% GST ONLY on that 20% share
 final int gstOnFee = (platformShare * 0.18).round();
+
 
 // 3. User views: Actual Service Price + GST
 final int subTotal = servicePriceInclusive + gstOnFee;
@@ -584,9 +627,9 @@ if (selected != null) {
       discountPercentage = ((discountAmount / itemTotal) * 100).round();
     }
   } else {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      couponController.selectedCoupon.value = null;
-    });
+    Future.microtask(() {
+  couponController.selectedCoupon.value = null;
+});
   }
 }
 
@@ -776,6 +819,8 @@ final int total = totalRaw > 0 ? totalRaw : 0;
                                 grandTotal: servicePriceInclusive,
                                 feeRate: 0.20,
                                 gstOnFeeRate: 0.18,
+                                gstAmount: gstOnFee,
+
                                 showSavingsTag: false,
                                 discountAmount: discountAmount,
                               ),

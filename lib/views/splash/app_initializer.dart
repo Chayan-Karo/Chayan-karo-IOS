@@ -7,6 +7,7 @@ import 'package:app_links/app_links.dart';
 import '../../widgets/app_update_service.dart';
 import 'dart:io';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import '../../controllers/category_controller.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
@@ -145,7 +146,17 @@ _showGif = !(hasEnteredApp || isLoggedIn);
         await AppTrackingTransparency.requestTrackingAuthorization();
       }
     }
+    try {
+  final categoryController =
+      Get.find<CategoryController>();
 
+await categoryController.refreshCategories(
+  silent: true,
+);
+  print('✅ AppInitializer: Categories refreshed');
+} catch (e) {
+  print('❌ Category refresh error: $e');
+}
     // 3. CRITICAL FIX:
     // If a deep link was caught during the update/init process,
     // do NOT proceed with the normal navigation.

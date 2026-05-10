@@ -585,6 +585,7 @@ class SummaryPaymentDetailsBlock extends StatelessWidget {
   final double scale;
   final int grandTotal;
   final double feeRate;
+  final int gstAmount;
   final double gstOnFeeRate;
   final bool showSavingsTag;
   final double discountAmount;
@@ -594,6 +595,7 @@ class SummaryPaymentDetailsBlock extends StatelessWidget {
     required this.scale,
     required this.grandTotal,
     this.feeRate = 0.20,
+    required this.gstAmount,
     this.gstOnFeeRate = 0.18,
     this.showSavingsTag = false,
     this.discountAmount = 0.0,
@@ -604,8 +606,7 @@ class SummaryPaymentDetailsBlock extends StatelessWidget {
     final int booking = grandTotal;
     final int platformFee = (booking * feeRate).round();
     final int perService = (booking * (1 - feeRate)).round();
-    final int gst = (platformFee * gstOnFeeRate).round();
-
+    final int gst = gstAmount;
     final int subTotal = perService + platformFee + gst;
     final int total = (subTotal - discountAmount).toInt() > 0
         ? (subTotal - discountAmount).toInt()

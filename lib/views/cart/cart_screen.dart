@@ -65,39 +65,54 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   // Logic to handle updates, show loader, and enforce limit
-  Future<void> _handleQuantityUpdate(String itemId, bool isIncrement) async {
-    // 1. Check Limits (Max 3)
+  Future<void> _handleQuantityUpdate(
+    String itemId,
+    bool isIncrement,
+  ) async {
+    // Prevent rapid duplicate taps
+    if (_isLoading) return;
+
+    // Max quantity protection
     if (isIncrement) {
-      final int currentQty = cartController.getQuantity(itemId);
-      // Strictly stop if limit reached. No Snackbar.
+      final int currentQty =
+          cartController.getQuantity(itemId);
+
       if (currentQty >= 30) {
-        return; 
+        return;
       }
     }
 
-    // 2. Show Loader
+    // Safety check
+    if (!mounted) return;
+
+    // Show loader
     setState(() {
       _isLoading = true;
     });
 
-    // 3. Simulate Loading Delay (Good animation time)
-    await Future.delayed(const Duration(milliseconds: 600));
+    // Small UX delay
+    await Future.delayed(
+      const Duration(milliseconds: 600),
+    );
 
-    // 4. Perform Action
+    // Screen may have been disposed
+    if (!mounted) return;
+
+    // Perform update
     if (isIncrement) {
       cartController.incrementQuantity(itemId);
     } else {
       cartController.decrementQuantity(itemId);
     }
 
-    // 5. Hide Loader
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
+    // Final mounted protection
+    if (!mounted) return;
 
+    // Hide loader
+    setState(() {
+      _isLoading = false;
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -140,10 +155,20 @@ class _CartScreenState extends State<CartScreen> {
                           ),
                           child: ChayanHeader(
                             title: 'Cart',
-onBack: () {
+                           onBack: () async {
                               if (_isNavigatingBack) return;
+
                               _isNavigatingBack = true;
-                              Navigator.pop(context);
+
+                              if (mounted) {
+                                Navigator.pop(context);
+                              }
+
+                              await Future.delayed(
+                                const Duration(milliseconds: 300),
+                              );
+
+                              _isNavigatingBack = false;
                             },                          ),
                         ),
                         Expanded(
@@ -341,6 +366,7 @@ Widget _buildCartItemCard(
     final bool isMaxLimit = cartItem.quantity >= 30;
 
     return Container(
+      key: ValueKey(cartItem.id),
       margin: EdgeInsets.symmetric(
           horizontal: 16.w * scaleFactor, vertical: 4.h * scaleFactor),
       padding: EdgeInsets.all(16.r * scaleFactor),
