@@ -226,24 +226,32 @@ class _PreviousChayanSathiScreenState extends State<PreviousChayanSathiScreen> {
         color: Colors.white,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+       crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,        
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(15.h * scaleFactor),
-            ),
-            child: hasNetImage
-                ? Image.network(
-                    saathi.imgLink!,
-                    height: 140.h * scaleFactor,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildPlaceholder(scaleFactor),
-                  )
-                : _buildPlaceholder(scaleFactor),
-          ),
+  borderRadius: BorderRadius.vertical(
+    top: Radius.circular(15.h * scaleFactor),
+  ),
+  child: Container(
+    height: 115.h * scaleFactor,
+    width: double.infinity,
+    color: const Color(0xFFFFEEE0),
+    child: hasNetImage
+        ? Image.network(
+            saathi.imgLink!,
+            height: 115.h * scaleFactor,
+            width: double.infinity,
+            fit: BoxFit.contain,
+            alignment: Alignment.topCenter,
+            errorBuilder: (_, __, ___) =>
+                _buildPlaceholder(scaleFactor),
+          )
+        : _buildPlaceholder(scaleFactor),
+  ),
+),
 
-          SizedBox(height: 8.h * scaleFactor),
+          SizedBox(height: 4.h * scaleFactor),
 
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0.w * scaleFactor),
@@ -265,21 +273,18 @@ class _PreviousChayanSathiScreenState extends State<PreviousChayanSathiScreen> {
             padding: EdgeInsets.symmetric(horizontal: 8.0.w * scaleFactor),
             child: Row(
               children: [
-                Transform.translate(
-                  offset: Offset(-2.w * scaleFactor, 0),
-                  child: SvgPicture.asset(
-                    'assets/icons/tick.svg',
-                    width: 14.w * scaleFactor,
-                    height: 14.h * scaleFactor,
-                  ),
-                ),
+                SvgPicture.asset(
+  'assets/icons/tick.svg',
+  width: 14.w * scaleFactor,
+  height: 14.h * scaleFactor,
+),
                 SizedBox(width: 4.w * scaleFactor),
                 Expanded(
                   child: Text(
                     "${saathi.totalReview} jobs completed",
                     style: TextStyle(
                       fontFamily: 'SFPro',
-                      fontSize: 12.sp * scaleFactor,
+                      fontSize: 11.sp * scaleFactor,
                       color: Colors.black,
                     ),
                     maxLines: 1,
@@ -359,7 +364,7 @@ class _PreviousChayanSathiScreenState extends State<PreviousChayanSathiScreen> {
 
   Widget _buildPlaceholder(double scaleFactor) {
     return Container(
-      height: 140.h * scaleFactor,
+      height: 115.h * scaleFactor,
       width: double.infinity,
       color: Colors.grey.shade100,
       alignment: Alignment.center,
