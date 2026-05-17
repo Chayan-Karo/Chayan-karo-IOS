@@ -28,7 +28,7 @@ import '../../models/service_timing_model.dart';
 
 part 'api_service.g.dart';
 
-@RestApi(baseUrl: "https://api.chayankaro.com")
+@RestApi(baseUrl: "http://43.205.101.170:8081")
 abstract class ApiService {
   factory ApiService(Dio dio, {String? baseUrl}) = _ApiService;
 

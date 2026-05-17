@@ -13,7 +13,7 @@ class NetworkClient {
 
   NetworkClient._internal() {
     // Use the same HTTPS base URL as ApiService annotation to avoid conflicts
-    const String base = 'https://api.chayankaro.com';
+    const String base = 'http://43.205.101.170:8081';
 
     _dio = Dio(
       BaseOptions(
